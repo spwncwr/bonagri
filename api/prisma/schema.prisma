@@ -1,7 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// BonAgri MVP Database Schema
+// HARVEST. TRADE. PROSPER.
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +8,263 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum UserRole {
+  BUYER
+  SUPPLIER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  READY_FOR_DELIVERY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  OZOW
+  PAYFAST
+  MANUAL
+}
+
+enum DeliveryStatus {
+  PENDING
+  ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String           @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  phone           String?
+  role            UserRole         @default(BUYER)
+  status          UserStatus       @default(ACTIVE)
+  supplierProfile SupplierProfile?
+  addresses       Address[]
+  orders          Order[]
+  notifications   Notification[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([role])
+  @@index([status])
+}
+
+model SupplierProfile {
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  businessName   String
+  description    String?
+  registrationNo String?
+  phone          String?
+  email          String?
+  address        String?
+  city           String?
+  province       String?
+  verified       Boolean   @default(false)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products       Product[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([businessName])
+  @@index([province])
+  @@index([verified])
+}
+
+model Address {
+  id            String   @id @default(uuid())
+  userId        String
+  label         String
+  recipientName String
+  phone         String?
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  province      String?
+  postalCode    String?
+  country       String   @default("South Africa")
+  isDefault     Boolean  @default(false)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders        Order[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id          String          @id @default(uuid())
+  supplierId  String
+  categoryId  String
+  name        String
+  slug        String          @unique
+  sku         String          @unique
+  description String?
+  price       Decimal         @db.Decimal(12, 2)
+  unit        String
+  imageUrl    String?
+  status      ProductStatus   @default(DRAFT)
+  supplier    SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  category    Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  inventory   Inventory?
+  orderItems  OrderItem[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([supplierId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([name])
+}
+
+model Inventory {
+  id               String   @id @default(uuid())
+  productId        String   @unique
+  quantity         Int      @default(0)
+  reservedQuantity Int      @default(0)
+  lowStockLevel    Int      @default(10)
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  updatedAt        DateTime @updatedAt
+}
+
+model Order {
+  id                String      @id @default(uuid())
+  orderNumber       String      @unique
+  userId            String
+  deliveryAddressId String
+  status            OrderStatus @default(PENDING)
+  subtotal          Decimal     @db.Decimal(12, 2)
+  deliveryFee       Decimal     @default(0) @db.Decimal(12, 2)
+  total             Decimal     @db.Decimal(12, 2)
+  notes             String?
+  user              User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  deliveryAddress   Address     @relation(fields: [deliveryAddressId], references: [id], onDelete: Restrict)
+  items             OrderItem[]
+  payment           Payment?
+  delivery          Delivery?
+  invoice           Invoice?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String  @id @default(uuid())
+  orderId     String
+  productId   String
+  productName String
+  unitPrice   Decimal @db.Decimal(12, 2)
+  quantity    Int
+  lineTotal   Decimal @db.Decimal(12, 2)
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id             String          @id @default(uuid())
+  orderId        String          @unique
+  provider       PaymentProvider
+  status         PaymentStatus   @default(PENDING)
+  amount         Decimal         @db.Decimal(12, 2)
+  transactionRef String?
+  paidAt         DateTime?
+  order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([status])
+  @@index([transactionRef])
+}
+
+model Delivery {
+  id             String         @id @default(uuid())
+  orderId        String         @unique
+  status         DeliveryStatus @default(PENDING)
+  trackingNumber String?        @unique
+  driverName     String?
+  driverPhone    String?
+  estimatedDate  DateTime?
+  pickedUpAt     DateTime?
+  deliveredAt    DateTime?
+  notes          String?
+  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model Invoice {
+  id            String   @id @default(uuid())
+  orderId       String   @unique
+  invoiceNumber String   @unique
+  subtotal      Decimal  @db.Decimal(12, 2)
+  deliveryFee   Decimal  @db.Decimal(12, 2)
+  total         Decimal  @db.Decimal(12, 2)
+  issuedAt      DateTime @default(now())
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  @@index([issuedAt])
 }

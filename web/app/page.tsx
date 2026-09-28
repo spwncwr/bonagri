@@ -356,7 +356,7 @@ export default function Home() {
             </div>
 
             <h2 className="mt-3 text-3xl font-black tracking-tight md:text-4xl">
-              Can't find what you need?
+              Can&apos;t find what you need?
             </h2>
 
             <p className="mt-4 max-w-xl leading-7 text-[#69756c]">

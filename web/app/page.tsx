@@ -1,57 +1,48 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-const products = [
-  {
-    name: "Fresh Tomatoes",
-    category: "Fresh Produce",
-    quantity: "2.5 tonnes available",
-    location: "Tzaneen, Limpopo",
-    price: "R18",
-    unit: "/ kg",
-    supplier: "BonAgri Farm",
-    verified: true,
-    tone: "bg-[#dfe9d8]",
-    visual: "TOMATO",
-  },
-  {
-    name: "Fresh Bananas",
-    category: "Fresh Produce",
-    quantity: "800 kg available",
-    location: "Mopani, Limpopo",
-    price: "R25",
-    unit: "/ kg",
-    supplier: "Limpopo Growers",
-    verified: true,
-    tone: "bg-[#eee8c9]",
-    visual: "BANANA",
-  },
-  {
-    name: "Green Chilli",
-    category: "Chilli & Sauces",
-    quantity: "400 kg available",
-    location: "Giyani, Limpopo",
-    price: "R32",
-    unit: "/ kg",
-    supplier: "Mathevula Produce",
-    verified: true,
-    tone: "bg-[#dce9d7]",
-    visual: "CHILLI",
-  },
-  {
-    name: "Fresh Okra",
-    category: "Vegetables",
-    quantity: "250 kg available",
-    location: "Polokwane, Limpopo",
-    price: "R28",
-    unit: "/ kg",
-    supplier: "Local Growers",
-    verified: false,
-    tone: "bg-[#e5ead8]",
-    visual: "OKRA",
-  },
-];
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http" + "://" + "localhost" + ":" + "3000";
+
+type ApiProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  price: string;
+  unit: string;
+  status: string;
+  category: {
+    name: string;
+    slug: string;
+  };
+  supplier: {
+    businessName: string;
+    city: string | null;
+    province: string | null;
+    verified: boolean;
+  };
+  inventory: {
+    quantity: number;
+    reservedQuantity: number;
+  } | null;
+};
+
+type Product = {
+  id: string;
+  name: string;
+  category: string;
+  quantity: string;
+  availableQuantity: number;
+  location: string;
+  price: string;
+  unit: string;
+  supplier: string;
+  verified: boolean;
+  tone: string;
+  visual: string;
+};
 
 const categories = [
   ["Fresh Produce", "Produce available from regional suppliers."],
@@ -69,9 +60,242 @@ const workflow = [
   ["04", "Move", "Coordinate delivery from supplier to buyer."],
 ];
 
+const productVisuals: Record<string, { tone: string; visual: string }> = {
+  "fresh-tomatoes": { tone: "bg-[#dfe9d8]", visual: "TOMATO" },
+  "fresh-bananas": { tone: "bg-[#eee8c9]", visual: "BANANA" },
+  "green-chilli": { tone: "bg-[#dce9d7]", visual: "CHILLI" },
+  "fresh-okra": { tone: "bg-[#e5ead8]", visual: "OKRA" },
+};
+
+function formatQuantity(quantity: number, unit: string) {
+  return `${quantity.toLocaleString()} ${unit} available`;
+}
+
+function mapApiProduct(product: ApiProduct): Product {
+  const visual = productVisuals[product.slug] ?? {
+    tone: "bg-[#e5ead8]",
+    visual: "PRODUCT",
+  };
+
+  const location = [product.supplier.city, product.supplier.province]
+    .filter(Boolean)
+    .join(", ");
+
+  const availableQuantity = Math.max(
+    0,
+    (product.inventory?.quantity ?? 0) -
+      (product.inventory?.reservedQuantity ?? 0),
+  );
+
+  return {
+    id: product.id,
+    name: product.name,
+    category: product.category.name,
+    quantity: formatQuantity(availableQuantity, product.unit),
+    availableQuantity,
+    location,
+    price: `R${product.price}`,
+    unit: `/ ${product.unit}`,
+    supplier: product.supplier.businessName,
+    verified: product.supplier.verified,
+    tone: visual.tone,
+    visual: visual.visual,
+  };
+}
+
 export default function Home() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [orderQuantity, setOrderQuantity] = useState(1);
+  const [ordering, setOrdering] = useState(false);
+  const [orderError, setOrderError] = useState("");
+  const [orderSuccess, setOrderSuccess] = useState<{
+    orderNumber: string;
+    productName: string;
+    quantity: number;
+    total: string;
+    location: string;
+    status: string;
+  } | null>(null);
+  const [orders, setOrders] = useState<
+    Array<{
+      id: string;
+      orderNumber: string;
+      status: string;
+      total: string;
+      createdAt: string;
+      items: Array<{
+        productName: string;
+        quantity: number;
+        unitPrice: string;
+        lineTotal: string;
+      }>;
+      deliveryAddress: {
+        city: string;
+        province: string;
+        country: string;
+      };
+    }>
+  >([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
+
+  async function handleStartOrder() {
+    if (!selectedProduct || ordering) return;
+
+    setOrdering(true);
+    setOrderError("");
+    setOrderSuccess(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: "a09e036b-0120-444c-bce4-4061d8a3f0f8",
+          deliveryAddressId: "ca8a2b58-610e-4edb-bfb8-39628c6220e1",
+          productId: selectedProduct.id,
+          quantity: orderQuantity,
+          notes: "Development order",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          Array.isArray(data?.message)
+            ? data.message.join(", ")
+            : data?.message || "Unable to place order",
+        );
+      }
+
+      setOrderSuccess({
+        orderNumber: data.orderNumber,
+        productName: selectedProduct.name,
+        quantity: orderQuantity,
+        total: String(data.total),
+        location: data.deliveryAddress?.city
+          ? `${data.deliveryAddress.city}, ${data.deliveryAddress.province}`
+          : selectedProduct.location,
+        status: data.status,
+      });
+
+      await loadOrders();
+      setSelectedProduct(null);
+    } catch (error) {
+      setOrderError(
+        error instanceof Error
+          ? error.message
+          : "Unable to place order. Please try again.",
+      );
+    } finally {
+      setOrdering(false);
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProducts() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const params = new URLSearchParams();
+
+        if (search.trim()) {
+          params.set("search", search.trim());
+        }
+
+        if (activeCategory !== "All") {
+          const category = categories.find(
+            ([name]) => name === activeCategory,
+          );
+
+          if (category) {
+            params.set(
+              "category",
+              category[0]
+                .toLowerCase()
+                .replace(/ & /g, "-")
+                .replace(/ /g, "-"),
+            );
+          }
+        }
+
+        const query = params.toString();
+        const response = await fetch(
+          `${API_BASE_URL}/api/products${query ? `?${query}` : ""}`,
+        );
+
+        if (!response.ok) {
+          throw new Error(`Products request failed: ${response.status}`);
+        }
+
+        const data: ApiProduct[] = await response.json();
+
+        if (!cancelled) {
+          setProducts(data.map(mapApiProduct));
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load products.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [search, activeCategory]);
+
+  const loadOrders = useCallback(async () => {
+    try {
+      setOrdersLoading(true);
+      setOrdersError("");
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/orders?userId=a09e036b-0120-444c-bce4-4061d8a3f0f8`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Orders request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      setOrders(data);
+    } catch (requestError) {
+      setOrdersError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to load orders.",
+      );
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadOrders();
+  }, [loadOrders]);
 
   const filteredProducts = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -88,7 +312,7 @@ export default function Home() {
 
       return matchesSearch && matchesCategory;
     });
-  }, [search, activeCategory]);
+  }, [products, search, activeCategory]);
 
   return (
     <main className="min-h-screen bg-[#f7f6f0] text-[#17251b]">
@@ -122,8 +346,8 @@ export default function Home() {
             <a href="#suppliers" className="text-[#5d695f] hover:text-[#17633a]">
               Suppliers
             </a>
-            <a href="#how-it-works" className="text-[#5d695f] hover:text-[#17633a]">
-              How it works
+            <a href="#orders" className="text-[#5d695f] hover:text-[#17633a]">
+              My Orders
             </a>
           </nav>
 
@@ -275,11 +499,23 @@ export default function Home() {
           ))}
         </div>
 
+        {loading && (
+          <div className="mt-6 rounded-2xl border border-[#dce2d9] bg-white p-8 text-center text-sm font-semibold text-[#69756c]">
+            Loading available supply…
+          </div>
+        )}
+
+        {error && !loading && (
+          <div className="mt-6 rounded-2xl border border-[#e3caca] bg-[#fff8f8] p-8 text-center text-sm font-semibold text-[#8a4545]">
+            Unable to load supply: {error}
+          </div>
+        )}
+
         {/* Product cards */}
         <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {filteredProducts.map((product) => (
             <article
-              key={product.name}
+              key={product.id}
               className="overflow-hidden rounded-2xl border border-[#dce2d9] bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
             >
               <div
@@ -331,7 +567,15 @@ export default function Home() {
                     </span>
                   </div>
 
-                  <button className="rounded-lg bg-[#17633a] px-4 py-2 text-xs font-black text-white hover:bg-[#0f4d2b]">
+                  <button
+                    type="button"
+                    onClick={() => {
+  setOrderQuantity(1);
+  setOrderError("");
+  setSelectedProduct(product);
+}}
+                    className="rounded-lg bg-[#17633a] px-4 py-2 text-xs font-black text-white hover:bg-[#0f4d2b]"
+                  >
                     View supply
                   </button>
                 </div>
@@ -339,6 +583,195 @@ export default function Home() {
             </article>
           ))}
         </div>
+
+        {selectedProduct && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${selectedProduct.name} supply details`}
+            onClick={() => setSelectedProduct(null)}
+          >
+            <div
+              className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={`relative flex h-48 items-end ${selectedProduct.tone}`}>
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/10 to-transparent" />
+                <div className="relative w-full px-6 pb-6">
+                  <div className="text-[11px] font-black tracking-[0.2em] text-[#43564a]/70">
+                    {selectedProduct.category.toUpperCase()}
+                  </div>
+                  <div className="mt-1 text-4xl font-black tracking-tight text-[#304635]/80">
+                    {selectedProduct.visual}
+                  </div>
+                </div>
+                <div className="absolute right-5 top-5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProduct(null)}
+                    className="rounded-full bg-white/90 px-3 py-2 text-sm font-black text-[#304635] hover:bg-white"
+                    aria-label="Close supply details"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-2xl font-black text-[#27382b]">
+                      {selectedProduct.name}
+                    </h3>
+                    <p className="mt-1 text-sm font-semibold text-[#566258]">
+                      {selectedProduct.supplier}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-2xl font-black text-[#17633a]">
+                      {selectedProduct.price}
+                    </div>
+                    <div className="text-xs text-[#7b867d]">
+                      {selectedProduct.unit}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl bg-[#f4f6f1] p-4">
+                    <div className="text-[10px] font-black tracking-wider text-[#6d786f]">
+                      AVAILABLE
+                    </div>
+                    <div className="mt-1 text-sm font-black text-[#27382b]">
+                      {selectedProduct.quantity}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-[#f4f6f1] p-4">
+                    <div className="text-[10px] font-black tracking-wider text-[#6d786f]">
+                      LOCATION
+                    </div>
+                    <div className="mt-1 text-sm font-black text-[#27382b]">
+                      {selectedProduct.location}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 rounded-xl border border-[#dce2d9] bg-[#f7f8f4] p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-[9px] font-black uppercase tracking-[0.16em] text-[#7b867d]">
+                        Order quantity
+                      </div>
+                      <div className="mt-1 text-xs text-[#69756c]">
+                        Available: {selectedProduct.quantity}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center rounded-xl border border-[#cfd8ce] bg-white">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOrderQuantity((quantity) =>
+                            Math.max(1, quantity - 1),
+                          )
+                        }
+                        disabled={ordering || orderQuantity <= 1}
+                        className="h-10 w-10 text-lg font-black text-[#17633a] disabled:opacity-40"
+                        aria-label="Decrease order quantity"
+                      >
+                        −
+                      </button>
+
+                      <div className="flex h-10 min-w-12 items-center justify-center border-x border-[#dfe5dc] px-3 text-sm font-black">
+                        {orderQuantity}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOrderQuantity((quantity) =>
+                            Math.min(
+                              selectedProduct.availableQuantity,
+                              quantity + 1,
+                            ),
+                          )
+                        }
+                        disabled={
+                          ordering ||
+                          orderQuantity >= selectedProduct.availableQuantity
+                        }
+                        className="h-10 w-10 text-lg font-black text-[#17633a] disabled:opacity-40"
+                        aria-label="Increase order quantity"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {orderError && (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+                      {orderError}
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="text-xs font-semibold text-[#69756c]">
+                      {selectedProduct.verified
+                        ? "✓ Verified supplier"
+                        : "Supplier profile"}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleStartOrder}
+                      disabled={ordering}
+                      className="rounded-xl bg-[#17633a] px-5 py-3 text-xs font-black text-white hover:bg-[#0f4d2b] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {ordering ? "Placing order..." : "Start order"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {orderSuccess && (
+          <div className="fixed bottom-6 right-6 z-[60] w-full max-w-sm rounded-2xl border border-[#cfe0cf] bg-white p-5 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e5f1e4] text-sm font-black text-[#17633a]">
+                ✓
+              </div>
+
+              <div className="min-w-0">
+                <div className="text-sm font-black text-[#243229]">
+                  Order placed
+                </div>
+                <div className="mt-1 text-xs leading-5 text-[#69756c]">
+                  {orderSuccess.productName} • {orderSuccess.quantity} units
+                </div>
+                <div className="mt-2 text-xs font-black text-[#17633a]">
+                  {orderSuccess.orderNumber}
+                </div>
+                <div className="mt-1 text-xs text-[#69756c]">
+                  Total: R{orderSuccess.total} • {orderSuccess.status}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setOrderSuccess(null)}
+                className="text-lg font-bold text-[#7b867d] hover:text-[#344238]"
+                aria-label="Dismiss order confirmation"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
 
         {filteredProducts.length === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-[#cbd5ca] bg-white p-12 text-center text-sm text-[#69756c]">
@@ -448,6 +881,137 @@ export default function Home() {
       </section>
 
       {/* How it works */}
+      <section id="orders" className="border-y border-[#dfe4dc] bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#17633a]">
+                Buyer workspace
+              </div>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-[#17251b]">
+                My Orders
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#69756c]">
+                Track your agricultural purchases, order status and delivery
+                details from one place.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[#dce2d9] bg-[#f7f8f4] px-4 py-3 text-xs font-bold text-[#5d695f]">
+              {orders.length} {orders.length === 1 ? "order" : "orders"}
+            </div>
+          </div>
+
+          <div className="mt-8">
+            {ordersLoading ? (
+              <div className="rounded-2xl border border-[#dce2d9] bg-[#f7f8f4] p-8 text-center">
+                <div className="text-sm font-bold text-[#17633a]">
+                  Loading your orders...
+                </div>
+              </div>
+            ) : ordersError ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+                <div className="text-sm font-black text-red-700">
+                  Unable to load orders
+                </div>
+                <div className="mt-1 text-xs text-red-600">
+                  {ordersError}
+                </div>
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="rounded-2xl border border-[#dce2d9] bg-[#f7f8f4] p-10 text-center">
+                <div className="text-sm font-black text-[#243229]">
+                  No orders yet
+                </div>
+                <div className="mt-2 text-xs leading-5 text-[#69756c]">
+                  Browse the marketplace above and start your first order.
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders.map((order) => (
+                  <article
+                    key={order.id}
+                    className="rounded-2xl border border-[#dce2d9] bg-[#fbfcf9] p-5"
+                  >
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="text-sm font-black text-[#17251b]">
+                            {order.orderNumber}
+                          </div>
+
+                          <span className="rounded-full bg-[#e5f1e4] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#17633a]">
+                            {order.status.replaceAll("_", " ")}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 text-xs text-[#7b867d]">
+                          {new Date(order.createdAt).toLocaleDateString(
+                            "en-ZA",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            },
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-left md:text-right">
+                        <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#7b867d]">
+                          Order total
+                        </div>
+                        <div className="mt-1 text-xl font-black text-[#17633a]">
+                          R{order.total}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid gap-4 border-t border-[#e3e8e0] pt-5 md:grid-cols-[1fr_auto]">
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#7b867d]">
+                          Items
+                        </div>
+
+                        <div className="mt-2 space-y-2">
+                          {order.items.map((item) => (
+                            <div
+                              key={`${order.id}-${item.productName}`}
+                              className="flex flex-wrap items-center justify-between gap-3 text-xs"
+                            >
+                              <span className="font-bold text-[#344238]">
+                                {item.productName}
+                              </span>
+                              <span className="text-[#69756c]">
+                                {item.quantity} × R{item.unitPrice}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="md:min-w-56">
+                        <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#7b867d]">
+                          Delivery
+                        </div>
+                        <div className="mt-2 text-xs font-bold text-[#344238]">
+                          {order.deliveryAddress.city},{" "}
+                          {order.deliveryAddress.province}
+                        </div>
+                        <div className="mt-1 text-xs text-[#69756c]">
+                          {order.deliveryAddress.country}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       <section id="how-it-works" className="bg-[#163b25] text-white">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="max-w-2xl">

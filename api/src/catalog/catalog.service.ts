@@ -70,10 +70,19 @@ export class CatalogService {
     return product;
   }
 
-  async createProduct(dto: CreateProductDto) {
+  async createProduct(userId: string, dto: CreateProductDto) {
+    const supplier = await this.prisma.supplierProfile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!supplier) {
+      throw new NotFoundException("Supplier profile not found");
+    }
+
     return this.prisma.product.create({
       data: {
-        supplierId: dto.supplierId,
+        supplierId: supplier.id,
         categoryId: dto.categoryId,
         name: dto.name,
         slug: dto.slug,
@@ -207,8 +216,20 @@ export class CatalogService {
     };
   }
 
-  async updateProduct(id: string, dto: UpdateProductDto) {
-    await this.getProduct(id);
+  async updateProduct(id: string, userId: string, dto: UpdateProductDto) {
+    const product = await this.prisma.product.findFirst({
+      where: {
+        id,
+        supplier: {
+          userId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!product) {
+      throw new NotFoundException("Supplier product not found");
+    }
 
     return this.prisma.product.update({
       where: { id },

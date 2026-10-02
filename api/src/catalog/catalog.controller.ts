@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
@@ -7,11 +6,29 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  UseGuards,
 } from "@nestjs/common";
+import type { Request } from "express";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { RolesGuard } from "../auth/guards/roles.guard";
 import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { UpdateInventoryDto } from "./dto/update-inventory.dto";
+
+type AuthenticatedRequest = Request & {
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    role: "BUYER" | "SUPPLIER" | "ADMIN";
+    status: "ACTIVE" | "SUSPENDED" | "PENDING";
+  };
+};
 
 @Controller()
 export class CatalogController {
@@ -31,22 +48,22 @@ export class CatalogController {
   }
 
   @Get("supplier/inventory")
-  getSupplierInventory(@Query("userId") userId?: string) {
-    if (!userId) {
-      throw new BadRequestException("userId is required");
-    }
-
-    return this.catalogService.getSupplierInventory(userId);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPPLIER", "ADMIN")
+  getSupplierInventory(@Req() request: AuthenticatedRequest) {
+    return this.catalogService.getSupplierInventory(request.user.id);
   }
 
   @Patch("supplier/inventory/:productId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPPLIER", "ADMIN")
   updateSupplierInventory(
+    @Req() request: AuthenticatedRequest,
     @Param("productId") productId: string,
-    @Query("userId") userId: string,
     @Body() dto: UpdateInventoryDto,
   ) {
     return this.catalogService.updateSupplierInventory(
-      userId,
+      request.user.id,
       productId,
       dto,
     );
@@ -58,15 +75,27 @@ export class CatalogController {
   }
 
   @Post("products")
-  createProduct(@Body() dto: CreateProductDto) {
-    return this.catalogService.createProduct(dto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPPLIER")
+  createProduct(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreateProductDto,
+  ) {
+    return this.catalogService.createProduct(request.user.id, dto);
   }
 
   @Patch("products/:id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPPLIER")
   updateProduct(
+    @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
     @Body() dto: UpdateProductDto,
   ) {
-    return this.catalogService.updateProduct(id, dto);
+    return this.catalogService.updateProduct(
+      id,
+      request.user.id,
+      dto,
+    );
   }
 }

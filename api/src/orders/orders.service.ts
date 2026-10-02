@@ -115,10 +115,10 @@ export class OrdersService {
     });
   }
 
-  async createOrder(dto: CreateOrderDto) {
+  async createOrder(userId: string, dto: CreateOrderDto) {
     return this.prisma.$transaction(async (tx) => {
       const buyer = await tx.user.findUnique({
-        where: { id: dto.userId },
+        where: { id: userId },
         select: {
           id: true,
           role: true,
@@ -141,7 +141,7 @@ export class OrdersService {
       const address = await tx.address.findFirst({
         where: {
           id: dto.deliveryAddressId,
-          userId: dto.userId,
+          userId,
         },
       });
 
@@ -186,7 +186,7 @@ export class OrdersService {
       const order = await tx.order.create({
         data: {
           orderNumber: this.generateOrderNumber(),
-          userId: dto.userId,
+          userId,
           deliveryAddressId: dto.deliveryAddressId,
           status: "PENDING",
           subtotal,
@@ -233,6 +233,8 @@ export class OrdersService {
 
   async updateOrderStatus(
     orderId: string,
+    actorUserId: string,
+    actorRole: "BUYER" | "SUPPLIER" | "ADMIN",
     dto: UpdateOrderStatusDto,
   ) {
     return this.prisma.$transaction(async (tx) => {
@@ -257,6 +259,43 @@ export class OrdersService {
 
       const current = order.status;
       const next = dto.status;
+
+      if (actorRole === "BUYER") {
+        if (order.userId !== actorUserId) {
+          throw new NotFoundException("Order not found");
+        }
+
+        if (next !== "CANCELLED" || current !== "PENDING") {
+          throw new BadRequestException(
+            "Buyers can only cancel their own pending orders",
+          );
+        }
+      } else if (actorRole === "SUPPLIER") {
+        const supplier = await tx.supplierProfile.findUnique({
+          where: { userId: actorUserId },
+          select: { id: true },
+        });
+
+        if (!supplier) {
+          throw new NotFoundException("Supplier profile not found");
+        }
+
+        const ownsOrderItem = order.items.some(
+          (item) => item.product.supplierId === supplier.id,
+        );
+
+        if (!ownsOrderItem) {
+          throw new NotFoundException("Order not found");
+        }
+
+        if (next === "CANCELLED") {
+          throw new BadRequestException(
+            "Suppliers cannot cancel buyer orders",
+          );
+        }
+      } else if (actorRole !== "ADMIN") {
+        throw new BadRequestException("Unsupported user role");
+      }
 
       const allowedTransitions: Record<string, string[]> = {
         PENDING: ["CONFIRMED", "CANCELLED"],

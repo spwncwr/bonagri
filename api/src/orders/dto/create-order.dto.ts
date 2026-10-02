@@ -9,9 +9,6 @@ import {
 
 export class CreateOrderDto {
   @IsUUID()
-  userId!: string;
-
-  @IsUUID()
   deliveryAddressId!: string;
 
   @IsUUID()

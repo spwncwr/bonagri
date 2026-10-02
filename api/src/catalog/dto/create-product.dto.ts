@@ -10,9 +10,6 @@ import {
 
 export class CreateProductDto {
   @IsUUID()
-  supplierId!: string;
-
-  @IsUUID()
   categoryId!: string;
 
   @IsString()

@@ -327,24 +327,53 @@ export class OrdersService {
         }
       }
 
+      const deliveryUpdate =
+        next === "READY_FOR_DELIVERY"
+          ? {
+              upsert: {
+                create: {
+                  status: "PENDING" as const,
+                },
+                update: {
+                  status: "PENDING" as const,
+                },
+              },
+            }
+          : next === "OUT_FOR_DELIVERY"
+            ? {
+                upsert: {
+                  create: {
+                    status: "IN_TRANSIT" as const,
+                    pickedUpAt: new Date(),
+                  },
+                  update: {
+                    status: "IN_TRANSIT" as const,
+                    pickedUpAt: new Date(),
+                  },
+                },
+              }
+            : next === "DELIVERED"
+              ? {
+                  upsert: {
+                    create: {
+                      status: "DELIVERED" as const,
+                      deliveredAt: new Date(),
+                    },
+                    update: {
+                      status: "DELIVERED" as const,
+                      deliveredAt: new Date(),
+                    },
+                  },
+                }
+              : undefined;
+
       const updated = await tx.order.update({
         where: {
           id: orderId,
         },
         data: {
           status: next,
-          ...(next === "READY_FOR_DELIVERY"
-            ? {
-                delivery: {
-                  upsert: {
-                    create: {
-                      status: "PENDING",
-                    },
-                    update: {},
-                  },
-                },
-              }
-            : {}),
+          ...(deliveryUpdate ? { delivery: deliveryUpdate } : {}),
         },
         include: {
           items: true,

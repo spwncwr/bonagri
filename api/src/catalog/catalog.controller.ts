@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -10,6 +11,7 @@ import {
 import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
+import { UpdateInventoryDto } from "./dto/update-inventory.dto";
 
 @Controller()
 export class CatalogController {
@@ -26,6 +28,28 @@ export class CatalogController {
     @Query("category") categorySlug?: string,
   ) {
     return this.catalogService.getProducts(search, categorySlug);
+  }
+
+  @Get("supplier/inventory")
+  getSupplierInventory(@Query("userId") userId?: string) {
+    if (!userId) {
+      throw new BadRequestException("userId is required");
+    }
+
+    return this.catalogService.getSupplierInventory(userId);
+  }
+
+  @Patch("supplier/inventory/:productId")
+  updateSupplierInventory(
+    @Param("productId") productId: string,
+    @Query("userId") userId: string,
+    @Body() dto: UpdateInventoryDto,
+  ) {
+    return this.catalogService.updateSupplierInventory(
+      userId,
+      productId,
+      dto,
+    );
   }
 
   @Get("products/:id")

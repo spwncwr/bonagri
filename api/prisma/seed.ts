@@ -1,23 +1,45 @@
-import * as bcrypt from "bcryptjs";
+
 import "dotenv/config";
+import * as bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+
+// -----------------------------------------------------------------------------
+// Development-only seed configuration
+// -----------------------------------------------------------------------------
 
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL is not configured");
+  throw new Error(
+    "DATABASE_URL is not configured. Set it in the development environment.",
+  );
+}
+
+// Require an explicit opt-in before modifying any database.
+if (process.env.SEED_DEVELOPMENT_DATA !== "true") {
+  throw new Error(
+    "Development seed blocked. Verify DATABASE_URL points to the development " +
+      "database, then set SEED_DEVELOPMENT_DATA=true to proceed.",
+  );
+}
+
+// Never run this development seed in a production runtime.
+if (process.env.NODE_ENV === "production") {
+  throw new Error("Development seed is disabled in production.");
 }
 
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
-
-async function main() {
+async function main(): Promise<void> {
+  // Development credentials only. Rerunning this seed resets these two
+  // development accounts to this password.
   const devPasswordHash = await bcrypt.hash("bonagri2024dev", 12);
 
-  const categories = [
+  // ---------------------------------------------------------------------------
+  // Categories
+  // ---------------------------------------------------------------------------
 
   const categories = [
     {
@@ -57,16 +79,24 @@ async function main() {
   for (const category of categories) {
     const record = await prisma.category.upsert({
       where: { slug: category.slug },
-      update: category,
+      update: {
+        name: category.name,
+        description: category.description,
+      },
       create: category,
     });
 
     categoryMap.set(record.slug, record.id);
   }
 
+  // ---------------------------------------------------------------------------
+  // Development supplier account
+  // ---------------------------------------------------------------------------
+
   const supplierUser = await prisma.user.upsert({
     where: { email: "dev@bonagri.co.za" },
     update: {
+      passwordHash: devPasswordHash,
       firstName: "BonAgri",
       lastName: "Farm",
       phone: "+27000000000",
@@ -75,7 +105,7 @@ async function main() {
     },
     create: {
       email: "dev@bonagri.co.za",
-      passwordHash: "development-only",
+      passwordHash: devPasswordHash,
       firstName: "BonAgri",
       lastName: "Farm",
       phone: "+27000000000",
@@ -84,9 +114,14 @@ async function main() {
     },
   });
 
+  // ---------------------------------------------------------------------------
+  // Development buyer account
+  // ---------------------------------------------------------------------------
+
   const buyerUser = await prisma.user.upsert({
     where: { email: "buyer@bonagri.co.za" },
     update: {
+      passwordHash: devPasswordHash,
       firstName: "BonAgri",
       lastName: "Buyer",
       phone: "+27000000001",
@@ -95,7 +130,7 @@ async function main() {
     },
     create: {
       email: "buyer@bonagri.co.za",
-      passwordHash: "development-only",
+      passwordHash: devPasswordHash,
       firstName: "BonAgri",
       lastName: "Buyer",
       phone: "+27000000001",
@@ -103,6 +138,10 @@ async function main() {
       status: "ACTIVE",
     },
   });
+
+  // ---------------------------------------------------------------------------
+  // Development buyer delivery address
+  // ---------------------------------------------------------------------------
 
   await prisma.address.upsert({
     where: {
@@ -134,6 +173,10 @@ async function main() {
     },
   });
 
+  // ---------------------------------------------------------------------------
+  // Supplier profile
+  // ---------------------------------------------------------------------------
+
   const supplier = await prisma.supplierProfile.upsert({
     where: { userId: supplierUser.id },
     update: {
@@ -156,6 +199,10 @@ async function main() {
       verified: true,
     },
   });
+
+  // ---------------------------------------------------------------------------
+  // Development products and inventory
+  // ---------------------------------------------------------------------------
 
   const products = [
     {
@@ -204,7 +251,9 @@ async function main() {
     const categoryId = categoryMap.get(product.category);
 
     if (!categoryId) {
-      throw new Error(`Category not found: ${product.category}`);
+      throw new Error(
+        `Category "${product.category}" was not found for product "${product.slug}".`,
+      );
     }
 
     const record = await prisma.product.upsert({
@@ -246,13 +295,15 @@ async function main() {
     });
   }
 
-  console.log("BonAgri development seed completed.");
+  console.log(
+    "BonAgri development seed completed: categories, accounts, supplier profile, products and inventory.",
+  );
 }
 
 main()
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
+  .catch((error: unknown) => {
+    console.error("BonAgri development seed failed:", error);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();

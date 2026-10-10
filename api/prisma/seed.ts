@@ -13,6 +13,12 @@ const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+
+async function main() {
+  const devPasswordHash = await bcrypt.hash("bonagri2024dev", 12);
+
+  const categories = [
+
   const categories = [
     {
       name: "Fresh Produce",

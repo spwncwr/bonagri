@@ -6,3 +6,7 @@ dist/
 .next/
 coverage/
 .DS_Store
+
+# Local test artifacts (never commit)
+.e2e/
+.runtime-test/

@@ -177,7 +177,17 @@ export default function LoginPage() {
           </div>
         </form>
 
-        <p className="mt-6 text-center text-xs text-slate-500">
+        <p className="mt-6 text-center text-sm text-slate-600">
+          New to BonAgri?{" "}
+          <Link
+            href="/register"
+            className="font-medium text-emerald-700 hover:text-emerald-800"
+          >
+            Create an account
+          </Link>
+        </p>
+
+        <p className="mt-4 text-center text-xs text-slate-500">
           Your account permissions are enforced by the BonAgri API.
         </p>
       </div>

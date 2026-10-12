@@ -515,7 +515,7 @@ export default function Home() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => router.push("/login")}
+                  onClick={() => router.push("/register")}
                   className="rounded-lg bg-[#17633a] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0f4d2b]"
                 >
                   Join BonAgri

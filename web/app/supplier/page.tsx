@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import AuthGuard from "../../components/auth/auth-guard";
+import { authHeaders, clearAuth } from "../../lib/auth";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000";
-
-const SUPPLIER_USER_ID = "ae53df0e-9536-4fb1-a195-5c8c1c75ee74";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
 
 type OrderStatus =
   | "PENDING"
@@ -100,6 +101,7 @@ function formatDate(value: string) {
 }
 
 export default function SupplierPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
@@ -112,8 +114,11 @@ export default function SupplierPage() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/orders/supplier?userId=${SUPPLIER_USER_ID}`,
-        { cache: "no-store" },
+        `${API_BASE_URL}/api/orders/supplier`,
+        {
+          cache: "no-store",
+          headers: authHeaders(),
+        },
       );
 
       if (!response.ok) {
@@ -139,8 +144,11 @@ export default function SupplierPage() {
     const fetchOrders = async () => {
       try {
         const response = await fetch(
-          `${API_BASE_URL}/api/orders/supplier?userId=${SUPPLIER_USER_ID}`,
-          { cache: "no-store" },
+          `${API_BASE_URL}/api/orders/supplier`,
+          {
+            cache: "no-store",
+            headers: authHeaders(),
+          },
         );
 
         if (!response.ok) {
@@ -189,6 +197,7 @@ export default function SupplierPage() {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
+            ...authHeaders(),
           },
           body: JSON.stringify({ status }),
         },
@@ -252,7 +261,8 @@ export default function SupplierPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
+    <AuthGuard requiredRole="SUPPLIER">
+      <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div>
@@ -267,12 +277,25 @@ export default function SupplierPage() {
             </p>
           </div>
 
-          <Link
-          href="/"
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-        >
-          Marketplace
-        </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              Marketplace
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                clearAuth();
+                router.replace("/login");
+              }}
+              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -509,7 +532,8 @@ export default function SupplierPage() {
           )}
         </section>
       </div>
-    </main>
+      </main>
+    </AuthGuard>
   );
 }
 

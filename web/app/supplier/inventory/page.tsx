@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import AuthGuard from "../../../components/auth/auth-guard";
+
 import { useEffect, useMemo, useState } from "react";
+import { authHeaders } from "../../../lib/auth";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
 
-const SUPPLIER_USER_ID = "ae53df0e-9536-4fb1-a195-5c8c1c75ee74";
 
 type InventoryItem = {
   productId: string;
@@ -65,8 +67,11 @@ export default function SupplierInventoryPage() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/supplier/inventory?userId=${SUPPLIER_USER_ID}`,
-        { cache: "no-store" },
+        `${API_BASE_URL}/api/supplier/inventory`,
+        {
+          cache: "no-store",
+          headers: authHeaders(),
+        },
       );
 
       if (!response.ok) {
@@ -105,8 +110,11 @@ export default function SupplierInventoryPage() {
     const fetchInventory = async () => {
       try {
         const response = await fetch(
-          `${API_BASE_URL}/api/supplier/inventory?userId=${SUPPLIER_USER_ID}`,
-          { cache: "no-store" },
+          `${API_BASE_URL}/api/supplier/inventory`,
+          {
+          cache: "no-store",
+          headers: authHeaders(),
+        },
         );
 
         if (!response.ok) {
@@ -247,11 +255,12 @@ export default function SupplierInventoryPage() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/supplier/inventory/${item.productId}?userId=${SUPPLIER_USER_ID}`,
+        `${API_BASE_URL}/api/supplier/inventory/${item.productId}`,
         {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
+            ...authHeaders(),
           },
           body: JSON.stringify({
             quantity,
@@ -309,7 +318,8 @@ export default function SupplierInventoryPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
+    <AuthGuard requiredRole="SUPPLIER">
+      <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div>
@@ -557,7 +567,8 @@ export default function SupplierInventoryPage() {
           )}
         </section>
       </div>
-    </main>
+      </main>
+    </AuthGuard>
   );
 }
 

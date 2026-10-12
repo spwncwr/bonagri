@@ -68,10 +68,12 @@ model User {
   firstName       String
   lastName        String
   phone           String?
+  emailVerifiedAt DateTime?
   role            UserRole         @default(BUYER)
   status          UserStatus       @default(ACTIVE)
   supplierProfile SupplierProfile?
   addresses       Address[]
+  emailVerificationTokens EmailVerificationToken[]
   orders          Order[]
   notifications   Notification[]
   createdAt       DateTime         @default(now())
@@ -79,6 +81,20 @@ model User {
 
   @@index([role])
   @@index([status])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model SupplierProfile {

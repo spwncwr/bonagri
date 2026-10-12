@@ -7,10 +7,12 @@ import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { RolesGuard } from "./guards/roles.guard";
 import { PrismaModule } from "../prisma/prisma.module";
+import { MailModule } from "../mail/mail.module";
 
 @Module({
   imports: [
     PrismaModule,
+    MailModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: {

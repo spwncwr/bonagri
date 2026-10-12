@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { authHeaders, fetchCurrentUser, clearAuth, type AuthUser } from "../lib/auth";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http" + "://" + "localhost" + ":" + "3000";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
 
 type ApiProduct = {
   id: string;
@@ -42,6 +44,20 @@ type Product = {
   verified: boolean;
   tone: string;
   visual: string;
+};
+
+type Address = {
+  id: string;
+  label: string;
+  recipientName: string;
+  phone: string | null;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  province: string | null;
+  postalCode: string | null;
+  country: string;
+  isDefault: boolean;
 };
 
 const categories = [
@@ -104,6 +120,8 @@ function mapApiProduct(product: ApiProduct): Product {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [search, setSearch] = useState("");
@@ -113,6 +131,23 @@ export default function Home() {
   const [orderQuantity, setOrderQuantity] = useState(1);
   const [ordering, setOrdering] = useState(false);
   const [orderError, setOrderError] = useState("");
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [addressError, setAddressError] = useState("");
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    label: "Home",
+    recipientName: "",
+    phone: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    province: "",
+    postalCode: "",
+    country: "South Africa",
+  });
   const [orderSuccess, setOrderSuccess] = useState<{
     orderNumber: string;
     productName: string;
@@ -147,6 +182,16 @@ export default function Home() {
   async function handleStartOrder() {
     if (!selectedProduct || ordering) return;
 
+    if (!currentUser) {
+      router.push("/login");
+      return;
+    }
+
+    if (!selectedAddressId) {
+      setAddressError("Please add or select a delivery address before ordering.");
+      return;
+    }
+
     setOrdering(true);
     setOrderError("");
     setOrderSuccess(null);
@@ -156,10 +201,10 @@ export default function Home() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...authHeaders(),
         },
         body: JSON.stringify({
-          userId: "a09e036b-0120-444c-bce4-4061d8a3f0f8",
-          deliveryAddressId: "ca8a2b58-610e-4edb-bfb8-39628c6220e1",
+          deliveryAddressId: selectedAddressId,
           productId: selectedProduct.id,
           quantity: orderQuantity,
           notes: "Development order",
@@ -199,6 +244,86 @@ export default function Home() {
       setOrdering(false);
     }
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSession() {
+      const user = await fetchCurrentUser();
+
+      if (!cancelled) {
+        setCurrentUser(user);
+      }
+    }
+
+    void loadSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "BUYER") {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadAddresses() {
+      try {
+        setAddressesLoading(true);
+        setAddressError("");
+
+        const response = await fetch(`${API_BASE_URL}/api/addresses`, {
+          cache: "no-store",
+          headers: authHeaders(),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            Array.isArray(data?.message)
+              ? data.message.join(", ")
+              : data?.message || "Unable to load delivery addresses.",
+          );
+        }
+
+        const loadedAddresses = Array.isArray(data)
+          ? (data as Address[])
+          : [];
+
+        if (!cancelled) {
+          setAddresses(loadedAddresses);
+
+          const defaultAddress =
+            loadedAddresses.find((address) => address.isDefault) ??
+            loadedAddresses[0];
+
+          setSelectedAddressId(defaultAddress?.id ?? "");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAddressError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load delivery addresses.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setAddressesLoading(false);
+        }
+      }
+    }
+
+    void loadAddresses();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser]);
 
   useEffect(() => {
     let cancelled = false;
@@ -267,13 +392,19 @@ export default function Home() {
   }, [search, activeCategory]);
 
   const loadOrders = useCallback(async () => {
+    if (!currentUser) {
+      setOrders([]);
+      return;
+    }
+
     try {
       setOrdersLoading(true);
       setOrdersError("");
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/orders?userId=a09e036b-0120-444c-bce4-4061d8a3f0f8`,
-      );
+      const response = await fetch(`${API_BASE_URL}/api/orders`, {
+        cache: "no-store",
+        headers: authHeaders(),
+      });
 
       if (!response.ok) {
         throw new Error(`Orders request failed: ${response.status}`);
@@ -291,7 +422,7 @@ export default function Home() {
     } finally {
       setOrdersLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     void loadOrders();
@@ -352,12 +483,45 @@ export default function Home() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <button className="hidden rounded-lg border border-[#ccd5ca] px-4 py-2.5 text-sm font-bold sm:block">
-              Sign in
-            </button>
-            <button className="rounded-lg bg-[#17633a] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0f4d2b]">
-              Join BonAgri
-            </button>
+            {currentUser ? (
+              <>
+                <a
+                  href="#orders"
+                  className="hidden rounded-lg border border-[#ccd5ca] px-4 py-2.5 text-sm font-bold sm:block"
+                >
+                  My Orders
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearAuth();
+                    setCurrentUser(null);
+                    setOrders([]);
+                    router.push("/login");
+                  }}
+                  className="rounded-lg bg-[#17633a] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0f4d2b]"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => router.push("/login")}
+                  className="hidden rounded-lg border border-[#ccd5ca] px-4 py-2.5 text-sm font-bold sm:block"
+                >
+                  Sign in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/login")}
+                  className="rounded-lg bg-[#17633a] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0f4d2b]"
+                >
+                  Join BonAgri
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -572,6 +736,8 @@ export default function Home() {
                     onClick={() => {
   setOrderQuantity(1);
   setOrderError("");
+  setAddressError("");
+  setShowAddressForm(false);
   setSelectedProduct(product);
 }}
                     className="rounded-lg bg-[#17633a] px-4 py-2 text-xs font-black text-white hover:bg-[#0f4d2b]"
@@ -657,6 +823,288 @@ export default function Home() {
                       {selectedProduct.location}
                     </div>
                   </div>
+                </div>
+
+                <div className="mt-5 rounded-xl border border-[#dce2d9] bg-[#f7f8f4] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[9px] font-black uppercase tracking-[0.16em] text-[#7b867d]">
+                        Delivery address
+                      </div>
+                      <div className="mt-1 text-xs text-[#69756c]">
+                        Orders are delivered to the address selected below.
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowAddressForm((visible) => !visible)}
+                      disabled={ordering}
+                      className="shrink-0 rounded-lg border border-[#17633a] px-3 py-2 text-[10px] font-black text-[#17633a] hover:bg-[#eaf2e8] disabled:opacity-50"
+                    >
+                      {showAddressForm ? "Cancel" : "Add address"}
+                    </button>
+                  </div>
+
+                  {addressesLoading ? (
+                    <div className="mt-3 rounded-lg bg-white px-3 py-3 text-xs font-semibold text-[#69756c]">
+                      Loading your saved addresses...
+                    </div>
+                  ) : addresses.length > 0 ? (
+                    <div className="mt-3">
+                      <select
+                        value={selectedAddressId}
+                        onChange={(event) => {
+                          setSelectedAddressId(event.target.value);
+                          setAddressError("");
+                        }}
+                        disabled={ordering}
+                        className="w-full rounded-xl border border-[#cfd8ce] bg-white px-3 py-3 text-sm font-semibold text-[#27382b] outline-none focus:border-[#17633a]"
+                      >
+                        {addresses.map((address) => (
+                          <option key={address.id} value={address.id}>
+                            {address.label} — {address.addressLine1}, {address.city}
+                            {address.isDefault ? " (Default)" : ""}
+                          </option>
+                        ))}
+                      </select>
+
+                      {(() => {
+                        const selectedAddress = addresses.find(
+                          (address) => address.id === selectedAddressId,
+                        );
+
+                        if (!selectedAddress) return null;
+
+                        return (
+                          <div className="mt-3 rounded-lg bg-white px-3 py-3 text-xs leading-5 text-[#69756c]">
+                            <div className="font-black text-[#27382b]">
+                              {selectedAddress.recipientName}
+                            </div>
+                            <div>{selectedAddress.addressLine1}</div>
+                            {selectedAddress.addressLine2 && (
+                              <div>{selectedAddress.addressLine2}</div>
+                            )}
+                            <div>
+                              {selectedAddress.city}
+                              {selectedAddress.province
+                                ? `, ${selectedAddress.province}`
+                                : ""}
+                              {selectedAddress.postalCode
+                                ? ` ${selectedAddress.postalCode}`
+                                : ""}
+                            </div>
+                            <div>{selectedAddress.country}</div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-lg border border-dashed border-[#cbd5ca] bg-white px-4 py-4 text-xs text-[#69756c]">
+                      No delivery address saved yet. Add one below before placing your order.
+                    </div>
+                  )}
+
+                  {showAddressForm && (
+                    <form
+                      className="mt-4 grid gap-3 border-t border-[#dce2d9] pt-4"
+                      onSubmit={async (event) => {
+                        event.preventDefault();
+
+                        if (savingAddress) return;
+
+                        try {
+                          setSavingAddress(true);
+                          setAddressError("");
+
+                          const response = await fetch(
+                            `${API_BASE_URL}/api/addresses`,
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                ...authHeaders(),
+                              },
+                              body: JSON.stringify(addressForm),
+                            },
+                          );
+
+                          const data = await response.json();
+
+                          if (!response.ok) {
+                            throw new Error(
+                              Array.isArray(data?.message)
+                                ? data.message.join(", ")
+                                : data?.message || "Unable to save address.",
+                            );
+                          }
+
+                          const newAddress = data as Address;
+
+                          setAddresses((current) => [
+                            newAddress,
+                            ...current.map((address) => ({
+                              ...address,
+                              isDefault: newAddress.isDefault
+                                ? false
+                                : address.isDefault,
+                            })),
+                          ]);
+                          setSelectedAddressId(newAddress.id);
+                          setShowAddressForm(false);
+                          setAddressForm({
+                            label: "Home",
+                            recipientName: "",
+                            phone: "",
+                            addressLine1: "",
+                            addressLine2: "",
+                            city: "",
+                            province: "",
+                            postalCode: "",
+                            country: "South Africa",
+                          });
+                        } catch (error) {
+                          setAddressError(
+                            error instanceof Error
+                              ? error.message
+                              : "Unable to save address.",
+                          );
+                        } finally {
+                          setSavingAddress(false);
+                        }
+                      }}
+                    >
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <input
+                          required
+                          value={addressForm.label}
+                          onChange={(event) =>
+                            setAddressForm((form) => ({
+                              ...form,
+                              label: event.target.value,
+                            }))
+                          }
+                          placeholder="Label e.g. Home"
+                          className="rounded-lg border border-[#cfd8ce] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#17633a]"
+                        />
+                        <input
+                          required
+                          value={addressForm.recipientName}
+                          onChange={(event) =>
+                            setAddressForm((form) => ({
+                              ...form,
+                              recipientName: event.target.value,
+                            }))
+                          }
+                          placeholder="Recipient name"
+                          className="rounded-lg border border-[#cfd8ce] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#17633a]"
+                        />
+                      </div>
+
+                      <input
+                        value={addressForm.phone}
+                        onChange={(event) =>
+                          setAddressForm((form) => ({
+                            ...form,
+                            phone: event.target.value,
+                          }))
+                        }
+                        placeholder="Phone"
+                        className="rounded-lg border border-[#cfd8ce] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#17633a]"
+                      />
+
+                      <input
+                        required
+                        value={addressForm.addressLine1}
+                        onChange={(event) =>
+                          setAddressForm((form) => ({
+                            ...form,
+                            addressLine1: event.target.value,
+                          }))
+                        }
+                        placeholder="Address line 1"
+                        className="rounded-lg border border-[#cfd8ce] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#17633a]"
+                      />
+
+                      <input
+                        value={addressForm.addressLine2}
+                        onChange={(event) =>
+                          setAddressForm((form) => ({
+                            ...form,
+                            addressLine2: event.target.value,
+                          }))
+                        }
+                        placeholder="Address line 2 (optional)"
+                        className="rounded-lg border border-[#cfd8ce] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#17633a]"
+                      />
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <input
+                          required
+                          value={addressForm.city}
+                          onChange={(event) =>
+                            setAddressForm((form) => ({
+                              ...form,
+                              city: event.target.value,
+                            }))
+                          }
+                          placeholder="City"
+                          className="rounded-lg border border-[#cfd8ce] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#17633a]"
+                        />
+                        <input
+                          value={addressForm.province}
+                          onChange={(event) =>
+                            setAddressForm((form) => ({
+                              ...form,
+                              province: event.target.value,
+                            }))
+                          }
+                          placeholder="Province"
+                          className="rounded-lg border border-[#cfd8ce] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#17633a]"
+                        />
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <input
+                          value={addressForm.postalCode}
+                          onChange={(event) =>
+                            setAddressForm((form) => ({
+                              ...form,
+                              postalCode: event.target.value,
+                            }))
+                          }
+                          placeholder="Postal code"
+                          className="rounded-lg border border-[#cfd8ce] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#17633a]"
+                        />
+                        <input
+                          required
+                          value={addressForm.country}
+                          onChange={(event) =>
+                            setAddressForm((form) => ({
+                              ...form,
+                              country: event.target.value,
+                            }))
+                          }
+                          placeholder="Country"
+                          className="rounded-lg border border-[#cfd8ce] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#17633a]"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={savingAddress}
+                        className="rounded-lg bg-[#17633a] px-4 py-2.5 text-xs font-black text-white hover:bg-[#0f4d2b] disabled:opacity-60"
+                      >
+                        {savingAddress ? "Saving address..." : "Save delivery address"}
+                      </button>
+                    </form>
+                  )}
+
+                  {addressError && (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+                      {addressError}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-5 rounded-xl border border-[#dce2d9] bg-[#f7f8f4] p-4">

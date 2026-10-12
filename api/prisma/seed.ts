@@ -102,6 +102,8 @@ async function main(): Promise<void> {
       phone: "+27000000000",
       role: "SUPPLIER",
       status: "ACTIVE",
+      // Seeded accounts are pre-verified so they can sign in immediately.
+      emailVerifiedAt: new Date(),
     },
     create: {
       email: "dev@bonagri.co.za",
@@ -111,6 +113,7 @@ async function main(): Promise<void> {
       phone: "+27000000000",
       role: "SUPPLIER",
       status: "ACTIVE",
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -127,6 +130,8 @@ async function main(): Promise<void> {
       phone: "+27000000001",
       role: "BUYER",
       status: "ACTIVE",
+      // Seeded accounts are pre-verified so they can sign in immediately.
+      emailVerifiedAt: new Date(),
     },
     create: {
       email: "buyer@bonagri.co.za",
@@ -136,6 +141,7 @@ async function main(): Promise<void> {
       phone: "+27000000001",
       role: "BUYER",
       status: "ACTIVE",
+      emailVerifiedAt: new Date(),
     },
   });
 

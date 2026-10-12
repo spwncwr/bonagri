@@ -321,9 +321,12 @@ export class OrdersService {
             );
           }
 
-          await tx.inventory.update({
+          const release = await tx.inventory.updateMany({
             where: {
               productId: item.productId,
+              reservedQuantity: {
+                gte: item.quantity,
+              },
             },
             data: {
               reservedQuantity: {
@@ -331,6 +334,12 @@ export class OrdersService {
               },
             },
           });
+
+          if (release.count !== 1) {
+            throw new BadRequestException(
+              `Reserved inventory is insufficient to release ${item.productName}`,
+            );
+          }
         }
       }
 

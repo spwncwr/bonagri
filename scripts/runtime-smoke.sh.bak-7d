@@ -1,0 +1,323 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+API="$ROOT/api"
+WEB="$ROOT/web"
+
+API_URL="${API_URL:-http://localhost:3000}"
+WEB_URL="${WEB_URL:-http://localhost:3001}"
+API_PREFIX="${API_PREFIX:-/api}"
+
+TEST_EMAIL="e2e_buyer_$(date +%s)@bonagri.local"
+TEST_PASSWORD='BonAgri-E2E-2026!'
+LOG_DIR="$ROOT/.runtime-test"
+mkdir -p "$LOG_DIR"
+
+cleanup() {
+  echo
+  echo "========================================"
+  echo "RUNTIME SMOKE TEST CLEANUP"
+  echo "========================================"
+
+  [[ -n "${API_PID:-}" ]] && kill "$API_PID" 2>/dev/null || true
+  [[ -n "${WEB_PID:-}" ]] && kill "$WEB_PID" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+fail() {
+  echo
+  echo "❌ RUNTIME TEST FAILED"
+  echo "$1"
+  echo
+  exit 1
+}
+
+request() {
+  local method="$1"
+  local url="$2"
+  local body="${3:-}"
+  local token="${4:-}"
+
+  if [[ -n "$token" ]]; then
+    if [[ -n "$body" ]]; then
+      curl -sS -X "$method" "$url" \
+        -H "Authorization: Bearer $token" \
+        -H "Content-Type: application/json" \
+        -d "$body"
+    else
+      curl -sS -X "$method" "$url" \
+        -H "Authorization: Bearer $token"
+    fi
+  else
+    if [[ -n "$body" ]]; then
+      curl -sS -X "$method" "$url" \
+        -H "Content-Type: application/json" \
+        -d "$body"
+    else
+      curl -sS -X "$method" "$url"
+    fi
+  fi
+}
+
+echo "========================================"
+echo "BONAGRI RUNTIME SMOKE TEST"
+echo "========================================"
+echo "API: $API_URL"
+echo "WEB: $WEB_URL"
+echo "TEST EMAIL: $TEST_EMAIL"
+echo
+
+echo "[1/8] Checking PostgreSQL / Prisma..."
+cd "$API"
+npx prisma db execute --stdin >/dev/null <<'SQL'
+SELECT 1;
+SQL
+echo "✓ Database reachable"
+
+echo
+echo "[2/8] Starting API..."
+cd "$API"
+
+CAPTURE_FILE="$ROOT/.e2e/verification-url.txt"
+mkdir -p "$ROOT/.e2e"
+rm -f "$CAPTURE_FILE"
+
+E2E_CAPTURE_MAIL=true \
+E2E_MAIL_CAPTURE_FILE="$CAPTURE_FILE" \
+npm run start:dev >"$LOG_DIR/api.log" 2>&1 &
+API_PID=$!
+
+for i in {1..60}; do
+  if curl -sS "$API_URL$API_PREFIX/categories" >/dev/null 2>&1; then
+    echo "✓ API responding"
+    break
+  fi
+
+  if ! kill -0 "$API_PID" 2>/dev/null; then
+    cat "$LOG_DIR/api.log"
+    fail "API process exited."
+  fi
+
+  sleep 1
+
+  if [[ "$i" == "60" ]]; then
+    cat "$LOG_DIR/api.log"
+    fail "API did not become ready."
+  fi
+done
+
+echo
+echo "[3/8] Starting frontend..."
+cd "$WEB"
+npm run dev -- --port 3001 >"$LOG_DIR/web.log" 2>&1 &
+WEB_PID=$!
+
+for i in {1..60}; do
+  if curl -sS "$WEB_URL/login" >/dev/null 2>&1; then
+    echo "✓ Frontend responding"
+    break
+  fi
+
+  if ! kill -0 "$WEB_PID" 2>/dev/null; then
+    cat "$LOG_DIR/web.log"
+    fail "Frontend process exited."
+  fi
+
+  sleep 1
+
+  if [[ "$i" == "60" ]]; then
+    cat "$LOG_DIR/web.log"
+    fail "Frontend did not become ready."
+  fi
+done
+
+echo
+echo "[4/8] Testing public catalog..."
+CATALOG="$(request GET "$API_URL$API_PREFIX/categories")"
+
+echo "$CATALOG" | grep -q '\[' \
+  || fail "Categories endpoint did not return an array."
+
+echo "✓ Categories endpoint responding"
+
+echo
+echo "[5/8] Testing registration..."
+REGISTER_RESPONSE="$(
+  request POST "$API_URL$API_PREFIX/auth/register" \
+  "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\",\"firstName\":\"E2E\",\"lastName\":\"Buyer\"}"
+)"
+
+if ! echo "$REGISTER_RESPONSE" | grep -q '"emailVerificationRequired"[[:space:]]*:[[:space:]]*true'; then
+  echo "Registration response:"
+  echo "$REGISTER_RESPONSE"
+  fail "Registration did not require email verification."
+fi
+
+echo "✓ Buyer registration accepted"
+echo "✓ Email verification required"
+
+echo
+echo "[6/8] Testing unverified-login protection..."
+LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}"
+)"
+
+if [[ "$LOGIN_HTTP" != "401" && "$LOGIN_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/login.json"
+  fail "Unverified buyer was not blocked from login. HTTP $LOGIN_HTTP"
+fi
+
+echo "✓ Unverified buyer blocked from login"
+
+echo
+echo "[7/8] Capturing verification URL..."
+
+CAPTURE_FILE="$ROOT/.e2e/verification-url.txt"
+
+
+echo
+echo "[7b/8] Waiting for verification URL..."
+
+for _ in $(seq 1 30); do
+  if [[ -s "$CAPTURE_FILE" ]]; then
+    break
+  fi
+  sleep 0.5
+done
+
+if [[ ! -s "$CAPTURE_FILE" ]]; then
+  fail "Verification URL was not captured."
+fi
+
+VERIFICATION_URL="$(cat "$CAPTURE_FILE")"
+
+if [[ "$VERIFICATION_URL" != *"/verify-email?token="* ]]; then
+  echo "Captured value:"
+  cat "$CAPTURE_FILE"
+  fail "Captured verification URL is invalid."
+fi
+
+VERIFICATION_TOKEN="${VERIFICATION_URL##*token=}"
+
+if [[ -z "$VERIFICATION_TOKEN" ]]; then
+  fail "Verification token could not be extracted."
+fi
+
+echo "✓ Raw verification token captured"
+
+echo
+echo "[7c/8] Verifying email..."
+
+VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/verify.json" -w "%{http_code}" \
+    --get \
+    --data-urlencode "token=$VERIFICATION_TOKEN" \
+    "$API_URL$API_PREFIX/auth/verify-email"
+)"
+
+if [[ "$VERIFY_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/verify.json"
+  fail "Email verification failed. HTTP $VERIFY_HTTP"
+fi
+
+if ! grep -q '"emailVerified"[[:space:]]*:[[:space:]]*true' "$LOG_DIR/verify.json"; then
+  cat "$LOG_DIR/verify.json"
+  fail "Verification response did not confirm email verification."
+fi
+
+echo "✓ Email verification succeeded"
+
+echo
+echo "[7d/8] Confirming verified state with Prisma Client..."
+
+USER_STATE="$(
+  TEST_EMAIL="$TEST_EMAIL" node <<'NODE'
+const { PrismaClient } = require("./src/generated/prisma/client");
+
+(async () => {
+  const prisma = new PrismaClient();
+
+  try {
+    const email = process.env.TEST_EMAIL;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        emailVerifiedAt: true,
+      },
+    });
+
+    if (!user || !user.emailVerifiedAt) {
+      process.exit(2);
+    }
+
+    process.stdout.write(JSON.stringify(user));
+  } finally {
+    await prisma.$disconnect();
+  }
+})().catch(() => process.exit(1));
+NODE
+)"
+
+if [[ -z "$USER_STATE" ]]; then
+  fail "Database does not show the E2E user as verified."
+fi
+
+USER_ID="$(printf '%s' "$USER_STATE" | python3 -c '
+import json,sys
+data=json.load(sys.stdin)
+print(data["id"])
+')"
+
+echo "✓ Database verification state confirmed"
+echo "✓ Verified user: $USER_ID"
+
+echo
+echo "[7e/8] Verifying token cannot be reused..."
+
+REUSE_HTTP="$(
+  curl -sS -o "$LOG_DIR/verify-reuse.json" -w "%{http_code}" \
+    --get \
+    --data-urlencode "token=$VERIFICATION_TOKEN" \
+    "$API_URL$API_PREFIX/auth/verify-email"
+)"
+
+if [[ "$REUSE_HTTP" != "401" ]]; then
+  cat "$LOG_DIR/verify-reuse.json"
+  fail "Unexpected verification-token reuse response: HTTP $REUSE_HTTP"
+fi
+
+echo "✓ Verification token reuse handled"
+
+echo "[8/8] Runtime endpoint inventory..."
+echo "Available API routes discovered from source:"
+grep -RhoE '@(Get|Post|Patch|Put|Delete)\([^)]*\)' \
+  "$API/src" 2>/dev/null |
+  sort -u |
+  sed 's/^/  /' || true
+
+echo
+echo "========================================"
+echo "RUNTIME SMOKE TEST RESULT"
+echo "========================================"
+echo "✓ Database reachable"
+echo "✓ API starts"
+echo "✓ Frontend starts"
+echo "✓ Catalog endpoint responds"
+echo "✓ Buyer registration works"
+echo "✓ Email verification is required"
+echo "✓ Unverified login is blocked"
+echo "✓ Registered user persisted"
+echo
+echo "NEXT BLOCKER:"
+echo "Verification-token retrieval needs to be wired into the automated E2E path"
+echo "before a fully automated register → verify → login → order workflow can run."
+echo
+echo "Logs:"
+echo "  $LOG_DIR/api.log"
+echo "  $LOG_DIR/web.log"

@@ -151,7 +151,8 @@ async function main(): Promise<void> {
 
   await prisma.address.upsert({
     where: {
-      id: "00000000-0000-0000-0000-000000000001",
+      // Must satisfy class-validator's @IsUUID() (valid v4 version/variant digits).
+      id: "11111111-1111-4111-8111-111111111111",
     },
     update: {
       label: "Development Delivery Address",
@@ -165,7 +166,7 @@ async function main(): Promise<void> {
       isDefault: true,
     },
     create: {
-      id: "00000000-0000-0000-0000-000000000001",
+      id: "11111111-1111-4111-8111-111111111111",
       userId: buyerUser.id,
       label: "Development Delivery Address",
       recipientName: "BonAgri Buyer",

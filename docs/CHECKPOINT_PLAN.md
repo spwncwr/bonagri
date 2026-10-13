@@ -48,7 +48,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP0 | Role & audit foundations | 2026-10-13 | done (b07b321) |
 | CP1 | Supplier listing screens | 2026-10-13 | done (2d8c4bc) |
 | CP2 | Consumer flow completion | 2026-10-13 | done (f4249e1) |
-| CP3 | Admin management | — | pending |
+| CP3 | Admin management | 2026-10-13 | done (38fd535) |
 | CP4 | Agro dealers | — | pending |
 | CP5 | Disputes | — | pending |
 | CP6 | Glue & self-service | — | pending |
@@ -100,6 +100,19 @@ Extra gates:
 Role journey (deployed): register a fresh buyer → admin promotes them to SUPPLIER →
 that user re-logs-in and lands on `/supplier` hub → admin suspends them → login refused
 → admin reactivates; admin creates/renames a category visible on marketplace.
+
+Status **done** (`38fd535`, verified live 2026-10-13): 49 API unit tests
+(`admin.service.spec.ts` +17); new `AdminModule` — `GET /admin/stats`, `GET/PATCH
+/admin/users` (search/role/status filters, suspend/reactivate — admins cannot be
+suspended), `POST /admin/users/:id/promote-supplier` (profile exactly once, 409 on
+repeat), `GET/PATCH /admin/suppliers` (verify toggle), `POST/PATCH /admin/categories`
+(auto-slug, 409 on duplicate); full `/admin` console (layout + dashboard/users/
+suppliers/categories/orders screens); `/orders/[id]` now buyer+admin; smoke A1–A3
+green. Deployed journey: promote 201 → double-promote 409 → re-login SUPPLIER +
+`/orders/supplier` 200 → suspend (token 401, login 401) → reactivate (login 201);
+category created → public marketplace → renamed → public again, duplicate slug 409;
+verify toggle read back via public `GET /products` then restored; all 5 admin web
+screens 200; buyer/supplier regressions 200.
 
 ### CP4 — Agro dealers
 Extra gates:

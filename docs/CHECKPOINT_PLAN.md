@@ -51,7 +51,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP3 | Admin management | 2026-10-13 | done (38fd535) |
 | CP4 | Agro dealers | 2026-10-13 | done (426fa27) |
 | CP5 | Disputes | 2026-10-13 | done (7545c5c) |
-| CP6 | Glue & self-service | — | pending |
+| CP6 | Glue & self-service | 2026-10-13 | done (02afeeb) |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
 
@@ -183,6 +183,36 @@ Extra gates:
   promotes role exactly once.
 Role journey (deployed): buyer applies to sell → admin approves → user becomes dealer/
 supplier on next login; notification emails observed for confirm/deliver/dispute.
+
+Status **done** (`02afeeb`, verified live 2026-10-13): 100 API unit tests (+26:
+transition map writes the right rows for the right people, email failure never breaks
+the trigger, dispute-closed rows are row-only (CP5 already emailed), inbox scoping +
+mark-read ownership; apply guards, reopen-after-reject, approve promotes exactly once
+with profile+role+stamp in one transaction, 409s on every double-promotion path); new
+**`SellerApplication`** model (`userId @unique` → one lifecycle per user, reopen on
+re-apply after rejection, migration `20261013184325_add_seller_applications`,
+generated client committed); new **`NotificationsModule`** (`GET /notifications`,
+`PATCH /notifications/:id/read`) + **`SellerApplicationsModule`**
+(`POST/GET /seller-applications`, `GET .../mine`, `PATCH /seller-applications/:id`).
+Notification rows + best-effort emails on: order CONFIRMED/DELIVERED (→ buyer),
+CANCELLED (→ vendor), dispute closed (→ buyer, row only), application decided and
+supplier verified (row + email); single generic `sendNotificationEmail` with the same
+capture-mode short-circuit as the dispute email (`E2E_NOTIFY_CAPTURE_FILE`, default
+`.e2e/notifications.txt`). Web: buyer **`/apply`** page (apply as supplier/dealer,
+status card, re-apply after rejection) + "Sell on BonAgri" header link,
+**notifications panel** shared component on the buyer homepage + vendor hub,
+`/admin/applications` console screen (+ nav entry). Smoke **F1–F3** (fresh
+registered+verified applicant so the A2 promote journey stays untouched; apply →
+duplicate 409 → vendor 403 → /mine + admin queue; confirm/deliver/dispute transitions
+assert buyer notification rows + captured emails; approve → 201, re-approve → 409,
+re-login as SUPPLIER, vendor hub 200, approval notification) — suite now 113 ✓ across
+6 acceptance flows. Live journey: buyer@bonagri.co.za applied (PENDING, duplicate 409),
+order `BON-20261013-774765` walked to DELIVERED (confirm+deliver emails via SendGrid),
+dispute resolved (`emailSent: true` + dispute notification), admin approved
+(approval email), re-approve 409, re-login → role SUPPLIER, `/orders/supplier` 200,
+approval notification visible, `/mine` now 403; `/apply`, `/admin/applications`,
+`/supplier` all 200. Known residue (accepted): buyer@bonagri.co.za is now a SUPPLIER
+account.
 
 ## 4. Checkpoint hygiene rules
 

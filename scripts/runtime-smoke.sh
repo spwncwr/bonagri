@@ -1226,6 +1226,397 @@ echo
 echo "✓ CONSUMER FLOW ACCEPTANCE PASSED"
 
 echo
+echo "ADMIN MANAGEMENT FLOW"
+echo "========================================"
+
+ADMIN_E2E_EMAIL="${ADMIN_E2E_EMAIL:-}"
+ADMIN_E2E_PASSWORD="${ADMIN_E2E_PASSWORD:-}"
+
+if [ -z "$ADMIN_E2E_PASSWORD" ] && [ -f "$API/.env" ]; then
+  ADMIN_E2E_EMAIL="${ADMIN_E2E_EMAIL:-$(sed -n 's/^SEED_ADMIN_EMAIL=//p' "$API/.env" | tail -1)}"
+  ADMIN_E2E_PASSWORD="$(sed -n 's/^SEED_ADMIN_PASSWORD=//p' "$API/.env" | tail -1 | tr -d "\"'" | tr -d '\r')"
+fi
+
+if [ -z "$ADMIN_E2E_EMAIL" ]; then
+  ADMIN_E2E_EMAIL="admin@bonagri.co.za"
+fi
+
+if [ -z "$ADMIN_E2E_PASSWORD" ]; then
+  echo "⚠ Admin section SKIPPED: no SEED_ADMIN_PASSWORD in api/.env and no ADMIN_E2E_PASSWORD env var."
+else
+
+echo
+echo "[A1/3] Admin login + platform stats..."
+
+ADMIN_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
+)"
+
+if [[ "$ADMIN_LOGIN_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/admin-login.json"
+  fail "Admin login failed (check SEED_ADMIN_* env and that the seed ran). HTTP $ADMIN_LOGIN_HTTP"
+fi
+
+ADMIN_TOKEN="$(
+  python3 -c '
+import json,sys
+with open(sys.argv[1]) as f:
+    data=json.load(f)
+print(data.get("accessToken",""))
+' "$LOG_DIR/admin-login.json"
+)"
+
+if [ -z "$ADMIN_TOKEN" ]; then
+  fail "Admin login returned no access token"
+fi
+
+echo "✓ Admin login succeeded"
+
+request GET "$API_URL$API_PREFIX/admin/stats" "" "$ADMIN_TOKEN" > "$LOG_DIR/admin-stats.json"
+
+python3 - "$LOG_DIR/admin-stats.json" <<'PYJSON'
+import json, sys
+
+stats = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if stats.get("users", {}).get("total", 0) < 3:
+    raise SystemExit("ERROR: expected at least 3 users in platform stats")
+
+if stats.get("products", {}).get("total", 0) < 1:
+    raise SystemExit("ERROR: expected at least 1 product in platform stats")
+
+print("✓ Platform stats: {} users, {} products, {} orders".format(
+    stats["users"]["total"], stats["products"]["total"], stats["orders"]["total"]))
+PYJSON
+
+echo
+echo "[A2/3] Promote buyer -> supplier, suspend -> reactivate..."
+
+PROMOTE_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-promote.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/users/$USER_ID/promote-supplier" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"businessName":"Smoke Admin Traders","city":"Polokwane"}'
+)"
+
+if [[ "$PROMOTE_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/admin-promote.json"
+  fail "Promote-to-supplier failed. HTTP $PROMOTE_HTTP"
+fi
+
+python3 - "$LOG_DIR/admin-promote.json" <<'PYJSON'
+import json, sys
+
+user = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if user.get("role") != "SUPPLIER" or not user.get("supplierProfile"):
+    raise SystemExit("ERROR: promotion did not produce SUPPLIER role with a profile")
+
+print("✓ Promoted to SUPPLIER with profile {}".format(user["supplierProfile"]["id"]))
+PYJSON
+
+PROMOTE_AGAIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-promote-again.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/users/$USER_ID/promote-supplier" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"businessName":"Smoke Admin Traders Again"}'
+)"
+
+if [[ "$PROMOTE_AGAIN_HTTP" != "409" ]]; then
+  cat "$LOG_DIR/admin-promote-again.json"
+  fail "Second promotion should conflict (profile created exactly once). HTTP $PROMOTE_AGAIN_HTTP"
+fi
+
+echo "✓ Second promotion rejected with 409 (profile exists exactly once)"
+
+PROMOTED_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-promoted-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}"
+)"
+
+if [[ "$PROMOTED_LOGIN_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/admin-promoted-login.json"
+  fail "Promoted user login failed. HTTP $PROMOTED_LOGIN_HTTP"
+fi
+
+PROMOTED_TOKEN="$(
+  python3 -c '
+import json,sys
+with open(sys.argv[1]) as f:
+    data=json.load(f)
+print(data.get("accessToken",""))
+' "$LOG_DIR/admin-promoted-login.json"
+)"
+
+python3 - "$LOG_DIR/admin-promoted-login.json" <<'PYJSON'
+import json, sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+role = data.get("user", {}).get("role")
+
+if role != "SUPPLIER":
+    raise SystemExit("ERROR: expected role SUPPLIER after re-login, got {}".format(role))
+
+print("✓ Promoted user re-logs-in as SUPPLIER (lands on supplier hub role)")
+PYJSON
+
+SUPPLIER_HUB_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-supplier-hub.json" -w "%{http_code}" \
+    -X GET "$API_URL$API_PREFIX/orders/supplier" \
+    -H "Authorization: Bearer $PROMOTED_TOKEN"
+)"
+
+if [[ "$SUPPLIER_HUB_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/admin-supplier-hub.json"
+  fail "Promoted user cannot load supplier hub data. HTTP $SUPPLIER_HUB_HTTP"
+fi
+
+echo "✓ Promoted user loads supplier hub data (GET /orders/supplier -> 200)"
+
+SUSPEND_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-suspend.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/admin/users/$USER_ID/status" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"SUSPENDED"}'
+)"
+
+if [[ "$SUSPEND_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/admin-suspend.json"
+  fail "Suspend failed. HTTP $SUSPEND_HTTP"
+fi
+
+TOKEN_AFTER_SUSPEND_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-token-rejected.json" -w "%{http_code}" \
+    -X GET "$API_URL$API_PREFIX/auth/me" \
+    -H "Authorization: Bearer $PROMOTED_TOKEN"
+)"
+
+if [[ "$TOKEN_AFTER_SUSPEND_HTTP" != "401" ]]; then
+  cat "$LOG_DIR/admin-token-rejected.json"
+  fail "Existing token still valid after suspension. HTTP $TOKEN_AFTER_SUSPEND_HTTP"
+fi
+
+echo "✓ Existing token rejected at the guard after suspension"
+
+SUSPENDED_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-suspended-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}"
+)"
+
+if [[ "$SUSPENDED_LOGIN_HTTP" != "401" ]]; then
+  cat "$LOG_DIR/admin-suspended-login.json"
+  fail "Suspended user could still log in. HTTP $SUSPENDED_LOGIN_HTTP"
+fi
+
+echo "✓ Login refused while suspended (401)"
+
+REACTIVATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-reactivate.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/admin/users/$USER_ID/status" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"ACTIVE"}'
+)"
+
+if [[ "$REACTIVATE_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/admin-reactivate.json"
+  fail "Reactivation failed. HTTP $REACTIVATE_HTTP"
+fi
+
+REACTIVATED_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-reactivated-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}"
+)"
+
+if [[ "$REACTIVATED_LOGIN_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/admin-reactivated-login.json"
+  fail "Reactivated user cannot log in. HTTP $REACTIVATED_LOGIN_HTTP"
+fi
+
+echo "✓ Reactivated user logs in again (201)"
+
+echo
+echo "[A3/3] Category create/rename + supplier verification toggle..."
+
+ADMIN_CAT_SLUG="smoke-admin-category-$(date +%s)"
+
+CREATE_CAT_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-category.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/categories" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"Smoke Admin Category\",\"slug\":\"$ADMIN_CAT_SLUG\"}"
+)"
+
+if [[ "$CREATE_CAT_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/admin-category.json"
+  fail "Category creation failed. HTTP $CREATE_CAT_HTTP"
+fi
+
+ADMIN_CATEGORY_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/admin-category.json"
+)"
+
+if [ -z "$ADMIN_CATEGORY_ID" ]; then
+  fail "Category creation returned no id"
+fi
+
+echo "✓ Category created"
+
+request GET "$API_URL$API_PREFIX/categories" "" > "$LOG_DIR/admin-categories-public.json"
+
+python3 - "$LOG_DIR/admin-categories-public.json" "$ADMIN_CAT_SLUG" <<'PYJSON'
+import json, sys
+
+categories = json.load(open(sys.argv[1], encoding="utf-8"))
+slug = sys.argv[2]
+
+if not any(c.get("slug") == slug for c in categories):
+    raise SystemExit("ERROR: new category not visible on the public marketplace list")
+
+print("✓ New category visible on the public marketplace (/{}/)".format(slug))
+PYJSON
+
+RENAME_CAT_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-category-renamed.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/admin/categories/$ADMIN_CATEGORY_ID" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"name":"Smoke Admin Category Renamed"}'
+)"
+
+if [[ "$RENAME_CAT_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/admin-category-renamed.json"
+  fail "Category rename failed. HTTP $RENAME_CAT_HTTP"
+fi
+
+request GET "$API_URL$API_PREFIX/categories" "" > "$LOG_DIR/admin-categories-renamed.json"
+
+python3 - "$LOG_DIR/admin-categories-renamed.json" "$ADMIN_CAT_SLUG" <<'PYJSON'
+import json, sys
+
+categories = json.load(open(sys.argv[1], encoding="utf-8"))
+slug = sys.argv[2]
+
+match = next((c for c in categories if c.get("slug") == slug), None)
+
+if match is None or match.get("name") != "Smoke Admin Category Renamed":
+    raise SystemExit("ERROR: category rename not visible on the public marketplace list")
+
+print("✓ Category rename visible publicly")
+PYJSON
+
+DUP_CAT_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-category-dup.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/categories" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"Smoke Admin Category Duplicate\",\"slug\":\"$ADMIN_CAT_SLUG\"}"
+)"
+
+if [[ "$DUP_CAT_HTTP" != "409" ]]; then
+  cat "$LOG_DIR/admin-category-dup.json"
+  fail "Duplicate category slug should conflict. HTTP $DUP_CAT_HTTP"
+fi
+
+echo "✓ Duplicate category slug handled with 409"
+
+request GET "$API_URL$API_PREFIX/products" "" > "$LOG_DIR/admin-products.json"
+
+SUPPLIER_PROFILE_ID="$(
+  python3 -c '
+import json,sys
+products = json.load(open(sys.argv[1], encoding="utf-8"))
+if not products:
+    raise SystemExit("ERROR: no products in the marketplace; run the seed first")
+print(products[0]["supplier"]["id"])
+' "$LOG_DIR/admin-products.json"
+)"
+
+CURRENT_VERIFIED="$(
+  python3 -c '
+import json,sys
+products = json.load(open(sys.argv[1], encoding="utf-8"))
+print(str(products[0]["supplier"]["verified"]).lower())
+' "$LOG_DIR/admin-products.json"
+)"
+
+if [ "$CURRENT_VERIFIED" = "true" ]; then
+  NEXT_VERIFIED="false"
+else
+  NEXT_VERIFIED="true"
+fi
+
+VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-verify.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/admin/suppliers/$SUPPLIER_PROFILE_ID" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"verified\":$NEXT_VERIFIED}"
+)"
+
+if [[ "$VERIFY_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/admin-verify.json"
+  fail "Verification toggle failed. HTTP $VERIFY_HTTP"
+fi
+
+request GET "$API_URL$API_PREFIX/products" "" > "$LOG_DIR/admin-products-verified.json"
+
+python3 - "$LOG_DIR/admin-products-verified.json" "$SUPPLIER_PROFILE_ID" "$NEXT_VERIFIED" <<'PYJSON'
+import json, sys
+
+products = json.load(open(sys.argv[1], encoding="utf-8"))
+supplier_id = sys.argv[2]
+expected = sys.argv[3] == "true"
+
+match = next((p for p in products if p.get("supplier", {}).get("id") == supplier_id), None)
+
+if match is None:
+    raise SystemExit("ERROR: supplier's product missing from the marketplace")
+
+if match["supplier"]["verified"] is not expected:
+    raise SystemExit(
+        "ERROR: public verified flag did not update (expected {}, got {})".format(
+            expected, match["supplier"]["verified"]
+        )
+    )
+
+print("✓ Verification toggle readable publicly (supplier.verified={})".format(expected))
+PYJSON
+
+RESTORE_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/admin-verify-restore.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/admin/suppliers/$SUPPLIER_PROFILE_ID" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"verified\":$CURRENT_VERIFIED}"
+)"
+
+if [[ "$RESTORE_VERIFY_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/admin-verify-restore.json"
+  fail "Verification restore failed. HTTP $RESTORE_VERIFY_HTTP"
+fi
+
+echo "✓ Original verification state restored"
+
+fi
+
+echo
+echo "✓ ADMIN MANAGEMENT FLOW ACCEPTANCE PASSED"
+
+echo
 echo "RUNTIME SMOKE TEST CLEANUP"
 echo "========================================"
 

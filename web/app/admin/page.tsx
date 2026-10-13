@@ -2,117 +2,225 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import AuthGuard from "../../components/auth/auth-guard";
-import { fetchCurrentUser, type AuthUser } from "../../lib/auth";
+import { authHeaders } from "../../lib/auth";
 
-const sections = [
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
+
+type Stats = {
+  users: {
+    total: number;
+    buyers: number;
+    suppliers: number;
+    dealers: number;
+    admins: number;
+    suspended: number;
+  };
+  products: {
+    total: number;
+    active: number;
+    draft: number;
+    inactive: number;
+  };
+  orders: {
+    total: number;
+    pending: number;
+    confirmed: number;
+    processing: number;
+    readyForDelivery: number;
+    outForDelivery: number;
+    delivered: number;
+    cancelled: number;
+  };
+  revenue: {
+    net: string | number;
+    gross: string | number;
+  };
+};
+
+const SECTIONS = [
   {
-    title: "Dashboard",
-    description: "Platform statistics: users, orders and revenue.",
-    status: "Coming in CP3",
-  },
-  {
+    href: "/admin/users",
     title: "Users",
-    description:
-      "Suspend, activate and promote accounts (buyer, supplier, agro dealer).",
-    status: "Coming in CP3",
+    description: "Suspend, reactivate and promote buyers to suppliers.",
   },
   {
+    href: "/admin/suppliers",
     title: "Suppliers",
     description: "Review and verify supplier and dealer profiles.",
-    status: "Coming in CP3",
   },
   {
+    href: "/admin/categories",
     title: "Categories",
-    description: "Manage marketplace categories.",
-    status: "Coming in CP3",
+    description: "Create and rename marketplace categories.",
   },
   {
+    href: "/admin/orders",
     title: "Orders",
-    description: "Platform-wide order overview.",
-    status: "Coming in CP3",
-  },
-  {
-    title: "Disputes",
-    description: "Review and resolve buyer disputes.",
-    status: "Coming in CP5",
+    description: "Platform-wide order overview with buyer details.",
   },
 ];
 
-export default function AdminPage() {
-  const [user, setUser] = useState<AuthUser | null>(null);
+export default function AdminDashboardPage() {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
-    void fetchCurrentUser().then((currentUser) => {
-      if (!cancelled) {
-        setUser(currentUser);
+    const load = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
+          cache: "no-store",
+          headers: authHeaders(),
+        });
+
+        if (!response.ok) {
+          throw new Error("Unable to load platform statistics");
+        }
+
+        const data = (await response.json()) as Stats;
+
+        if (!cancelled) {
+          setStats(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Unable to load statistics",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    });
+    };
+
+    void load();
 
     return () => {
       cancelled = true;
     };
   }, []);
 
+  const inProgress =
+    stats !== null
+      ? stats.orders.confirmed +
+        stats.orders.processing +
+        stats.orders.readyForDelivery +
+        stats.orders.outForDelivery
+      : 0;
+
   return (
-    <AuthGuard requiredRole="ADMIN">
-      <main className="min-h-screen bg-slate-50 px-6 py-12">
-        <div className="mx-auto max-w-4xl">
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <Link
-                href="/"
-                className="text-sm font-medium text-emerald-700 hover:text-emerald-800"
-              >
-                ← Back to BonAgri
-              </Link>
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Live platform statistics across users, products and orders.
+        </p>
+      </div>
 
-              <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900">
-                Admin console
-              </h1>
+      {error ? (
+        <div
+          role="alert"
+          className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {error}
+        </div>
+      ) : null}
 
-              <p className="mt-2 text-sm text-slate-600">
-                Signed in as{" "}
-                <span className="font-medium text-slate-900">
-                  {user ? `${user.firstName} ${user.lastName}` : "…"}
-                </span>{" "}
-                — platform management for the BonAgri marketplace.
-              </p>
+      {loading ? (
+        <p className="text-sm text-slate-500">Loading statistics...</p>
+      ) : stats ? (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Users
+              </div>
+              <div className="mt-2 text-3xl font-bold text-slate-900">
+                {stats.users.total}
+              </div>
+              <div className="mt-2 text-xs text-slate-600">
+                {stats.users.buyers} buyers · {stats.users.suppliers}{" "}
+                suppliers · {stats.users.dealers} dealers ·{" "}
+                {stats.users.admins} admins
+              </div>
+              {stats.users.suspended > 0 ? (
+                <div className="mt-1 text-xs font-semibold text-red-600">
+                  {stats.users.suspended} suspended
+                </div>
+              ) : null}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Products
+              </div>
+              <div className="mt-2 text-3xl font-bold text-slate-900">
+                {stats.products.active}
+              </div>
+              <div className="mt-2 text-xs text-slate-600">
+                live listings · {stats.products.draft} draft ·{" "}
+                {stats.products.inactive} inactive
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Orders
+              </div>
+              <div className="mt-2 text-3xl font-bold text-slate-900">
+                {stats.orders.total}
+              </div>
+              <div className="mt-2 text-xs text-slate-600">
+                {stats.orders.pending} pending · {inProgress} in progress ·{" "}
+                {stats.orders.delivered} delivered
+              </div>
+              {stats.orders.cancelled > 0 ? (
+                <div className="mt-1 text-xs text-slate-500">
+                  {stats.orders.cancelled} cancelled
+                </div>
+              ) : null}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Revenue (excl. cancelled)
+              </div>
+              <div className="mt-2 text-3xl font-bold text-emerald-700">
+                R{Number(stats.revenue.net).toLocaleString("en-ZA", {
+                  minimumFractionDigits: 2,
+                })}
+              </div>
+              <div className="mt-2 text-xs text-slate-600">
+                gross R{Number(stats.revenue.gross).toLocaleString("en-ZA", {
+                  minimumFractionDigits: 2,
+                })}
+              </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            The admin console is under construction. Foundations (CP0) are live:
-            this account can already view every order via the API. Management
-            screens arrive with CP3, disputes with CP5.
-          </div>
-
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {sections.map((section) => (
-              <div
-                key={section.title}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {SECTIONS.map((section) => (
+              <Link
+                key={section.href}
+                href={section.href}
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50/40"
               >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base font-bold text-slate-900">
-                    {section.title}
-                  </h2>
-
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                    {section.status}
-                  </span>
-                </div>
-
+                <h2 className="text-base font-bold text-slate-900">
+                  {section.title} →
+                </h2>
                 <p className="mt-2 text-sm text-slate-600">
                   {section.description}
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
-        </div>
-      </main>
-    </AuthGuard>
+        </>
+      ) : null}
+    </div>
   );
 }

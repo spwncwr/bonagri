@@ -188,7 +188,7 @@ export default function OrderDetailPage() {
   }
 
   return (
-    <AuthGuard requiredRole="BUYER">
+    <AuthGuard allowedRoles={["BUYER", "ADMIN"]}>
       <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
         <header className="border-b border-[#dce2d9] bg-white">
           <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">

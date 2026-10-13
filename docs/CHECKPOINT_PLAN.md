@@ -50,7 +50,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP2 | Consumer flow completion | 2026-10-13 | done (f4249e1) |
 | CP3 | Admin management | 2026-10-13 | done (38fd535) |
 | CP4 | Agro dealers | 2026-10-13 | done (426fa27) |
-| CP5 | Disputes | — | pending |
+| CP5 | Disputes | 2026-10-13 | done (7545c5c) |
 | CP6 | Glue & self-service | — | pending |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
@@ -150,6 +150,32 @@ Role journey (deployed): buyer orders → supplier marks DELIVERED → buyer ope
 ( DAMAGED ) → vendor sees it → admin resolves with note → buyer sees resolution →
 resolution email actually arrives (SMTP already live); dispute appears in admin queue
 with order history evidence.
+
+Status **done** (`7545c5c`, verified live 2026-10-13): 74 API unit tests (+13:
+eligibility statuses, owner-only, vendor blocked, duplicate 409 + P2002 race, vendor
+scoping, admin resolve/reject transitions incl. note-required + terminal-state +
+email-failure resilience); new **`Dispute`** model (`orderId` `@unique` → exactly one
+dispute per order, `DisputeReason`/`DisputeStatus` enums, opener/resolver relations,
+migration `20261013125752_add_disputes`, generated client committed); new
+**`DisputesModule`** — `POST /orders/:id/dispute` (BUYER only, eligible only from
+OUT_FOR_DELIVERY/DELIVERED), `GET /disputes/mine` (SUPPLIER+AGRO_DEALER, scoped via
+order→items→product→supplier), `GET /disputes` + `PATCH /disputes/:id` (ADMIN;
+OPEN→UNDER_REVIEW→RESOLVED/REJECTED, resolution note required to close, terminal states
+immutable); **resolution email** via the existing SMTP service, best-effort so an SMTP
+outage never blocks an admin decision (capture mode short-circuits → smoke never hits
+real SMTP); `GET /orders/:id` now includes the dispute; web: buyer "Open dispute" form +
+dispute/resolution panel on `/orders/[id]`, **Disputes** section on the vendor hub,
+`/admin/disputes` queue (resolve/reject + note + order-history evidence panel, nav
+entry); smoke **E1–E3** green (guards, eligibility, duplicate 409, vendor/dealer
+scoping, admin queue evidence, resolve + captured resolution email, buyer sees outcome,
+terminal + role guards). Deployed journey: buyer@ order `BON-20261013-703076` →
+supplier delivers → `DAMAGED` dispute opened → duplicate 409 → vendor queue shows it
+(dealer scoped empty; buyer 403 on the admin queue) → admin resolves with note (queue
+carried 6 history entries as evidence; SendGrid resolution email dispatched,
+`emailSent: true`) → buyer sees RESOLVED + note on the order → `/admin/disputes`,
+`/orders/:id`, `/supplier` all 200. Smoke fix along the way: dispute email gets its own
+capture file (`E2E_DISPUTE_CAPTURE_FILE`, default `.e2e/dispute-resolution.txt`) so the
+verification capture is never overwritten.
 
 ### CP6 — Glue & self-service
 Extra gates:

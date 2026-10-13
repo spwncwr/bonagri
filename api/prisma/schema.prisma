@@ -13,6 +13,7 @@ datasource db {
 enum UserRole {
   BUYER
   SUPPLIER
+  AGRO_DEALER
   ADMIN
 }
 
@@ -76,6 +77,7 @@ model User {
   emailVerificationTokens EmailVerificationToken[]
   orders          Order[]
   notifications   Notification[]
+  actedOnOrders   OrderStatusHistory[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -201,12 +203,30 @@ model Order {
   payment           Payment?
   delivery          Delivery?
   invoice           Invoice?
+  history           OrderStatusHistory[]
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+}
+
+model OrderStatusHistory {
+  id          String       @id @default(uuid())
+  orderId     String
+  fromStatus  OrderStatus?
+  toStatus    OrderStatus
+  actorUserId String?
+  actorRole   UserRole?
+  note        String?
+  createdAt   DateTime     @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
+  @@index([actorUserId])
 }
 
 model OrderItem {

@@ -13,6 +13,7 @@ import type { Request } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { UserRole } from "../common/types";
 import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
@@ -25,7 +26,7 @@ type AuthenticatedRequest = Request & {
     firstName: string;
     lastName: string;
     phone: string | null;
-    role: "BUYER" | "SUPPLIER" | "ADMIN";
+    role: UserRole;
     status: "ACTIVE" | "SUSPENDED" | "PENDING";
   };
 };

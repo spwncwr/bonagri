@@ -12,6 +12,7 @@
 export const UserRole = {
   BUYER: 'BUYER',
   SUPPLIER: 'SUPPLIER',
+  AGRO_DEALER: 'AGRO_DEALER',
   ADMIN: 'ADMIN'
 } as const
 

@@ -10,11 +10,15 @@ import {
 
 type AuthGuardProps = {
   children: ReactNode;
+  /** Allow any of these roles (checked in addition to requiredRole). */
+  allowedRoles?: UserRole[];
+  /** Restrict to exactly one role. */
   requiredRole?: UserRole;
 };
 
 export default function AuthGuard({
   children,
+  allowedRoles,
   requiredRole,
 }: AuthGuardProps) {
   const router = useRouter();
@@ -34,7 +38,11 @@ export default function AuthGuard({
         return;
       }
 
-      if (requiredRole && currentUser.role !== requiredRole) {
+      const roleAllowed =
+        (!requiredRole || currentUser.role === requiredRole) &&
+        (!allowedRoles || allowedRoles.includes(currentUser.role));
+
+      if (!roleAllowed) {
         router.replace("/");
         return;
       }
@@ -48,7 +56,7 @@ export default function AuthGuard({
     return () => {
       cancelled = true;
     };
-  }, [requiredRole, router]);
+  }, [allowedRoles, requiredRole, router]);
 
   if (checking || !user) {
     return (

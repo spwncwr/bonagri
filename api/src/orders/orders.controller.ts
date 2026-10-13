@@ -12,6 +12,7 @@ import type { Request } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { UserRole } from "../common/types";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
 import { OrdersService } from "./orders.service";
@@ -23,7 +24,7 @@ type AuthenticatedRequest = Request & {
     firstName: string;
     lastName: string;
     phone: string | null;
-    role: "BUYER" | "SUPPLIER" | "ADMIN";
+    role: UserRole;
     status: "ACTIVE" | "SUSPENDED" | "PENDING";
   };
 };
@@ -37,14 +38,32 @@ export class OrdersController {
   @Roles("BUYER", "ADMIN")
   @UseGuards(RolesGuard)
   getBuyerOrders(@Req() request: AuthenticatedRequest) {
-    return this.ordersService.getBuyerOrders(request.user.id);
+    return this.ordersService.getBuyerOrders(
+      request.user.id,
+      request.user.role,
+    );
   }
 
   @Get("supplier")
   @Roles("SUPPLIER", "ADMIN")
   @UseGuards(RolesGuard)
   getSupplierOrders(@Req() request: AuthenticatedRequest) {
-    return this.ordersService.getSupplierOrders(request.user.id);
+    return this.ordersService.getSupplierOrders(
+      request.user.id,
+      request.user.role,
+    );
+  }
+
+  @Get(":id")
+  getOrder(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    return this.ordersService.getOrderDetail(
+      id,
+      request.user.id,
+      request.user.role,
+    );
   }
 
   @Post()

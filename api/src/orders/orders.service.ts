@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { UserRole } from "../common/types";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
 
@@ -18,7 +19,44 @@ export class OrdersService {
     return `BON-${date}-${suffix}`;
   }
 
-  async getBuyerOrders(userId: string) {
+  private async getAllOrdersForAdmin() {
+    return this.prisma.order.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
+        items: {
+          include: {
+            product: {
+              include: {
+                supplier: true,
+                category: true,
+              },
+            },
+          },
+        },
+        deliveryAddress: true,
+        payment: true,
+        delivery: true,
+        invoice: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  }
+
+  async getBuyerOrders(userId: string, role: UserRole) {
+    if (role === "ADMIN") {
+      return this.getAllOrdersForAdmin();
+    }
+
     const buyer = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -59,7 +97,11 @@ export class OrdersService {
     });
   }
 
-  async getSupplierOrders(userId: string) {
+  async getSupplierOrders(userId: string, role: UserRole) {
+    if (role === "ADMIN") {
+      return this.getAllOrdersForAdmin();
+    }
+
     const supplier = await this.prisma.supplierProfile.findUnique({
       where: { userId },
       select: {
@@ -113,6 +155,73 @@ export class OrdersService {
         createdAt: "desc",
       },
     });
+  }
+
+  async getOrderDetail(orderId: string, actorUserId: string, actorRole: UserRole) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
+        items: {
+          include: {
+            product: {
+              include: {
+                supplier: true,
+                category: true,
+              },
+            },
+          },
+        },
+        deliveryAddress: true,
+        payment: true,
+        delivery: true,
+        invoice: true,
+        history: {
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException("Order not found");
+    }
+
+    if (actorRole === "ADMIN") {
+      return order;
+    }
+
+    if (actorRole === "BUYER") {
+      if (order.userId !== actorUserId) {
+        throw new NotFoundException("Order not found");
+      }
+
+      return order;
+    }
+
+    const supplier = await this.prisma.supplierProfile.findUnique({
+      where: { userId: actorUserId },
+      select: { id: true },
+    });
+
+    const ownsOrderItem =
+      supplier &&
+      order.items.some((item) => item.product.supplierId === supplier.id);
+
+    if (!ownsOrderItem) {
+      throw new NotFoundException("Order not found");
+    }
+
+    return order;
   }
 
   async createOrder(userId: string, dto: CreateOrderDto) {
@@ -218,6 +327,17 @@ export class OrdersService {
         },
       });
 
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: order.id,
+          fromStatus: null,
+          toStatus: "PENDING",
+          actorUserId: userId,
+          actorRole: "BUYER",
+          note: "Order placed",
+        },
+      });
+
       return {
         id: order.id,
         orderNumber: order.orderNumber,
@@ -234,7 +354,7 @@ export class OrdersService {
   async updateOrderStatus(
     orderId: string,
     actorUserId: string,
-    actorRole: "BUYER" | "SUPPLIER" | "ADMIN",
+    actorRole: UserRole,
     dto: UpdateOrderStatusDto,
   ) {
     return this.prisma.$transaction(async (tx) => {
@@ -429,6 +549,17 @@ export class OrdersService {
           payment: true,
           delivery: true,
           invoice: true,
+        },
+      });
+
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId,
+          fromStatus: current,
+          toStatus: next,
+          actorUserId,
+          actorRole,
+          note: null,
         },
       });
 

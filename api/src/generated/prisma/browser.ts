@@ -58,6 +58,11 @@ export type Inventory = Prisma.InventoryModel
  */
 export type Order = Prisma.OrderModel
 /**
+ * Model OrderStatusHistory
+ * 
+ */
+export type OrderStatusHistory = Prisma.OrderStatusHistoryModel
+/**
  * Model OrderItem
  * 
  */

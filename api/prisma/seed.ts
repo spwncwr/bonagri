@@ -72,6 +72,16 @@ async function main(): Promise<void> {
       slug: "farm-inputs",
       description: "Agricultural inputs, supplies and production equipment.",
     },
+    {
+      name: "Agricultural Tools & Equipment",
+      slug: "agricultural-tools",
+      description: "Tools, equipment and machinery for agricultural operations.",
+    },
+    {
+      name: "Seeds & Chemicals",
+      slug: "seeds-chemicals",
+      description: "Seeds, fertilizers and crop-protection chemicals.",
+    },
   ];
 
   const categoryMap = new Map<string, string>();
@@ -144,6 +154,43 @@ async function main(): Promise<void> {
       emailVerifiedAt: new Date(),
     },
   });
+
+  // ---------------------------------------------------------------------------
+  // Admin account (opt-in via environment; never hard-coded)
+  // ---------------------------------------------------------------------------
+
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+  if (adminEmail && adminPassword) {
+    const adminPasswordHash = await bcrypt.hash(adminPassword, 12);
+
+    await prisma.user.upsert({
+      where: { email: adminEmail },
+      update: {
+        passwordHash: adminPasswordHash,
+        role: "ADMIN",
+        status: "ACTIVE",
+        emailVerifiedAt: new Date(),
+      },
+      create: {
+        email: adminEmail,
+        passwordHash: adminPasswordHash,
+        firstName: "BonAgri",
+        lastName: "Admin",
+        phone: null,
+        role: "ADMIN",
+        status: "ACTIVE",
+        emailVerifiedAt: new Date(),
+      },
+    });
+
+    console.log(`Admin account ready: ${adminEmail}`);
+  } else {
+    console.log(
+      "SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD not set - skipping admin account.",
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // Development buyer delivery address
@@ -304,6 +351,9 @@ async function main(): Promise<void> {
 
   console.log(
     "BonAgri development seed completed: categories, accounts, supplier profile, products and inventory.",
+  );
+  console.log(
+    "Categories now include Agricultural Tools & Equipment and Seeds & Chemicals.",
   );
 }
 

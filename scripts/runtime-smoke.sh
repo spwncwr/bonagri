@@ -629,7 +629,7 @@ echo "SUPPLIER ORDER VISIBILITY / STATUS ACCEPTANCE"
 echo "========================================"
 echo
 
-echo "[S1/7] Loading deterministic development supplier credentials..."
+echo "[S1/8] Loading deterministic development supplier credentials..."
 
 # Development E2E supplier seeded by api/prisma/seed.ts.
 # Override with SUPPLIER_E2E_EMAIL / SUPPLIER_E2E_PASSWORD when required.
@@ -644,7 +644,7 @@ fi
 echo "✓ Development supplier configured: $SUPPLIER_EMAIL"
 
 echo
-echo "[S2/7] Authenticating supplier..."
+echo "[S2/8] Authenticating supplier..."
 
 SUPPLIER_LOGIN_PAYLOAD="$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$SUPPLIER_EMAIL" "$SUPPLIER_PASSWORD")"
 
@@ -671,7 +671,7 @@ fi
 echo "✓ Supplier authenticated"
 
 echo
-echo "[S3/7] Confirming supplier order visibility..."
+echo "[S3/8] Confirming supplier order visibility..."
 
 SUPPLIER_ORDERS_HTTP="$(curl -sS -o "$LOG_DIR/supplier-orders.json" \
   -w '%{http_code}' \
@@ -716,7 +716,7 @@ if order.get("status") != "PENDING":
 ' "$LOG_DIR/supplier-orders.json" "$ORDER_ID"
 
 echo
-echo "[S4/7] Confirming buyer cannot access supplier order endpoint..."
+echo "[S4/8] Confirming buyer cannot access supplier order endpoint..."
 
 BUYER_SUPPLIER_HTTP="$(curl -sS -o "$LOG_DIR/buyer-supplier-orders.json" \
   -w '%{http_code}' \
@@ -732,7 +732,7 @@ fi
 echo "✓ Buyer correctly received HTTP 403"
 
 echo
-echo "[S5/7] Supplier accepting PENDING order..."
+echo "[S5/8] Supplier accepting PENDING order..."
 
 SUPPLIER_CONFIRM_HTTP="$(curl -sS -o "$LOG_DIR/supplier-confirm.json" \
   -w '%{http_code}' \
@@ -763,7 +763,7 @@ print("✓ Supplier transitioned PENDING → CONFIRMED")
 ' "$LOG_DIR/supplier-confirm.json"
 
 echo
-echo "[S6/7] Supplier processing order through lifecycle..."
+echo "[S6/8] Supplier processing order through lifecycle..."
 
 for expected in PROCESSING READY_FOR_DELIVERY OUT_FOR_DELIVERY DELIVERED; do
   RESPONSE_FILE="$LOG_DIR/supplier-$(printf "%s" "$expected" | tr "[:upper:]" "[:lower:]").json"
@@ -803,7 +803,7 @@ print("✓ Supplier transitioned order → {}".format(expected))
 done
 
 echo
-echo "[S7/7] Confirming buyer sees final order status..."
+echo "[S7/8] Confirming buyer sees final order status..."
 
 BUYER_FINAL_HTTP="$(curl -sS -o "$LOG_DIR/buyer-final-orders.json" \
   -w '%{http_code}' \
@@ -848,6 +848,49 @@ if order.get("status") != "DELIVERED":
 print("✓ Buyer sees final order status: {}".format(order.get("status")))
 print("✓ Final order: {}".format(order.get("orderNumber")))
 ' "$LOG_DIR/buyer-final-orders.json" "$ORDER_ID"
+
+echo
+echo "[S8/8] Fetching order detail with status history..."
+
+DETAIL_HTTP="$(curl -sS -o "$LOG_DIR/order-detail.json" \
+  -w '%{http_code}' \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "$API_URL/api/orders/$ORDER_ID")"
+
+if [ "$DETAIL_HTTP" != "200" ]; then
+  echo "ERROR: buyer order detail endpoint returned HTTP $DETAIL_HTTP"
+  cat "$LOG_DIR/order-detail.json"
+  exit 1
+fi
+
+python3 - "$LOG_DIR/order-detail.json" <<'PYJSON'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    order = json.load(f)
+
+history = order.get("history")
+
+if not isinstance(history, list) or len(history) < 6:
+    raise SystemExit(
+        "ERROR: order history missing or too short: {}".format(history)
+    )
+
+first, last = history[0], history[-1]
+
+if first.get("toStatus") != "PENDING" or first.get("fromStatus") is not None:
+    raise SystemExit("ERROR: history does not start at PENDING")
+
+if last.get("toStatus") != "DELIVERED":
+    raise SystemExit("ERROR: history does not end at DELIVERED")
+
+print(
+    "✓ Order detail includes full status history ({} steps)".format(
+        len(history)
+    )
+)
+PYJSON
 
 echo
 echo "✓ SUPPLIER ORDER VISIBILITY / STATUS ACCEPTANCE PASSED"

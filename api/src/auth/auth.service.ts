@@ -8,6 +8,7 @@ import * as bcrypt from "bcryptjs";
 import { createHash, randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
+import { UserRole } from "../common/types";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 
@@ -316,7 +317,7 @@ export class AuthService {
     firstName: string;
     lastName: string;
     phone: string | null;
-    role: "BUYER" | "SUPPLIER" | "ADMIN";
+    role: UserRole;
     status: "ACTIVE" | "SUSPENDED" | "PENDING";
     emailVerifiedAt: Date | null;
   }) {

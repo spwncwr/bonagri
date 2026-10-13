@@ -50,21 +50,21 @@ export class CatalogController {
 
   @Get("supplier/inventory")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("SUPPLIER", "ADMIN")
+  @Roles("SUPPLIER", "AGRO_DEALER", "ADMIN")
   getSupplierInventory(@Req() request: AuthenticatedRequest) {
     return this.catalogService.getSupplierInventory(request.user.id);
   }
 
   @Get("supplier/products")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("SUPPLIER")
+  @Roles("SUPPLIER", "AGRO_DEALER")
   getSupplierProducts(@Req() request: AuthenticatedRequest) {
     return this.catalogService.getSupplierProducts(request.user.id);
   }
 
   @Patch("supplier/inventory/:productId")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("SUPPLIER", "ADMIN")
+  @Roles("SUPPLIER", "AGRO_DEALER", "ADMIN")
   updateSupplierInventory(
     @Req() request: AuthenticatedRequest,
     @Param("productId") productId: string,
@@ -84,7 +84,7 @@ export class CatalogController {
 
   @Post("products")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("SUPPLIER")
+  @Roles("SUPPLIER", "AGRO_DEALER")
   createProduct(
     @Req() request: AuthenticatedRequest,
     @Body() dto: CreateProductDto,
@@ -94,7 +94,7 @@ export class CatalogController {
 
   @Patch("products/:id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("SUPPLIER")
+  @Roles("SUPPLIER", "AGRO_DEALER")
   updateProduct(
     @Req() request: AuthenticatedRequest,
     @Param("id") id: string,

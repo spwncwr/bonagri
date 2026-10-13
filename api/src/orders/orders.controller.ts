@@ -45,7 +45,7 @@ export class OrdersController {
   }
 
   @Get("supplier")
-  @Roles("SUPPLIER", "ADMIN")
+  @Roles("SUPPLIER", "AGRO_DEALER", "ADMIN")
   @UseGuards(RolesGuard)
   getSupplierOrders(@Req() request: AuthenticatedRequest) {
     return this.ordersService.getSupplierOrders(

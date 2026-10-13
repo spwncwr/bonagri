@@ -140,3 +140,76 @@ describe("CatalogService (CP1 listings)", () => {
     });
   });
 });
+
+describe("CatalogService (CP4 agro dealers)", () => {
+  it("lets an AGRO_DEALER create a tool listing under their own profile", async () => {
+    const { service, prisma } = makeService();
+
+    prisma.supplierProfile.findUnique.mockResolvedValue({
+      id: "sup-dealer",
+    });
+    prisma.product.create.mockResolvedValue({ id: "prod-tool-1" });
+
+    const result = await service.createProduct("dealer-user-1", {
+      categoryId: "cat-tools",
+      name: "Electric Fence Energizer 12J",
+      slug: "electric-fence-energizer-12j",
+      sku: "BON-EFE-012",
+      price: 1250,
+      unit: "each",
+      quantity: 25,
+      status: "ACTIVE",
+    } as never);
+
+    expect(result).toEqual({ id: "prod-tool-1" });
+    expect(prisma.product.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          supplierId: "sup-dealer",
+          unit: "each",
+          status: "ACTIVE",
+        }),
+      }),
+    );
+  });
+
+  it("scopes an AGRO_DEALER's listing list to their own products", async () => {
+    const { service, prisma } = makeService();
+
+    prisma.supplierProfile.findUnique.mockResolvedValue({
+      id: "sup-dealer",
+    });
+    prisma.product.findMany.mockResolvedValue([]);
+
+    await service.getSupplierProducts("dealer-user-1");
+
+    expect(prisma.supplierProfile.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: "dealer-user-1" } }),
+    );
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { supplierId: "sup-dealer" },
+      }),
+    );
+  });
+
+  it("rejects an AGRO_DEALER updating another vendor's listing (404)", async () => {
+    const { service, prisma } = makeService();
+
+    prisma.product.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.updateProduct("prod-supplier-1", "dealer-user-1", {
+        price: 1,
+      } as never),
+    ).rejects.toThrow(NotFoundException);
+    expect(prisma.product.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: "prod-supplier-1",
+          supplier: { userId: "dealer-user-1" },
+        }),
+      }),
+    );
+  });
+});

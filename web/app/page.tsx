@@ -70,6 +70,37 @@ const categories = [
   ["Farm Inputs", "Inputs and supplies for agricultural production."],
 ];
 
+// Category-group segments so tool/equipment listings surface properly (CP4).
+const SEGMENT_CATEGORIES: Record<"Produce" | "Tools", string[]> = {
+  Produce: [
+    "Fresh Produce",
+    "Fruits",
+    "Vegetables",
+    "Chilli & Sauces",
+    "Processed Foods",
+    "Poultry & Livestock",
+  ],
+  Tools: [
+    "Farm Inputs",
+    "Agricultural Tools & Equipment",
+    "Seeds & Chemicals",
+  ],
+};
+
+// Explicit pill-name -> API slug map (slugifying names would break
+// "Agricultural Tools & Equipment" -> "agricultural-tools-equipment").
+const CATEGORY_SLUGS: Record<string, string> = {
+  "Fresh Produce": "fresh-produce",
+  Fruits: "fruits",
+  Vegetables: "vegetables",
+  "Chilli & Sauces": "chilli-sauces",
+  "Processed Foods": "processed-foods",
+  "Farm Inputs": "farm-inputs",
+  "Agricultural Tools & Equipment": "agricultural-tools",
+  "Seeds & Chemicals": "seeds-chemicals",
+  "Poultry & Livestock": "poultry-livestock",
+};
+
 const workflow = [
   ["01", "Discover", "Search available agricultural products and suppliers."],
   ["02", "Connect", "Engage with suppliers and submit requirements."],
@@ -127,6 +158,9 @@ export default function Home() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [activeSegment, setActiveSegment] = useState<
+    "All" | "Produce" | "Tools"
+  >("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [orderQuantity, setOrderQuantity] = useState(1);
@@ -345,18 +379,10 @@ export default function Home() {
         }
 
         if (activeCategory !== "All") {
-          const category = categories.find(
-            ([name]) => name === activeCategory,
-          );
+          const slug = CATEGORY_SLUGS[activeCategory];
 
-          if (category) {
-            params.set(
-              "category",
-              category[0]
-                .toLowerCase()
-                .replace(/ & /g, "-")
-                .replace(/ /g, "-"),
-            );
+          if (slug) {
+            params.set("category", slug);
           }
         }
 
@@ -489,9 +515,20 @@ export default function Home() {
       const matchesCategory =
         activeCategory === "All" || product.category === activeCategory;
 
-      return matchesSearch && matchesCategory;
+      const matchesSegment =
+        activeSegment === "All" ||
+        SEGMENT_CATEGORIES[
+          activeSegment as "Produce" | "Tools"
+        ].includes(product.category);
+
+      return matchesSearch && matchesCategory && matchesSegment;
     });
-  }, [products, search, activeCategory]);
+  }, [products, search, activeCategory, activeSegment]);
+
+  const segmentCategoryNames =
+    activeSegment === "All"
+      ? [...SEGMENT_CATEGORIES.Produce, ...SEGMENT_CATEGORIES.Tools]
+      : SEGMENT_CATEGORIES[activeSegment as "Produce" | "Tools"];
 
   return (
     <main className="min-h-screen bg-[#f7f6f0] text-[#17251b]">
@@ -700,9 +737,29 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Produce / Tools segment control */}
+        <div className="mt-8 flex gap-2">
+          {(["All", "Produce", "Tools"] as const).map((segment) => (
+            <button
+              key={segment}
+              onClick={() => {
+                setActiveSegment(segment);
+                setActiveCategory("All");
+              }}
+              className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide transition ${
+                activeSegment === segment
+                  ? "bg-[#17633a] text-white"
+                  : "border border-[#d7ded4] bg-white text-[#657067] hover:border-[#8ead95]"
+              }`}
+            >
+              {segment === "All" ? "All listings" : segment}
+            </button>
+          ))}
+        </div>
+
         {/* Category filters */}
-        <div className="mt-8 flex gap-2 overflow-x-auto pb-2">
-          {["All", ...categories.map(([name]) => name)].map((category) => (
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+          {["All", ...segmentCategoryNames].map((category) => (
             <button
               key={category}
               onClick={() => setActiveCategory(category)}

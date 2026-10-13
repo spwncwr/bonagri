@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import AuthGuard from "../../components/auth/auth-guard";
-import { authHeaders, clearAuth } from "../../lib/auth";
+import { authHeaders, clearAuth, fetchCurrentUser, type UserRole } from "../../lib/auth";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -107,6 +107,13 @@ export default function SupplierPage() {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"ALL" | OrderStatus>("ALL");
+  const [vendorRole, setVendorRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    void fetchCurrentUser().then((user) => {
+      setVendorRole(user?.role ?? null);
+    });
+  }, []);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -249,7 +256,7 @@ export default function SupplierPage() {
   );
 
   return (
-    <AuthGuard requiredRole="SUPPLIER">
+    <AuthGuard allowedRoles={["SUPPLIER", "AGRO_DEALER"]}>
       <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
@@ -258,10 +265,14 @@ export default function SupplierPage() {
               BonAgri
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              Supplier Operations
+              {vendorRole === "AGRO_DEALER"
+                ? "Agro Dealer Operations"
+                : "Supplier Operations"}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Manage incoming orders, fulfilment and delivery readiness.
+              {vendorRole === "AGRO_DEALER"
+                ? "Manage your tool and equipment orders, fulfilment and delivery readiness."
+                : "Manage incoming orders, fulfilment and delivery readiness."}
             </p>
           </div>
 

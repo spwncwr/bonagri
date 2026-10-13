@@ -255,6 +255,57 @@ async function main(): Promise<void> {
   });
 
   // ---------------------------------------------------------------------------
+  // Development agro-dealer account (CP4)
+  // ---------------------------------------------------------------------------
+
+  const dealerUser = await prisma.user.upsert({
+    where: { email: "dealer@bonagri.co.za" },
+    update: {
+      passwordHash: devPasswordHash,
+      firstName: "BonAgri",
+      lastName: "Equipment",
+      phone: "+27000000003",
+      role: "AGRO_DEALER",
+      status: "ACTIVE",
+      // Seeded accounts are pre-verified so they can sign in immediately.
+      emailVerifiedAt: new Date(),
+    },
+    create: {
+      email: "dealer@bonagri.co.za",
+      passwordHash: devPasswordHash,
+      firstName: "BonAgri",
+      lastName: "Equipment",
+      phone: "+27000000003",
+      role: "AGRO_DEALER",
+      status: "ACTIVE",
+      emailVerifiedAt: new Date(),
+    },
+  });
+
+  const dealer = await prisma.supplierProfile.upsert({
+    where: { userId: dealerUser.id },
+    update: {
+      businessName: "Limpopo Agro Equipment",
+      description: "Farm tools, fencing and equipment for Limpopo operations.",
+      phone: "+27000000003",
+      email: "dealer@bonagri.co.za",
+      city: "Polokwane",
+      province: "Limpopo",
+      verified: false,
+    },
+    create: {
+      userId: dealerUser.id,
+      businessName: "Limpopo Agro Equipment",
+      description: "Farm tools, fencing and equipment for Limpopo operations.",
+      phone: "+27000000003",
+      email: "dealer@bonagri.co.za",
+      city: "Polokwane",
+      province: "Limpopo",
+      verified: false,
+    },
+  });
+
+  // ---------------------------------------------------------------------------
   // Development products and inventory
   // ---------------------------------------------------------------------------
 
@@ -349,11 +400,76 @@ async function main(): Promise<void> {
     });
   }
 
+  const dealerProducts = [
+    {
+      name: "Electric Fence Energizer 12J",
+      slug: "electric-fence-energizer-12j",
+      sku: "BON-EFE-012",
+      category: "agricultural-tools",
+      price: 1250,
+      unit: "each",
+      quantity: 25,
+      description:
+        "12 Joule mains/solar electric fence energizer for livestock and crop protection.",
+    },
+  ];
+
+  for (const product of dealerProducts) {
+    const categoryId = categoryMap.get(product.category);
+
+    if (!categoryId) {
+      throw new Error(
+        `Category "${product.category}" was not found for product "${product.slug}".`,
+      );
+    }
+
+    const record = await prisma.product.upsert({
+      where: { slug: product.slug },
+      update: {
+        supplierId: dealer.id,
+        categoryId,
+        name: product.name,
+        sku: product.sku,
+        description: product.description,
+        price: product.price,
+        unit: product.unit,
+        status: "ACTIVE",
+      },
+      create: {
+        supplierId: dealer.id,
+        categoryId,
+        name: product.name,
+        slug: product.slug,
+        sku: product.sku,
+        description: product.description,
+        price: product.price,
+        unit: product.unit,
+        status: "ACTIVE",
+      },
+    });
+
+    await prisma.inventory.upsert({
+      where: { productId: record.id },
+      update: {
+        quantity: product.quantity,
+        lowStockLevel: 5,
+      },
+      create: {
+        productId: record.id,
+        quantity: product.quantity,
+        lowStockLevel: 5,
+      },
+    });
+  }
+
   console.log(
-    "BonAgri development seed completed: categories, accounts, supplier profile, products and inventory.",
+    "BonAgri development seed completed: categories, accounts, supplier/dealer profiles, products and inventory.",
   );
   console.log(
     "Categories now include Agricultural Tools & Equipment and Seeds & Chemicals.",
+  );
+  console.log(
+    "Agro dealer: dealer@bonagri.co.za (AGRO_DEALER, Limpopo Agro Equipment).",
   );
 }
 

@@ -359,7 +359,14 @@ active = [
 if not active:
     raise SystemExit("No ACTIVE products returned from catalog.")
 
+# Pin to the seeded development supplier listing so the vendor-queue
+# checks stay deterministic - the CP4 dealer tool listing also lives in
+# this catalog and could otherwise sort first.
 product = active[0]
+for item in active:
+    if item.get("slug") == "fresh-tomatoes":
+        product = item
+        break
 product_id = product.get("id")
 product_name = product.get("name")
 available = product.get("available")
@@ -1226,6 +1233,262 @@ echo
 echo "✓ CONSUMER FLOW ACCEPTANCE PASSED"
 
 echo
+echo "DEALER FLOW: LISTING → ORDER → FULFILMENT"
+echo "========================================"
+
+echo
+echo "[D1/3] Agro dealer login + tool listing under Tools..."
+
+DEALER_EMAIL="${DEALER_E2E_EMAIL:-dealer@bonagri.co.za}"
+DEALER_PASSWORD="${DEALER_E2E_PASSWORD:-bonagri2024dev}"
+
+if [ -z "$DEALER_EMAIL" ] || [ -z "$DEALER_PASSWORD" ]; then
+  fail "Agro dealer E2E credentials are empty"
+fi
+
+DEALER_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/dealer-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$DEALER_EMAIL" "$DEALER_PASSWORD")"
+)"
+
+if [[ "$DEALER_LOGIN_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/dealer-login.json"
+  fail "Agro dealer login failed (seed must create dealer@bonagri.co.za). HTTP $DEALER_LOGIN_HTTP"
+fi
+
+DEALER_TOKEN="$(
+  python3 -c '
+import json,sys
+with open(sys.argv[1]) as f:
+    data=json.load(f)
+assert data.get("user", {}).get("role") == "AGRO_DEALER", data.get("user", {}).get("role")
+print(data.get("accessToken",""))
+' "$LOG_DIR/dealer-login.json"
+)"
+
+echo "✓ Agro dealer logged in (role AGRO_DEALER)"
+
+DEALER_OWN_HTTP="$(
+  curl -sS -o "$LOG_DIR/dealer-own-products.json" -w "%{http_code}" \
+    -X GET "$API_URL$API_PREFIX/supplier/products" \
+    -H "Authorization: Bearer $DEALER_TOKEN"
+)"
+
+if [[ "$DEALER_OWN_HTTP" != "200" ]]; then
+  fail "Dealer cannot list own products. HTTP $DEALER_OWN_HTTP"
+fi
+
+python3 - "$LOG_DIR/dealer-own-products.json" <<'PYJSON'
+import json, sys
+
+products = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if not any(p.get("slug") == "electric-fence-energizer-12j" for p in products):
+    raise SystemExit("ERROR: seeded dealer listing missing from dealer's own list")
+
+print("✓ Dealer sees own listings (incl. seeded energizer)")
+PYJSON
+
+DEALER_TS="$(date +%s)"
+DEALER_SLUG="smoke-dealer-tool-$DEALER_TS"
+DEALER_SKU="BON-DLR-$DEALER_TS"
+
+DEALER_TOOLS_CATEGORY_ID="$(curl -sS "$API_URL$API_PREFIX/categories" | python3 -c '
+import json, sys
+
+data = json.load(sys.stdin)
+match = next((c for c in data if c.get("slug") == "agricultural-tools"), None)
+
+if not match:
+    raise SystemExit("ERROR: agricultural-tools category not found")
+
+print(match["id"])
+')"
+
+DEALER_CREATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/dealer-product-create.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/products" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"categoryId\":\"$DEALER_TOOLS_CATEGORY_ID\",\"name\":\"Smoke Dealer Tool\",\"slug\":\"$DEALER_SLUG\",\"sku\":\"$DEALER_SKU\",\"price\":99,\"unit\":\"each\",\"quantity\":3,\"status\":\"ACTIVE\"}")"
+
+if [[ "$DEALER_CREATE_HTTP" != "200" ]] && [[ "$DEALER_CREATE_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/dealer-product-create.json"
+  fail "Dealer product creation failed. HTTP $DEALER_CREATE_HTTP"
+fi
+
+DEALER_PRODUCT_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/dealer-product-create.json"
+)"
+
+curl -sS "$API_URL$API_PREFIX/products" -o "$LOG_DIR/dealer-public-list.json"
+
+python3 - "$LOG_DIR/dealer-public-list.json" "$DEALER_SLUG" <<'PYJSON'
+import json, sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+slug = sys.argv[2]
+match = next((p for p in data if p.get("slug") == slug), None)
+
+if match is None:
+    raise SystemExit("ERROR: dealer listing is not publicly listed")
+
+business = match.get("supplier", {}).get("businessName")
+
+if business != "Limpopo Agro Equipment":
+    raise SystemExit("ERROR: dealer listing not owned by the dealer profile, got {}".format(business))
+
+print("✓ Dealer listing publicly listed under Limpopo Agro Equipment")
+PYJSON
+
+echo
+echo "[D2/3] Vendor guards: buyers blocked, dealers scoped to own products..."
+
+BUYER_CREATE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/products" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{}")"
+
+if [[ "$BUYER_CREATE_HTTP" != "403" ]]; then
+  fail "Buyer could create a product. HTTP $BUYER_CREATE_HTTP (expected 403)"
+fi
+
+BUYER_VENDOR_LIST_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X GET "$API_URL$API_PREFIX/supplier/products" \
+    -H "Authorization: Bearer $ACCESS_TOKEN")"
+
+if [[ "$BUYER_VENDOR_LIST_HTTP" != "403" ]]; then
+  fail "Buyer could list vendor products. HTTP $BUYER_VENDOR_LIST_HTTP (expected 403)"
+fi
+
+DEALER_BUYER_ROUTE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X GET "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $DEALER_TOKEN")"
+
+if [[ "$DEALER_BUYER_ROUTE_HTTP" != "403" ]]; then
+  fail "Dealer could access the buyer order route. HTTP $DEALER_BUYER_ROUTE_HTTP (expected 403)"
+fi
+
+OTHER_PRODUCT_ID="$(python3 -c '
+import json,sys
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+match = next((p for p in data if p.get("slug") == "fresh-tomatoes"), None)
+if not match:
+    raise SystemExit("ERROR: fresh-tomatoes listing not found")
+print(match["id"])
+' "$LOG_DIR/dealer-public-list.json")"
+
+DEALER_CROSS_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/products/$OTHER_PRODUCT_ID" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"price":1}')"
+
+if [[ "$DEALER_CROSS_HTTP" != "404" ]]; then
+  fail "Dealer touched another vendor's product. HTTP $DEALER_CROSS_HTTP (expected 404)"
+fi
+
+echo "✓ Buyers 403 on vendor routes; dealer cross-vendor edit 404"
+
+echo
+echo "[D3/3] Buyer orders the dealer's tool; dealer fulfils to DELIVERED..."
+
+DEALER_ORDER_HTTP="$(
+  curl -sS -o "$LOG_DIR/dealer-order-create.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"deliveryAddressId\":\"$ADDRESS_ID\",
+      \"productId\":\"$DEALER_PRODUCT_ID\",
+      \"quantity\":1,
+      \"notes\":\"Automated BonAgri dealer flow order\"
+    }")"
+
+if [[ "$DEALER_ORDER_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/dealer-order-create.json"
+  fail "Buyer order for dealer listing failed. HTTP $DEALER_ORDER_HTTP"
+fi
+
+DEALER_ORDER_ID="$(
+  python3 -c '
+import json,sys
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+order = data.get("order") if isinstance(data.get("order"), dict) else data
+print(order.get("id",""))
+' "$LOG_DIR/dealer-order-create.json"
+)"
+
+echo "✓ Buyer ordered dealer listing: $DEALER_ORDER_ID"
+
+curl -sS "$API_URL$API_PREFIX/orders/supplier" \
+  -H "Authorization: Bearer $DEALER_TOKEN" > "$LOG_DIR/dealer-orders.json"
+
+python3 - "$LOG_DIR/dealer-orders.json" "$DEALER_ORDER_ID" <<'PYJSON'
+import json, sys
+
+orders = json.load(open(sys.argv[1], encoding="utf-8"))
+order_id = sys.argv[2]
+
+if not any(o.get("id") == order_id for o in orders):
+    raise SystemExit("ERROR: dealer cannot see the buyer's order on their queue")
+
+print("✓ Dealer sees the order on their queue")
+PYJSON
+
+for transition in CONFIRMED PROCESSING READY_FOR_DELIVERY OUT_FOR_DELIVERY DELIVERED; do
+  TRANSITION_HTTP="$(
+    curl -sS -o "$LOG_DIR/dealer-transition.json" -w "%{http_code}" \
+      -X PATCH "$API_URL$API_PREFIX/orders/$DEALER_ORDER_ID/status" \
+      -H "Authorization: Bearer $DEALER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"status\":\"$transition\"}")"
+
+  if [[ "$TRANSITION_HTTP" != "200" ]]; then
+    cat "$LOG_DIR/dealer-transition.json"
+    fail "Dealer transition to $transition failed. HTTP $TRANSITION_HTTP"
+  fi
+
+  ACTUAL_STATUS="$(
+    python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("status",""))' "$LOG_DIR/dealer-transition.json"
+)"
+
+  if [[ "$ACTUAL_STATUS" != "$transition" ]]; then
+    fail "Dealer transition expected $transition, got $ACTUAL_STATUS"
+  fi
+
+  echo "✓ Dealer transitioned order → $transition"
+done
+
+curl -sS "$API_URL$API_PREFIX/orders/$DEALER_ORDER_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/dealer-order-final.json"
+
+python3 - "$LOG_DIR/dealer-order-final.json" <<'PYJSON'
+import json, sys
+
+order = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if order.get("status") != "DELIVERED":
+    raise SystemExit(
+        "ERROR: expected buyer-visible DELIVERED, got {}".format(
+            order.get("status")
+        )
+    )
+
+print("✓ Buyer sees the dealer order as DELIVERED")
+PYJSON
+
+echo
+echo "✓ DEALER FLOW ACCEPTANCE PASSED"
+
+echo
 echo "ADMIN MANAGEMENT FLOW"
 echo "========================================"
 
@@ -1450,14 +1713,15 @@ echo "✓ Reactivated user logs in again (201)"
 echo
 echo "[A3/3] Category create/rename + supplier verification toggle..."
 
-ADMIN_CAT_SLUG="smoke-admin-category-$(date +%s)"
+ADMIN_CAT_TS="$(date +%s)"
+ADMIN_CAT_SLUG="smoke-admin-category-$ADMIN_CAT_TS"
 
 CREATE_CAT_HTTP="$(
   curl -sS -o "$LOG_DIR/admin-category.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/categories" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"name\":\"Smoke Admin Category\",\"slug\":\"$ADMIN_CAT_SLUG\"}"
+    -d "{\"name\":\"Smoke Admin Category $ADMIN_CAT_TS\",\"slug\":\"$ADMIN_CAT_SLUG\"}"
 )"
 
 if [[ "$CREATE_CAT_HTTP" != "201" ]]; then
@@ -1494,7 +1758,7 @@ RENAME_CAT_HTTP="$(
     -X PATCH "$API_URL$API_PREFIX/admin/categories/$ADMIN_CATEGORY_ID" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
     -H "Content-Type: application/json" \
-    -d '{"name":"Smoke Admin Category Renamed"}'
+    -d "{\"name\":\"Smoke Admin Category Renamed $ADMIN_CAT_TS\"}"
 )"
 
 if [[ "$RENAME_CAT_HTTP" != "200" ]]; then
@@ -1504,15 +1768,16 @@ fi
 
 request GET "$API_URL$API_PREFIX/categories" "" > "$LOG_DIR/admin-categories-renamed.json"
 
-python3 - "$LOG_DIR/admin-categories-renamed.json" "$ADMIN_CAT_SLUG" <<'PYJSON'
+python3 - "$LOG_DIR/admin-categories-renamed.json" "$ADMIN_CAT_SLUG" "Smoke Admin Category Renamed $ADMIN_CAT_TS" <<'PYJSON'
 import json, sys
 
 categories = json.load(open(sys.argv[1], encoding="utf-8"))
 slug = sys.argv[2]
+expected_name = sys.argv[3]
 
 match = next((c for c in categories if c.get("slug") == slug), None)
 
-if match is None or match.get("name") != "Smoke Admin Category Renamed":
+if match is None or match.get("name") != expected_name:
     raise SystemExit("ERROR: category rename not visible on the public marketplace list")
 
 print("✓ Category rename visible publicly")

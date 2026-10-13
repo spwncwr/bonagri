@@ -390,7 +390,7 @@ export class OrdersService {
             "Buyers can only cancel their own pending orders",
           );
         }
-      } else if (actorRole === "SUPPLIER") {
+      } else if (actorRole === "SUPPLIER" || actorRole === "AGRO_DEALER") {
         const supplier = await tx.supplierProfile.findUnique({
           where: { userId: actorUserId },
           select: { id: true },

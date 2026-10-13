@@ -318,7 +318,7 @@ export default function SupplierInventoryPage() {
   };
 
   return (
-    <AuthGuard requiredRole="SUPPLIER">
+    <AuthGuard allowedRoles={["SUPPLIER", "AGRO_DEALER"]}>
       <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">

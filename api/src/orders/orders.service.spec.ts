@@ -357,3 +357,136 @@ describe("OrdersService (CP0 foundations)", () => {
     });
   });
 });
+
+describe("OrdersService (CP4 agro dealers)", () => {
+  function primePendingOrder(tx: TxMock, supplierId = "sup-dealer") {
+    tx.order.findUnique.mockResolvedValue({
+      id: "order-1",
+      userId: "buyer-1",
+      status: "PENDING",
+      items: [
+        {
+          productId: "prod-tool-1",
+          quantity: 1,
+          productName: "Electric Fence Energizer 12J",
+          product: {
+            supplierId,
+            inventory: { quantity: 10, reservedQuantity: 1 },
+          },
+        },
+      ],
+    });
+    tx.order.update.mockImplementation(({ data }: { data: unknown }) =>
+      Promise.resolve({ id: "order-1", ...(data as object) }),
+    );
+  }
+
+  it("lets an AGRO_DEALER advance an order containing their product", async () => {
+    const tx = makeTx();
+    const { service } = makeService(tx);
+
+    primePendingOrder(tx);
+    tx.supplierProfile.findUnique.mockResolvedValue({ id: "sup-dealer" });
+    tx.inventory.update.mockResolvedValue({});
+
+    await service.updateOrderStatus(
+      "order-1",
+      "dealer-user-1",
+      "AGRO_DEALER",
+      { status: "CONFIRMED" } as never,
+    );
+
+    expect(tx.orderStatusHistory.create).toHaveBeenCalledWith({
+      data: {
+        orderId: "order-1",
+        fromStatus: "PENDING",
+        toStatus: "CONFIRMED",
+        actorUserId: "dealer-user-1",
+        actorRole: "AGRO_DEALER",
+        note: null,
+      },
+    });
+  });
+
+  it("rejects an AGRO_DEALER advancing another vendor's order", async () => {
+    const tx = makeTx();
+    const { service } = makeService(tx);
+
+    primePendingOrder(tx, "sup-other-vendor");
+    tx.supplierProfile.findUnique.mockResolvedValue({ id: "sup-dealer" });
+
+    await expect(
+      service.updateOrderStatus("order-1", "dealer-user-1", "AGRO_DEALER", {
+        status: "CONFIRMED",
+      } as never),
+    ).rejects.toThrow(NotFoundException);
+
+    expect(tx.order.update).not.toHaveBeenCalled();
+  });
+
+  it("scopes the AGRO_DEALER order list to their own products", async () => {
+    const tx = makeTx();
+    const { service, prisma } = makeService(tx);
+
+    prisma.supplierProfile.findUnique.mockResolvedValue({
+      id: "sup-dealer",
+      userId: "dealer-user-1",
+      businessName: "Limpopo Agro Equipment",
+      verified: false,
+    });
+    prisma.order.findMany.mockResolvedValue([{ id: "order-1" }]);
+
+    const orders = await service.getSupplierOrders(
+      "dealer-user-1",
+      "AGRO_DEALER",
+    );
+
+    expect(orders).toEqual([{ id: "order-1" }]);
+    expect(prisma.order.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          items: {
+            some: {
+              product: {
+                supplierId: "sup-dealer",
+              },
+            },
+          },
+        },
+      }),
+    );
+  });
+
+  it("lets an AGRO_DEALER view an order containing their product (and hides others)", async () => {
+    const tx = makeTx();
+    const { service, prisma } = makeService(tx);
+
+    prisma.order.findUnique.mockResolvedValue({
+      id: "order-1",
+      items: [{ product: { supplierId: "sup-dealer" } }],
+    });
+    prisma.supplierProfile.findUnique.mockResolvedValue({
+      id: "sup-dealer",
+    });
+
+    await expect(
+      service.getOrderDetail("order-1", "dealer-user-1", "AGRO_DEALER"),
+    ).resolves.toEqual({
+      id: "order-1",
+      items: [{ product: { supplierId: "sup-dealer" } }],
+    });
+
+    prisma.supplierProfile.findUnique.mockResolvedValue({
+      id: "sup-dealer",
+    });
+
+    prisma.order.findUnique.mockResolvedValue({
+      id: "order-2",
+      items: [{ product: { supplierId: "sup-other-vendor" } }],
+    });
+
+    await expect(
+      service.getOrderDetail("order-2", "dealer-user-1", "AGRO_DEALER"),
+    ).rejects.toThrow(NotFoundException);
+  });
+});

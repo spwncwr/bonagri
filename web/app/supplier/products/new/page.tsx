@@ -9,7 +9,12 @@ import { authHeaders } from "../../../../lib/auth";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
 
-const UNIT_OPTIONS = ["kg", "bag", "box", "dozen", "litre", "ton", "each"];
+const UNIT_PRESETS: Record<"Produce" | "Tools", string[]> = {
+  // Default produce units (mass/volume based).
+  Produce: ["kg", "bag", "box", "dozen", "litre", "ton"],
+  // Tool/equipment listings are counted per item (CP4).
+  Tools: ["each", "unit", "bag", "box"],
+};
 
 type Category = {
   id: string;
@@ -43,6 +48,15 @@ export default function NewProductPage() {
   const [quantity, setQuantity] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [unitPreset, setUnitPreset] = useState<"Produce" | "Tools">("Produce");
+
+  function selectUnitPreset(preset: "Produce" | "Tools") {
+    setUnitPreset(preset);
+
+    if (!UNIT_PRESETS[preset].includes(unit)) {
+      setUnit(preset === "Tools" ? "each" : "kg");
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -123,7 +137,7 @@ export default function NewProductPage() {
   }
 
   return (
-    <AuthGuard requiredRole="SUPPLIER">
+    <AuthGuard allowedRoles={["SUPPLIER", "AGRO_DEALER"]}>
       <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
@@ -253,6 +267,24 @@ export default function NewProductPage() {
                   >
                     Unit
                   </label>
+                  <div className="mb-2 flex gap-2">
+                    {(["Produce", "Tools"] as const).map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => selectUnitPreset(preset)}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                          unitPreset === preset
+                            ? "bg-emerald-700 text-white"
+                            : "border border-slate-300 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        {preset === "Produce"
+                          ? "Produce units"
+                          : "Tool units"}
+                      </button>
+                    ))}
+                  </div>
                   <select
                     id="unit"
                     name="unit"
@@ -260,7 +292,7 @@ export default function NewProductPage() {
                     onChange={(event) => setUnit(event.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
                   >
-                    {UNIT_OPTIONS.map((option) => (
+                    {UNIT_PRESETS[unitPreset].map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>

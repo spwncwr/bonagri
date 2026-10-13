@@ -80,3 +80,23 @@ export const DeliveryStatus = {
 } as const
 
 export type DeliveryStatus = (typeof DeliveryStatus)[keyof typeof DeliveryStatus]
+
+
+export const DisputeReason = {
+  NOT_DELIVERED: 'NOT_DELIVERED',
+  WRONG_ITEM: 'WRONG_ITEM',
+  DAMAGED: 'DAMAGED',
+  OTHER: 'OTHER'
+} as const
+
+export type DisputeReason = (typeof DisputeReason)[keyof typeof DisputeReason]
+
+
+export const DisputeStatus = {
+  OPEN: 'OPEN',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  RESOLVED: 'RESOLVED',
+  REJECTED: 'REJECTED'
+} as const
+
+export type DisputeStatus = (typeof DisputeStatus)[keyof typeof DisputeStatus]

@@ -62,6 +62,20 @@ enum DeliveryStatus {
   FAILED
 }
 
+enum DisputeReason {
+  NOT_DELIVERED
+  WRONG_ITEM
+  DAMAGED
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -78,6 +92,8 @@ model User {
   orders          Order[]
   notifications   Notification[]
   actedOnOrders   OrderStatusHistory[]
+  openedDisputes  Dispute[] @relation("DisputeOpener")
+  resolvedDisputes Dispute[] @relation("DisputeResolver")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -204,6 +220,7 @@ model Order {
   delivery          Delivery?
   invoice           Invoice?
   history           OrderStatusHistory[]
+  dispute           Dispute?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
@@ -227,6 +244,27 @@ model OrderStatusHistory {
 
   @@index([orderId, createdAt])
   @@index([actorUserId])
+}
+
+model Dispute {
+  id             String        @id @default(uuid())
+  orderId        String        @unique
+  openedById     String
+  reason         DisputeReason
+  description    String
+  status         DisputeStatus @default(OPEN)
+  resolutionNote String?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  order      Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  openedBy   User   @relation("DisputeOpener", fields: [openedById], references: [id], onDelete: Restrict)
+  resolvedBy User?  @relation("DisputeResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([openedById])
 }
 
 model OrderItem {

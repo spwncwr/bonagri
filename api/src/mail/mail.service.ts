@@ -108,4 +108,92 @@ export class MailService {
       throw error;
     }
   }
+
+  async sendDisputeResolutionEmail(
+    email: string,
+    firstName: string,
+    orderNumber: string,
+    outcome: "RESOLVED" | "REJECTED",
+    resolutionNote: string | null,
+  ) {
+    if (
+      process.env.E2E_CAPTURE_MAIL === "true" &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      const captureFile =
+        process.env.E2E_DISPUTE_CAPTURE_FILE ??
+        ".e2e/dispute-resolution.txt";
+
+      const { mkdir, writeFile } = await import("node:fs/promises");
+      const { dirname } = await import("node:path");
+
+      await mkdir(dirname(captureFile), { recursive: true });
+      await writeFile(
+        captureFile,
+        JSON.stringify({ email, orderNumber, outcome, resolutionNote }),
+        "utf8",
+      );
+
+      // Capture mode short-circuits: E2E runs must never hit real SMTP.
+      return;
+    }
+
+    if (!this.transporter) {
+      throw new ServiceUnavailableException(
+        "Email delivery is not configured",
+      );
+    }
+
+    const from =
+      process.env.SMTP_FROM ??
+      process.env.SMTP_USER;
+
+    const resolved = outcome === "RESOLVED";
+
+    const subject = resolved
+      ? `BonAgri dispute update: order ${orderNumber} resolved`
+      : `BonAgri dispute update: order ${orderNumber} rejected`;
+
+    try {
+      await this.transporter.sendMail({
+        from,
+        to: email,
+        subject,
+        text: [
+          `Hello ${firstName},`,
+          "",
+          resolved
+            ? `Your dispute on order ${orderNumber} has been resolved in your favour.`
+            : `Your dispute on order ${orderNumber} has been reviewed and rejected.`,
+          "",
+          ...(resolutionNote
+            ? [`Resolution note: ${resolutionNote}`, ""]
+            : []),
+          "You can view the full dispute and order timeline in your BonAgri account.",
+          "",
+          "BonAgri",
+          "Agricultural trade, connected.",
+        ].join("\n"),
+        html: `
+          <div style="font-family:Arial,sans-serif;line-height:1.6;max-width:600px;margin:auto">
+            <h2>${resolved ? "Dispute resolved" : "Dispute rejected"}</h2>
+            <p>Hello ${firstName},</p>
+            <p>
+              ${resolved
+                ? `Your dispute on order <strong>${orderNumber}</strong> has been resolved in your favour.`
+                : `Your dispute on order <strong>${orderNumber}</strong> has been reviewed and rejected.`}
+            </p>
+            ${resolutionNote
+              ? `<p><strong>Resolution note:</strong> ${resolutionNote}</p>`
+              : ""}
+            <p>You can view the full dispute and order timeline in your BonAgri account.</p>
+            <p>BonAgri<br />Agricultural trade, connected.</p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.error("BonAgri SMTP delivery error:", error);
+      throw error;
+    }
+  }
 }

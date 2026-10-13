@@ -61,6 +61,42 @@ type SupplierOrder = {
   };
 };
 
+type VendorDispute = {
+  id: string;
+  reason: string;
+  description: string;
+  status: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED";
+  resolutionNote: string | null;
+  createdAt: string;
+  order: {
+    id: string;
+    orderNumber: string;
+    status: OrderStatus;
+    total: string;
+    createdAt: string;
+  };
+  openedBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+};
+
+const DISPUTE_REASON_LABELS: Record<string, string> = {
+  NOT_DELIVERED: "Not delivered",
+  WRONG_ITEM: "Wrong item received",
+  DAMAGED: "Damaged goods",
+  OTHER: "Other",
+};
+
+const DISPUTE_STATUS_STYLES: Record<VendorDispute["status"], string> = {
+  OPEN: "border-amber-200 bg-amber-50 text-amber-700",
+  UNDER_REVIEW: "border-blue-200 bg-blue-50 text-blue-700",
+  RESOLVED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  REJECTED: "border-red-200 bg-red-50 text-red-700",
+};
+
 const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING: "Pending",
   CONFIRMED: "Confirmed",
@@ -108,11 +144,43 @@ export default function SupplierPage() {
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"ALL" | OrderStatus>("ALL");
   const [vendorRole, setVendorRole] = useState<UserRole | null>(null);
+  const [disputes, setDisputes] = useState<VendorDispute[]>([]);
 
   useEffect(() => {
     void fetchCurrentUser().then((user) => {
       setVendorRole(user?.role ?? null);
     });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDisputes = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/disputes/mine`, {
+          cache: "no-store",
+          headers: authHeaders(),
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as VendorDispute[];
+
+        if (!cancelled) {
+          setDisputes(data);
+        }
+      } catch {
+        // The disputes panel is non-blocking; leave it empty on failure.
+      }
+    };
+
+    void loadDisputes();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const loadOrders = useCallback(async () => {
@@ -530,6 +598,86 @@ export default function SupplierPage() {
                   </article>
                 );
               })}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold">Disputes</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Disputes buyers have opened on orders containing your products. The
+            BonAgri team reviews each one with the order timeline as evidence.
+          </p>
+
+          {disputes.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+              No disputes on your orders. Keep fulfilling on time and this list
+              will stay empty.
+            </div>
+          ) : (
+            <div className="mt-5 space-y-4">
+              {disputes.map((dispute) => (
+                <article
+                  key={dispute.id}
+                  className="rounded-2xl border border-slate-200 p-5"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/orders/${dispute.order.id}`}
+                          className="font-semibold hover:underline"
+                        >
+                          {dispute.order.orderNumber}
+                        </Link>
+
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${DISPUTE_STATUS_STYLES[dispute.status]}`}
+                        >
+                          {dispute.status.replaceAll("_", " ")}
+                        </span>
+                      </div>
+
+                      <p className="mt-1 text-xs text-slate-500">
+                        Opened {formatDate(dispute.createdAt)} by{" "}
+                        {dispute.openedBy.firstName}{" "}
+                        {dispute.openedBy.lastName}
+                      </p>
+                    </div>
+
+                    <div className="text-left sm:text-right">
+                      <p className="text-xs text-slate-500">Order total</p>
+                      <p className="text-lg font-semibold">
+                        {money(dispute.order.total)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      {DISPUTE_REASON_LABELS[dispute.reason] ?? dispute.reason}
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-slate-700">
+                      {dispute.description}
+                    </p>
+                  </div>
+
+                  {dispute.resolutionNote ? (
+                    <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                        Resolution note
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap text-emerald-900">
+                        {dispute.resolutionNote}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-slate-500">
+                      Awaiting review by the BonAgri team.
+                    </p>
+                  )}
+                </article>
+              ))}
             </div>
           )}
         </section>

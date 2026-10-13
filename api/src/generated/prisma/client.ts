@@ -85,6 +85,11 @@ export type Order = Prisma.OrderModel
  */
 export type OrderStatusHistory = Prisma.OrderStatusHistoryModel
 /**
+ * Model Dispute
+ * 
+ */
+export type Dispute = Prisma.DisputeModel
+/**
  * Model OrderItem
  * 
  */

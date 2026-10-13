@@ -184,6 +184,7 @@ export class OrdersService {
         payment: true,
         delivery: true,
         invoice: true,
+        dispute: true,
         history: {
           orderBy: {
             createdAt: "asc",

@@ -84,11 +84,14 @@ echo "[2/12] Starting API..."
 cd "$API"
 
 CAPTURE_FILE="$ROOT/.e2e/verification-url.txt"
+DISPUTE_CAPTURE_FILE="$ROOT/.e2e/dispute-resolution.txt"
 mkdir -p "$ROOT/.e2e"
 rm -f "$CAPTURE_FILE"
+rm -f "$DISPUTE_CAPTURE_FILE"
 
 E2E_CAPTURE_MAIL=true \
 E2E_MAIL_CAPTURE_FILE="$CAPTURE_FILE" \
+E2E_DISPUTE_CAPTURE_FILE="$DISPUTE_CAPTURE_FILE" \
 npm run start:dev >"$LOG_DIR/api.log" 2>&1 &
 API_PID=$!
 
@@ -1487,6 +1490,404 @@ PYJSON
 
 echo
 echo "✓ DEALER FLOW ACCEPTANCE PASSED"
+
+echo
+echo "DISPUTE FLOW: RAISE → VENDOR → RESOLVE"
+echo "========================================"
+
+# Same guarded credential resolution as the admin section below (idempotent).
+ADMIN_E2E_EMAIL="${ADMIN_E2E_EMAIL:-}"
+ADMIN_E2E_PASSWORD="${ADMIN_E2E_PASSWORD:-}"
+
+if [ -z "$ADMIN_E2E_PASSWORD" ] && [ -f "$API/.env" ]; then
+  ADMIN_E2E_EMAIL="${ADMIN_E2E_EMAIL:-$(sed -n 's/^SEED_ADMIN_EMAIL=//p' "$API/.env" | tail -1)}"
+  ADMIN_E2E_PASSWORD="$(sed -n 's/^SEED_ADMIN_PASSWORD=//p' "$API/.env" | tail -1 | tr -d "\"'" | tr -d '\r')"
+fi
+
+if [ -z "$ADMIN_E2E_EMAIL" ]; then
+  ADMIN_E2E_EMAIL="admin@bonagri.co.za"
+fi
+
+if [ -z "$ADMIN_E2E_PASSWORD" ]; then
+  echo "⚠ Dispute section SKIPPED: no SEED_ADMIN_PASSWORD in api/.env and no ADMIN_E2E_PASSWORD env var."
+else
+
+echo
+echo "[E1/3] Buyer opens a dispute (guards + eligibility)..."
+
+# Vendors cannot open disputes (BUYER-only route).
+VENDOR_DISPUTE_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-vendor-open.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$ORDER_ID/dispute" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"reason\":\"DAMAGED\",\"description\":\"vendor trying to open a dispute\"}")"
+
+if [[ "$VENDOR_DISPUTE_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/dispute-vendor-open.json"
+  fail "Vendor was able to open a dispute. HTTP $VENDOR_DISPUTE_HTTP"
+fi
+
+echo "✓ Vendor cannot open disputes (403)"
+
+# Anonymous requests are rejected before any dispute logic.
+ANON_DISPUTE_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-anon.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$ORDER_ID/dispute" \
+    -H "Content-Type: application/json" \
+    -d "{\"reason\":\"OTHER\",\"description\":\"anonymous attempt\"}")"
+
+if [[ "$ANON_DISPUTE_HTTP" != "401" ]]; then
+  fail "Anonymous dispute attempt returned HTTP $ANON_DISPUTE_HTTP, expected 401"
+fi
+
+echo "✓ Anonymous dispute attempt rejected (401)"
+
+# Disputes are only eligible from OUT_FOR_DELIVERY / DELIVERED.
+# A fresh order stays PENDING: opening a dispute must fail with 400,
+# then the buyer cancels it so the reservation is released again.
+PENDING_ORDER_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-pending-order.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"productId\":\"$PRODUCT_ID\",\"quantity\":1,\"notes\":\"Dispute eligibility check\"}")"
+
+if [[ "$PENDING_ORDER_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/dispute-pending-order.json"
+  fail "Could not create the PENDING order for the dispute eligibility check. HTTP $PENDING_ORDER_HTTP"
+fi
+
+PENDING_ORDER_ID="$(
+  python3 - "$LOG_DIR/dispute-pending-order.json" <<'PYJSON'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+order = data.get("order") if isinstance(data.get("order"), dict) else data
+print(order.get("id", ""))
+PYJSON
+)"
+
+if [[ -z "$PENDING_ORDER_ID" ]]; then
+  fail "PENDING order identity missing in the dispute eligibility check."
+fi
+
+EARLY_DISPUTE_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-early.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$PENDING_ORDER_ID/dispute" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"reason\":\"NOT_DELIVERED\",\"description\":\"too early to dispute\"}")"
+
+if [[ "$EARLY_DISPUTE_HTTP" != "400" ]]; then
+  cat "$LOG_DIR/dispute-early.json"
+  fail "Dispute on a PENDING order returned HTTP $EARLY_DISPUTE_HTTP, expected 400"
+fi
+
+echo "✓ Dispute rejected on a non-eligible (PENDING) order (400)"
+
+CANCEL_DISPUTE_ORDER_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-cancel.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$PENDING_ORDER_ID/status" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"CANCELLED\"}")"
+
+if [[ "$CANCEL_DISPUTE_ORDER_HTTP" != "200" ]]; then
+  fail "Cleanup cancel of the throwaway order failed. HTTP $CANCEL_DISPUTE_ORDER_HTTP"
+fi
+
+echo "✓ Throwaway PENDING order cancelled (reservation released)"
+
+# The delivered order from the buyer journey is eligible.
+DISPUTE_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-create.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$ORDER_ID/dispute" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"reason\":\"DAMAGED\",\"description\":\"Two crates arrived bruised and unusable\"}")"
+
+if [[ "$DISPUTE_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/dispute-create.json"
+  fail "Buyer dispute creation failed. HTTP $DISPUTE_HTTP"
+fi
+
+DISPUTE_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/dispute-create.json"
+)"
+
+if [[ -z "$DISPUTE_ID" ]]; then
+  fail "Dispute creation returned no dispute id."
+fi
+
+python3 - "$LOG_DIR/dispute-create.json" "$ORDER_ID" <<'PYJSON'
+import json
+import sys
+
+dispute = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if dispute.get("status") != "OPEN":
+    raise SystemExit("ERROR: new dispute expected OPEN, got {}".format(dispute.get("status")))
+
+if (dispute.get("order") or {}).get("id") != sys.argv[2]:
+    raise SystemExit("ERROR: dispute attached to the wrong order")
+
+print("✓ Buyer opened a dispute on the delivered order")
+PYJSON
+
+# A second dispute on the same order must be rejected.
+DUPLICATE_DISPUTE_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-duplicate.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$ORDER_ID/dispute" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"reason\":\"OTHER\",\"description\":\"second dispute attempt\"}")"
+
+if [[ "$DUPLICATE_DISPUTE_HTTP" != "409" ]]; then
+  cat "$LOG_DIR/dispute-duplicate.json"
+  fail "Duplicate dispute returned HTTP $DUPLICATE_DISPUTE_HTTP, expected 409"
+fi
+
+echo "✓ Duplicate dispute rejected (409)"
+
+# The platform-wide queue is admin-only.
+BUYER_QUEUE_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-buyer-queue.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/disputes")"
+
+if [[ "$BUYER_QUEUE_HTTP" != "403" ]]; then
+  fail "Buyer dispute-queue access returned HTTP $BUYER_QUEUE_HTTP, expected 403"
+fi
+
+echo "✓ Buyer cannot reach the admin dispute queue (403)"
+
+# The vendor sees disputes on orders containing their products.
+curl -sS "$API_URL$API_PREFIX/disputes/mine" \
+  -H "Authorization: Bearer $SUPPLIER_TOKEN" > "$LOG_DIR/dispute-vendor-list.json"
+
+python3 - "$LOG_DIR/dispute-vendor-list.json" "$DISPUTE_ID" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+dispute_id = sys.argv[2]
+
+if not isinstance(items, list):
+    raise SystemExit("ERROR: vendor dispute list is not an array")
+
+if not any(d.get("id") == dispute_id for d in items):
+    raise SystemExit("ERROR: vendor cannot see the dispute for their order")
+
+print("✓ Vendor sees the dispute on their queue")
+PYJSON
+
+# The dealer shares the vendor screen but has no disputed orders.
+curl -sS "$API_URL$API_PREFIX/disputes/mine" \
+  -H "Authorization: Bearer $DEALER_TOKEN" > "$LOG_DIR/dispute-dealer-list.json"
+
+python3 - "$LOG_DIR/dispute-dealer-list.json" "$DISPUTE_ID" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+dispute_id = sys.argv[2]
+
+if not isinstance(items, list):
+    raise SystemExit("ERROR: dealer dispute list is not an array")
+
+if any(d.get("id") == dispute_id for d in items):
+    raise SystemExit("ERROR: dealer can see a dispute on another vendor order")
+
+print("✓ Dealer dispute list stays scoped to their own orders")
+PYJSON
+
+echo
+echo "[E2/3] Admin resolves with a note; buyer sees the outcome; email captured..."
+
+ADMIN_LOGIN_E_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-admin-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
+)"
+
+if [[ "$ADMIN_LOGIN_E_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/dispute-admin-login.json"
+  fail "Admin login for the dispute flow failed. HTTP $ADMIN_LOGIN_E_HTTP"
+fi
+
+ADMIN_TOKEN="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("accessToken",""))' "$LOG_DIR/dispute-admin-login.json"
+)"
+
+if [[ -z "$ADMIN_TOKEN" ]]; then
+  fail "Admin login for the dispute flow returned no access token"
+fi
+
+echo "✓ Admin login succeeded"
+
+curl -sS "$API_URL$API_PREFIX/disputes" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" > "$LOG_DIR/dispute-admin-list.json"
+
+python3 - "$LOG_DIR/dispute-admin-list.json" "$DISPUTE_ID" "$ORDER_ID" "$TEST_EMAIL" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+dispute_id = sys.argv[2]
+order_id = sys.argv[3]
+buyer_email = sys.argv[4]
+
+if not isinstance(items, list):
+    raise SystemExit("ERROR: admin dispute queue is not an array")
+
+match = [d for d in items if d.get("id") == dispute_id]
+
+if not match:
+    raise SystemExit("ERROR: dispute missing from the admin queue")
+
+dispute = match[0]
+order = dispute.get("order") or {}
+
+if order.get("id") != order_id:
+    raise SystemExit("ERROR: admin queue shows the dispute on the wrong order")
+
+if (dispute.get("openedBy") or {}).get("email") != buyer_email:
+    raise SystemExit("ERROR: dispute opener does not match the buyer account")
+
+if not order.get("history"):
+    raise SystemExit("ERROR: admin queue dispute has no order-history evidence")
+
+print("✓ Admin queue shows the dispute with order-history evidence")
+PYJSON
+
+RESOLVE_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-resolve.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/disputes/$DISPUTE_ID" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"RESOLVED\",\"resolutionNote\":\"Two crates refunded; supplier advised on packaging standards\"}")"
+
+if [[ "$RESOLVE_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/dispute-resolve.json"
+  fail "Admin dispute resolution failed. HTTP $RESOLVE_HTTP"
+fi
+
+python3 - "$LOG_DIR/dispute-resolve.json" <<'PYJSON'
+import json
+import sys
+
+result = json.load(open(sys.argv[1], encoding="utf-8"))
+dispute = result.get("dispute") or {}
+
+if dispute.get("status") != "RESOLVED":
+    raise SystemExit("ERROR: expected RESOLVED, got {}".format(dispute.get("status")))
+
+if not dispute.get("resolutionNote"):
+    raise SystemExit("ERROR: resolution note missing on the resolved dispute")
+
+if not dispute.get("resolvedAt"):
+    raise SystemExit("ERROR: resolvedAt missing on the resolved dispute")
+
+print("✓ Admin resolved the dispute with a note")
+PYJSON
+
+# The resolution email must have been captured (mail capture mode).
+if [[ ! -f "$DISPUTE_CAPTURE_FILE" ]]; then
+  fail "Resolution email was not captured at $DISPUTE_CAPTURE_FILE"
+fi
+
+python3 - "$DISPUTE_CAPTURE_FILE" "$ORDER_NUMBER" <<'PYJSON'
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+order_number = sys.argv[2]
+
+if payload.get("orderNumber") != order_number:
+    raise SystemExit("ERROR: captured resolution email references the wrong order")
+
+if payload.get("outcome") != "RESOLVED":
+    raise SystemExit("ERROR: captured resolution email outcome is {}".format(payload.get("outcome")))
+
+if not payload.get("resolutionNote"):
+    raise SystemExit("ERROR: captured resolution email has no note")
+
+print("✓ Resolution email captured for the buyer")
+PYJSON
+
+# The buyer sees the resolution on the order detail.
+curl -sS "$API_URL$API_PREFIX/orders/$ORDER_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/dispute-buyer-order.json"
+
+python3 - "$LOG_DIR/dispute-buyer-order.json" "$DISPUTE_ID" <<'PYJSON'
+import json
+import sys
+
+order = json.load(open(sys.argv[1], encoding="utf-8"))
+dispute = order.get("dispute") or {}
+
+if dispute.get("id") != sys.argv[2]:
+    raise SystemExit("ERROR: buyer order detail is missing the dispute")
+
+if dispute.get("status") != "RESOLVED":
+    raise SystemExit("ERROR: buyer sees dispute status {}, expected RESOLVED".format(dispute.get("status")))
+
+if not dispute.get("resolutionNote"):
+    raise SystemExit("ERROR: buyer cannot see the resolution note")
+
+print("✓ Buyer sees the resolved dispute and note on the order")
+PYJSON
+
+echo
+echo "[E3/3] Closed disputes and role guards hold..."
+
+# Closed disputes are terminal.
+RECLOSE_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-reclose.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/disputes/$DISPUTE_ID" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"REJECTED\",\"resolutionNote\":\"attempting to close twice\"}")"
+
+if [[ "$RECLOSE_HTTP" != "400" ]]; then
+  cat "$LOG_DIR/dispute-reclose.json"
+  fail "Re-closing a closed dispute returned HTTP $RECLOSE_HTTP, expected 400"
+fi
+
+echo "✓ Closed dispute rejects further transitions (400)"
+
+# Vendors and buyers cannot act on the admin queue.
+VENDOR_PATCH_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-vendor-patch.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/disputes/$DISPUTE_ID" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"UNDER_REVIEW\"}")"
+
+if [[ "$VENDOR_PATCH_HTTP" != "403" ]]; then
+  fail "Vendor dispute update returned HTTP $VENDOR_PATCH_HTTP, expected 403"
+fi
+
+BUYER_PATCH_HTTP="$(
+  curl -sS -o "$LOG_DIR/dispute-buyer-patch.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/disputes/$DISPUTE_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"UNDER_REVIEW\"}")"
+
+if [[ "$BUYER_PATCH_HTTP" != "403" ]]; then
+  fail "Buyer dispute update returned HTTP $BUYER_PATCH_HTTP, expected 403"
+fi
+
+echo "✓ Only admins can act on disputes (403 for vendor and buyer)"
+
+echo
+echo "✓ DISPUTE FLOW ACCEPTANCE PASSED"
+
+fi
 
 echo
 echo "ADMIN MANAGEMENT FLOW"

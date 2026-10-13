@@ -173,6 +173,78 @@ describe("OrdersService (CP0 foundations)", () => {
         } as never),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it("lets the buyer cancel their own PENDING order and releases stock", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primePendingOrder(tx);
+      tx.inventory.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.updateOrderStatus("order-1", "buyer-1", "BUYER", {
+        status: "CANCELLED",
+      } as never);
+
+      expect(tx.inventory.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            productId: "prod-1",
+            reservedQuantity: { gte: 2 },
+          }),
+          data: { reservedQuantity: { decrement: 2 } },
+        }),
+      );
+      expect(tx.orderStatusHistory.create).toHaveBeenCalledWith({
+        data: {
+          orderId: "order-1",
+          fromStatus: "PENDING",
+          toStatus: "CANCELLED",
+          actorUserId: "buyer-1",
+          actorRole: "BUYER",
+          note: null,
+        },
+      });
+    });
+
+    it("rejects a buyer cancelling somebody else's order", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primePendingOrder(tx);
+      tx.order.findUnique.mockResolvedValue({
+        id: "order-1",
+        userId: "other-buyer",
+        status: "PENDING",
+        items: [],
+      });
+
+      await expect(
+        service.updateOrderStatus("order-1", "buyer-1", "BUYER", {
+          status: "CANCELLED",
+        } as never),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("rejects a buyer cancelling an order past PENDING", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primePendingOrder(tx);
+      tx.order.findUnique.mockResolvedValue({
+        id: "order-1",
+        userId: "buyer-1",
+        status: "CONFIRMED",
+        items: [],
+      });
+
+      await expect(
+        service.updateOrderStatus("order-1", "buyer-1", "BUYER", {
+          status: "CANCELLED",
+        } as never),
+      ).rejects.toThrow(
+        "Buyers can only cancel their own pending orders",
+      );
+    });
   });
 
   describe("getOrderDetail", () => {

@@ -986,6 +986,246 @@ echo
 echo "✓ SUPPLIER ORDER VISIBILITY / STATUS ACCEPTANCE PASSED"
 
 echo
+echo "========================================"
+echo "CONSUMER FLOW: ADDRESSES / CANCEL / TIMELINE"
+echo "========================================"
+
+echo
+echo "[C1/3] Managing buyer addresses..."
+
+ADDR2_HTTP="$(curl -sS -o "$LOG_DIR/smoke-address-create.json" \
+  -w '%{http_code}' \
+  -X POST "$API_URL/api/addresses" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"label":"Smoke Backup","recipientName":"Smoke Buyer","addressLine1":"9 Test Street","city":"Polokwane","province":"Limpopo","postalCode":"0700"}')"
+
+if [ "$ADDR2_HTTP" != "201" ] && [ "$ADDR2_HTTP" != "200" ]; then
+  echo "ERROR: second address creation failed with HTTP $ADDR2_HTTP"
+  cat "$LOG_DIR/smoke-address-create.json"
+  exit 1
+fi
+
+ADDR2_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/smoke-address-create.json")"
+
+echo "✓ Second address created: ${ADDR2_ID:0:8}..."
+
+PATCH_DEFAULT_HTTP="$(curl -sS -o /dev/null -w '%{http_code}' \
+  -X PATCH "$API_URL/api/addresses/$ADDR2_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"isDefault":true}')"
+
+if [ "$PATCH_DEFAULT_HTTP" != "200" ]; then
+  echo "ERROR: setting default failed with HTTP $PATCH_DEFAULT_HTTP"
+  exit 1
+fi
+
+curl -sS "$API_URL/api/addresses" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -o "$LOG_DIR/smoke-addresses-default.json"
+
+python3 - "$LOG_DIR/smoke-addresses-default.json" "$ADDR2_ID" <<'PYJSON'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+defaults = [a for a in data if a.get("isDefault")]
+
+if len(defaults) != 1:
+    raise SystemExit(
+        "ERROR: expected exactly one default address, got {}".format(
+            len(defaults)
+        )
+    )
+
+if defaults[0]["id"] != sys.argv[2]:
+    raise SystemExit("ERROR: default did not move to the updated address")
+
+print("✓ Default moved to the updated address (exactly one default)")
+PYJSON
+
+# An address referenced by an existing order must refuse deletion.
+ADDR_USED_HTTP="$(curl -sS -o /dev/null -w '%{http_code}' \
+  -X DELETE "$API_URL/api/addresses/$ADDRESS_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN")"
+
+if [ "$ADDR_USED_HTTP" != "400" ]; then
+  echo "ERROR: deleting an order-used address returned HTTP $ADDR_USED_HTTP, expected 400"
+  exit 1
+fi
+
+echo "✓ Order-used address protected from deletion (400)"
+
+# Deleting the default promotes the remaining address back.
+ADDR2_DELETE_HTTP="$(curl -sS -o /dev/null -w '%{http_code}' \
+  -X DELETE "$API_URL/api/addresses/$ADDR2_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN")"
+
+if [ "$ADDR2_DELETE_HTTP" != "200" ]; then
+  echo "ERROR: second address deletion failed with HTTP $ADDR2_DELETE_HTTP"
+  exit 1
+fi
+
+curl -sS "$API_URL/api/addresses" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -o "$LOG_DIR/smoke-addresses-after.json"
+
+python3 - "$LOG_DIR/smoke-addresses-after.json" "$ADDR2_ID" "$ADDRESS_ID" <<'PYJSON'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+ids = {a["id"] for a in data}
+
+if sys.argv[2] in ids:
+    raise SystemExit("ERROR: deleted address still present")
+
+defaults = [a for a in data if a.get("isDefault")]
+
+if len(defaults) != 1 or defaults[0]["id"] != sys.argv[3]:
+    raise SystemExit(
+        "ERROR: original address was not promoted back to default"
+    )
+
+print("✓ Address deleted; original address promoted back to default")
+PYJSON
+
+echo
+echo "[C2/3] Buyer cancelling a PENDING order releases stock..."
+
+curl -sS "$API_URL/api/products/$PRODUCT_ID" \
+  -o "$LOG_DIR/smoke-product-before.json"
+
+BEFORE2_RESERVED="$(python3 -c '
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+print(data["inventory"]["reservedQuantity"])
+' "$LOG_DIR/smoke-product-before.json")"
+
+ORDER2_HTTP="$(curl -sS -o "$LOG_DIR/smoke-order-create.json" \
+  -w '%{http_code}' \
+  -X POST "$API_URL/api/orders" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"productId\":\"$PRODUCT_ID\",\"quantity\":1,\"notes\":\"CP2 cancel check\"}")"
+
+if [ "$ORDER2_HTTP" != "201" ] && [ "$ORDER2_HTTP" != "200" ]; then
+  echo "ERROR: throwaway order creation failed with HTTP $ORDER2_HTTP"
+  cat "$LOG_DIR/smoke-order-create.json"
+  exit 1
+fi
+
+ORDER2_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/smoke-order-create.json")"
+
+curl -sS "$API_URL/api/products/$PRODUCT_ID" \
+  -o "$LOG_DIR/smoke-product-reserved.json"
+
+AFTER_CREATE_RESERVED="$(python3 -c '
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+print(data["inventory"]["reservedQuantity"])
+' "$LOG_DIR/smoke-product-reserved.json")"
+
+if [ "$AFTER_CREATE_RESERVED" != "$((BEFORE2_RESERVED + 1))" ]; then
+  echo "ERROR: reservation did not increase by 1 (before=$BEFORE2_RESERVED after=$AFTER_CREATE_RESERVED)"
+  exit 1
+fi
+
+echo "✓ Reservation increased by 1 after order creation"
+
+CANCEL_HTTP="$(curl -sS -o "$LOG_DIR/smoke-order-cancel.json" \
+  -w '%{http_code}' \
+  -X PATCH "$API_URL/api/orders/$ORDER2_ID/status" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"CANCELLED"}')"
+
+if [ "$CANCEL_HTTP" != "200" ]; then
+  echo "ERROR: buyer cancel failed with HTTP $CANCEL_HTTP"
+  cat "$LOG_DIR/smoke-order-cancel.json"
+  exit 1
+fi
+
+curl -sS "$API_URL/api/products/$PRODUCT_ID" \
+  -o "$LOG_DIR/smoke-product-released.json"
+
+AFTER_CANCEL_RESERVED="$(python3 -c '
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+print(data["inventory"]["reservedQuantity"])
+' "$LOG_DIR/smoke-product-released.json")"
+
+if [ "$AFTER_CANCEL_RESERVED" != "$BEFORE2_RESERVED" ]; then
+  echo "ERROR: reservation not released on cancel (before=$BEFORE2_RESERVED after=$AFTER_CANCEL_RESERVED)"
+  exit 1
+fi
+
+echo "✓ Reservation released on buyer cancel (back to $AFTER_CANCEL_RESERVED)"
+
+LATE_CANCEL_HTTP="$(curl -sS -o /dev/null -w '%{http_code}' \
+  -X PATCH "$API_URL/api/orders/$ORDER_ID/status" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"CANCELLED"}')"
+
+if [ "$LATE_CANCEL_HTTP" != "400" ]; then
+  echo "ERROR: cancelling a DELIVERED order returned HTTP $LATE_CANCEL_HTTP, expected 400"
+  exit 1
+fi
+
+echo "✓ Cancel blocked past PENDING (400)"
+
+echo
+echo "[C3/3] Reading the cancelled order's status timeline..."
+
+curl -sS "$API_URL/api/orders/$ORDER2_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -o "$LOG_DIR/smoke-order-timeline.json"
+
+python3 - "$LOG_DIR/smoke-order-timeline.json" <<'PYJSON'
+import json
+import sys
+
+order = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if order.get("status") != "CANCELLED":
+    raise SystemExit(
+        "ERROR: expected CANCELLED status, got {}".format(
+            order.get("status")
+        )
+    )
+
+history = order.get("history")
+
+if not isinstance(history, list) or len(history) != 2:
+    raise SystemExit(
+        "ERROR: expected 2 history entries, got {}".format(history)
+    )
+
+first, last = history[0], history[-1]
+
+if first.get("toStatus") != "PENDING" or first.get("fromStatus") is not None:
+    raise SystemExit("ERROR: timeline does not start at PENDING")
+
+if last.get("toStatus") != "CANCELLED" or last.get("actorRole") != "BUYER":
+    raise SystemExit(
+        "ERROR: timeline does not end with a buyer cancellation"
+    )
+
+print("✓ Cancelled order timeline: PENDING -> CANCELLED by BUYER")
+PYJSON
+
+echo
+echo "✓ CONSUMER FLOW ACCEPTANCE PASSED"
+
+echo
 echo "RUNTIME SMOKE TEST CLEANUP"
 echo "========================================"
 

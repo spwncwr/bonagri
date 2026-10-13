@@ -6,6 +6,18 @@ _Investigation only. Every claim below was verified by reading code or running r
 
 ---
 
+## Update log (post-audit changes)
+
+Platform-expansion checkpoints land on `main` continuously. **Where this audit's body says otherwise, this table supersedes it** (notably the claims that no `OrderStatusHistory` model, no status history, no admin, no real tests, and no smoke run exist). Gates and verification journeys live in `docs/CHECKPOINT_PLAN.md`.
+
+| Date | Checkpoint | What changed |
+|---|---|---|
+| 2026-10-13 | **CP0** `b07b321` | `UserRole` gains `AGRO_DEALER` (§5, §15); new **`OrderStatusHistory`** model — every order create/status change writes a history row (stale: §10 relationship note, §14 "No status history"); `GET /api/orders/:id` detail endpoint; **admin fixed**: platform-wide order lists (closes gap #7); env-gated admin seed (`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`, never hard-coded); shared role types `api/src/common/types.ts`; `/admin` console shell; `jest.config.ts` resolves generated-Prisma imports, enabling service unit tests |
+| 2026-10-13 | **CP1** `2d8c4bc` | **Supplier listing screens**: `GET /api/supplier/products` + `/supplier/products` (list, activate/deactivate), `/supplier/products/new`, `/supplier/products/[id]`; public `GET /api/products/:id` hides DRAFT/INACTIVE (closes gap #14); broken supplier Cancel button removed (closes gap #8); `Agricultural Tools & Equipment` + `Seeds & Chemicals` categories seeded; smoke S9/S10 (create → public → deactivate → hidden) |
+| 2026-10-13 | **CP2** *(deploy pending)* | **Consumer flow**: `PATCH`/`DELETE /api/addresses/:id` (default promotion, order-used → 400); buyer **Cancel** UI on PENDING orders (homepage + detail page, releases reservation); `/orders/[id]` detail page with **status timeline** from `OrderStatusHistory`; `/addresses` management page (list/create/edit/delete/make-default) + header link; smoke C1–C3 (address lifecycle, cancel releases stock, cancelled-order timeline) |
+
+---
+
 ## 1. Repository map
 
 Single git repo (`origin = https://github.com/spwncwr/bonagri.git`), **not** an npm-workspaces monorepo — there is no root `package.json`. Two independent npm packages plus loose scripts:
@@ -58,7 +70,7 @@ Single git repo (`origin = https://github.com/spwncwr/bonagri.git`), **not** an 
 | Web tests | none | ❌ no `test` script exists |
 | API lint | `cd api && npm run lint` | ✅ exit 0, 1 warning (`mail.service.ts:45` unbound-method) |
 | Web lint | `cd web && npm run lint` | ✅ exit 0 |
-| Full runtime smoke | `bash scripts/runtime-smoke.sh` | Script exists and covers auth→verify→login→address→order→lifecycle; artifacts in `.runtime-test/` dated 2026-10-04 suggest a past successful run. Not re-run this session (it mutates the dev DB) — **UNVERIFIED** today |
+| Full runtime smoke | `bash scripts/runtime-smoke.sh` | ✅ **re-run 2026-10-13**: all 13 sections green (auth→verify→login→address→order→lifecycle, S8 history, S9/S10 listings, C1–C3 consumer flow); mutates the local dev DB |
 
 ## 4. Environment variables (names only)
 
@@ -195,9 +207,9 @@ DTOs: `CreateOrderDto` (deliveryAddressId, productId, quantity ≥1, notes?) —
 
 - `api/src/app.controller.spec.ts` — 1 trivial unit test ("Hello World!") for `AppController`, which is **not registered in AppModule** (dead code). Passes (`npm test` exit 0).
 - `api/test/app.e2e-spec.ts` — Nest starter e2e spec. **Broken**: `npm run test:e2e` exits 1 (`Cannot find module './internal/class.js'` — Jest/ts-jest cannot resolve the generated Prisma client's `.js` imports). Even if fixed, it asserts `GET /` → "Hello World!" which no longer exists.
-- **No Jest tests exist for any real feature** (auth, catalog, orders, addresses).
+- **Feature unit tests exist since CP0/CP1/CP2** (2026-10-13): `orders.service.spec.ts` (12), `catalog.service.spec.ts` (8), `addresses.service.spec.ts` (12) — **32 passing** via `npm test`. Auth/catalog e2e remains broken (§10).
 - `web/` — **no tests at all** (no test script, no test files).
-- `scripts/runtime-smoke.sh` (untracked) — the de-facto test suite: DB reachability, boots API (port 3000) + web (port 3001), public catalog, buyer registration, unverified-login block (expects 401), captures verification URL, verifies email, verifies token reuse → 401, verified login (expects 201), `/auth/me`, authenticated catalog, address create/retrieve, buyer order create (expects 201), **inventory reservation delta verified directly via psql**, supplier login, supplier order visibility (expects PENDING), buyer → `/orders/supplier` must 403, supplier walks PENDING→CONFIRMED→PROCESSING→READY_FOR_DELIVERY→OUT_FOR_DELIVERY→DELIVERED, buyer finally sees DELIVERED ("S1–S7 acceptance"). `.runtime-test/` artifacts from 2026-10-04 imply it passed then; not re-run today (**UNVERIFIED**).
+- `scripts/runtime-smoke.sh` (untracked) — the de-facto test suite: DB reachability, boots API (port 3000) + web (port 3001), public catalog, buyer registration, unverified-login block (expects 401), captures verification URL, verifies email, verifies token reuse → 401, verified login (expects 201), `/auth/me`, authenticated catalog, address create/retrieve, buyer order create (expects 201), **inventory reservation delta verified directly via psql**, supplier login, supplier order visibility (expects PENDING), buyer → `/orders/supplier` must 403, supplier walks PENDING→CONFIRMED→PROCESSING→READY_FOR_DELIVERY→OUT_FOR_DELIVERY→DELIVERED, buyer finally sees DELIVERED ("S1–S7 acceptance"); extended by CP0 (**S8** order-detail history), CP1 (**S9–S10** listing create/deactivate lifecycle), CP2 (**C1–C3** address CRUD + defaults + FK guard, buyer cancel releases reservation, cancelled-order timeline). ✅ Full run green 2026-10-13.
 - Smaller untracked scripts (`harden-and-verify.sh`, `integration-audit.sh`, `final-integrity-check.sh`, `fix-registration-verification.sh`) are grep-based self-checks, not tests.
 - **Coverage gaps**: all service logic unit tests; web UI tests; fixed e2e suite; negative-path tests (oversell concurrency, cross-supplier access, admin flows).
 
@@ -228,7 +240,7 @@ DTOs: `CreateOrderDto` (deliveryAddressId, productId, quantity ≥1, notes?) —
 | Registration | **VERIFIED DONE** | `auth.controller.ts:33`, `auth.service.ts:22` (BUYER-only) |
 | JWT | **VERIFIED DONE** | `auth.module.ts`, `jwt-auth.guard.ts` |
 | Buyer/supplier roles | **VERIFIED DONE** | `UserRole` enum, `@Roles` + `RolesGuard` |
-| Admin role foundation | **PARTIAL** | enum value + appears in `@Roles` lists (`catalog.controller.ts:52,59`, `orders.controller.ts:37,46`), but no admin user, seed, endpoint, or UI; two admin-allowed routes fail in the service layer |
+| Admin role foundation | **VERIFIED DONE** (CP0 `b07b321`) | env-gated admin seed (`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`), `GET /api/orders` returns platform-wide lists for ADMIN, `/admin` console shell; admin verified live on 2026-10-13 |
 | `/auth/me` | **VERIFIED DONE** | `auth.controller.ts:53` |
 | Email verification | **VERIFIED DONE** (⚠ uncommitted) | `auth.service.ts`, `EmailVerificationToken` model, migration `20261002232548_add_email_verification`, `web/app/verify-email/page.tsx` |
 | Unverified-account login block | **VERIFIED DONE** | `auth.service.ts:272-276` (401) |
@@ -237,7 +249,7 @@ DTOs: `CreateOrderDto` (deliveryAddressId, productId, quantity ≥1, notes?) —
 | Active products API | **VERIFIED DONE** | `catalog.controller.ts:42` (+ search/category filters) |
 | Product schema | **VERIFIED DONE** | `schema.prisma:153-176` |
 | Supplier inventory foundation | **VERIFIED DONE** | `catalog.controller.ts:50,57`, service ownership checks |
-| Delivery-address backend create/retrieve | **VERIFIED DONE** | `addresses.controller.ts` (⚠ uncommitted) |
+| Delivery-address backend create/retrieve/update/delete | **VERIFIED DONE** (CP2) | `addresses.controller.ts`: GET, POST, `PATCH :id` (partial update + default promotion), `DELETE :id` (order-used → 400; deleting the default promotes the newest remaining address) |
 | Buyer order creation endpoint | **VERIFIED DONE** | `orders.controller.ts:50`, `orders.service.ts:118` (single-product orders only) |
 | Inventory reservation | **VERIFIED DONE** | `orders.service.ts:212-219` (+ psql check in smoke script) |
 | Supplier order visibility | **VERIFIED DONE** | `orders.service.ts:62-116` |
@@ -252,13 +264,13 @@ DTOs: `CreateOrderDto` (deliveryAddressId, productId, quantity ≥1, notes?) —
 | Item | Verdict | Evidence |
 |---|---|---|
 | Buyer product listing/search/filters/detail/availability/quantity | **PARTIAL** | exists in `web/app/page.tsx` (cards, search box, category filter, detail modal, availability, quantity stepper capped at stock). **Missing**: real images (`imageUrl` never rendered; hardcoded placeholder visuals `page.tsx:79-84`), standalone detail page, sorting/pagination |
-| Order history/details/tracking | **PARTIAL** | "My Orders" list on `page.tsx:1332-1461` (order number, status badge, date, total, items, city). No detail page, no status timeline, no delivery tracking |
-| Order cancellation (buyer UI) | **NOT FOUND** | backend supports it (`orders.service.ts:263-272`) but no buyer UI. Supplier page has a Cancel button (`supplier/page.tsx:224-234,500-509`) that the backend always rejects — broken UX |
+| Order history/details/tracking | **VERIFIED DONE** (CP2) | "My Orders" list + **`/orders/[id]` detail page** (`web/app/orders/[id]/page.tsx`) with items, totals, delivery address, and a **status timeline** built from `OrderStatusHistory` (CP0). Delivery tracking = timeline only (no driver/GPS module — out of scope) |
+| Order cancellation (buyer UI) | **VERIFIED DONE** (CP2) | Cancel button on PENDING orders in My Orders + on `/orders/[id]`; confirms, `PATCH /api/orders/:id/status {CANCELLED}`, releases the reservation (smoke C2). Broken supplier Cancel button removed in CP1 |
 | Reorder | **NOT FOUND** | no code |
 | Cart (add/remove/qty/total/persistence/inventory validation) | **NOT FOUND** | no cart code anywhere (`grep cart` → nothing); ordering is direct single-product from the modal |
 | Checkout page / order summary / delivery fee / confirmation | **PARTIAL** | modal-based checkout with address select, summary and confirmation card (`page.tsx`); no dedicated pages; delivery fee always 0 (hard-coded, `orders.service.ts:183`) |
-| Address management UI | **PARTIAL** | create + select inside the order modal (`page.tsx:908-1113`); no edit/delete/list page |
-| Supplier product add/edit/activate/price UI | **NOT FOUND** (backend exists) | `POST /api/products`, `PATCH /api/products/:id` (incl. status/price) verified in `catalog.controller.ts` — no UI calls them |
+| Address management UI | **VERIFIED DONE** (CP2) | dedicated **`/addresses`** page (list/create/edit/delete/make-default, order-used delete surfaces the 400) + header link; modal create/select remains on the homepage checkout |
+| Supplier product add/edit/activate/price UI | **VERIFIED DONE** (CP1 `2d8c4bc`) | `/supplier/products` (list + activate/deactivate), `/supplier/products/new` (draft or publish), `/supplier/products/[id]` (edit incl. status/price) calling `POST`/`PATCH /api/products` |
 | Stock adjustment | **VERIFIED DONE** (UI+API) | `supplier/inventory/page.tsx`, `PATCH /supplier/inventory/:productId` |
 | Stock adjustment **history** | **NOT FOUND** | no model/service |
 | Low-stock alerts | **PARTIAL** | computed flag + UI badge/filter (`catalog.service.ts:151`, inventory page); no notifications |

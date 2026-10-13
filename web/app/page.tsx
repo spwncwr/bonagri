@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authHeaders, fetchCurrentUser, clearAuth, type AuthUser } from "../lib/auth";
@@ -178,6 +179,10 @@ export default function Home() {
   >([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState("");
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(
+    null,
+  );
+  const [orderActionError, setOrderActionError] = useState("");
 
   async function handleStartOrder() {
     if (!selectedProduct || ordering) return;
@@ -428,6 +433,49 @@ export default function Home() {
     void loadOrders();
   }, [loadOrders]);
 
+  async function cancelOrder(orderId: string, orderNumber: string) {
+    const confirmed = window.confirm(
+      `Cancel order ${orderNumber}? Reserved stock will be released.`,
+    );
+
+    if (!confirmed) return;
+
+    setCancellingOrderId(orderId);
+    setOrderActionError("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/orders/${orderId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+          },
+          body: JSON.stringify({ status: "CANCELLED" }),
+        },
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+
+        throw new Error(
+          Array.isArray(data?.message)
+            ? data.message.join(", ")
+            : data?.message || "Unable to cancel the order",
+        );
+      }
+
+      await loadOrders();
+    } catch (error) {
+      setOrderActionError(
+        error instanceof Error ? error.message : "Unable to cancel the order",
+      );
+    } finally {
+      setCancellingOrderId(null);
+    }
+  }
+
   const filteredProducts = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -491,6 +539,12 @@ export default function Home() {
                 >
                   My Orders
                 </a>
+                <Link
+                  href="/addresses"
+                  className="hidden rounded-lg border border-[#ccd5ca] px-4 py-2.5 text-sm font-bold sm:block"
+                >
+                  Addresses
+                </Link>
                 <button
                   type="button"
                   onClick={() => {
@@ -1351,6 +1405,15 @@ export default function Home() {
           </div>
 
           <div className="mt-8">
+            {orderActionError ? (
+              <div
+                role="alert"
+                className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              >
+                {orderActionError}
+              </div>
+            ) : null}
+
             {ordersLoading ? (
               <div className="rounded-2xl border border-[#dce2d9] bg-[#f7f8f4] p-8 text-center">
                 <div className="text-sm font-bold text-[#17633a]">
@@ -1451,6 +1514,30 @@ export default function Home() {
                           {order.deliveryAddress.country}
                         </div>
                       </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#e3e8e0] pt-4">
+                      <Link
+                        href={`/orders/${order.id}`}
+                        className="text-xs font-bold text-[#17633a] transition hover:text-[#12512f]"
+                      >
+                        View timeline &amp; details →
+                      </Link>
+
+                      {order.status === "PENDING" ? (
+                        <button
+                          type="button"
+                          disabled={cancellingOrderId === order.id}
+                          onClick={() =>
+                            void cancelOrder(order.id, order.orderNumber)
+                          }
+                          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {cancellingOrderId === order.id
+                            ? "Cancelling..."
+                            : "Cancel order"}
+                        </button>
+                      ) : null}
                     </div>
                   </article>
                 ))}

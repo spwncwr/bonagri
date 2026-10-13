@@ -47,7 +47,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 |---|---|---|---|
 | CP0 | Role & audit foundations | 2026-10-13 | done (b07b321) |
 | CP1 | Supplier listing screens | 2026-10-13 | done (2d8c4bc) |
-| CP2 | Consumer flow completion | 2026-10-13 | done (in progress of deploy) |
+| CP2 | Consumer flow completion | 2026-10-13 | done (f4249e1) |
 | CP3 | Admin management | — | pending |
 | CP4 | Agro dealers | — | pending |
 | CP5 | Disputes | — | pending |
@@ -86,6 +86,11 @@ Extra gates:
 Role journey (deployed): buyer adds a second address, edits it, sets default; places
 order → sees `/orders/:id` timeline advance as supplier fulfils; cancels a fresh
 PENDING order (stock reservation released — verify `reservedQuantity` via API).
+
+Status **done** (`f4249e1`, verified live 2026-10-13): 32 API unit tests; smoke
+C1–C3 green; deployed journey confirmed — default moved then promoted back on delete,
+order-used address → 400, reservation 0→1→0 around create+cancel, timeline
+`PENDING → CANCELLED` by BUYER, buyer/supplier regressions 200.
 
 ### CP3 — Admin management
 Extra gates:

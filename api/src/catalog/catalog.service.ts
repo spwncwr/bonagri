@@ -63,11 +63,37 @@ export class CatalogService {
       },
     });
 
-    if (!product) {
+    // The public detail endpoint must never leak unpublished listings
+    // (suppliers view their own drafts via GET /supplier/products).
+    if (!product || product.status !== "ACTIVE") {
       throw new NotFoundException("Product not found");
     }
 
     return product;
+  }
+
+  async getSupplierProducts(userId: string) {
+    const supplier = await this.prisma.supplierProfile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!supplier) {
+      throw new NotFoundException("Supplier profile not found");
+    }
+
+    return this.prisma.product.findMany({
+      where: {
+        supplierId: supplier.id,
+      },
+      include: {
+        category: true,
+        inventory: true,
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
   }
 
   async createProduct(userId: string, dto: CreateProductDto) {

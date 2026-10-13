@@ -629,7 +629,7 @@ echo "SUPPLIER ORDER VISIBILITY / STATUS ACCEPTANCE"
 echo "========================================"
 echo
 
-echo "[S1/8] Loading deterministic development supplier credentials..."
+echo "[S1/10] Loading deterministic development supplier credentials..."
 
 # Development E2E supplier seeded by api/prisma/seed.ts.
 # Override with SUPPLIER_E2E_EMAIL / SUPPLIER_E2E_PASSWORD when required.
@@ -644,7 +644,7 @@ fi
 echo "✓ Development supplier configured: $SUPPLIER_EMAIL"
 
 echo
-echo "[S2/8] Authenticating supplier..."
+echo "[S2/10] Authenticating supplier..."
 
 SUPPLIER_LOGIN_PAYLOAD="$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$SUPPLIER_EMAIL" "$SUPPLIER_PASSWORD")"
 
@@ -671,7 +671,7 @@ fi
 echo "✓ Supplier authenticated"
 
 echo
-echo "[S3/8] Confirming supplier order visibility..."
+echo "[S3/10] Confirming supplier order visibility..."
 
 SUPPLIER_ORDERS_HTTP="$(curl -sS -o "$LOG_DIR/supplier-orders.json" \
   -w '%{http_code}' \
@@ -716,7 +716,7 @@ if order.get("status") != "PENDING":
 ' "$LOG_DIR/supplier-orders.json" "$ORDER_ID"
 
 echo
-echo "[S4/8] Confirming buyer cannot access supplier order endpoint..."
+echo "[S4/10] Confirming buyer cannot access supplier order endpoint..."
 
 BUYER_SUPPLIER_HTTP="$(curl -sS -o "$LOG_DIR/buyer-supplier-orders.json" \
   -w '%{http_code}' \
@@ -732,7 +732,7 @@ fi
 echo "✓ Buyer correctly received HTTP 403"
 
 echo
-echo "[S5/8] Supplier accepting PENDING order..."
+echo "[S5/10] Supplier accepting PENDING order..."
 
 SUPPLIER_CONFIRM_HTTP="$(curl -sS -o "$LOG_DIR/supplier-confirm.json" \
   -w '%{http_code}' \
@@ -763,7 +763,7 @@ print("✓ Supplier transitioned PENDING → CONFIRMED")
 ' "$LOG_DIR/supplier-confirm.json"
 
 echo
-echo "[S6/8] Supplier processing order through lifecycle..."
+echo "[S6/10] Supplier processing order through lifecycle..."
 
 for expected in PROCESSING READY_FOR_DELIVERY OUT_FOR_DELIVERY DELIVERED; do
   RESPONSE_FILE="$LOG_DIR/supplier-$(printf "%s" "$expected" | tr "[:upper:]" "[:lower:]").json"
@@ -803,7 +803,7 @@ print("✓ Supplier transitioned order → {}".format(expected))
 done
 
 echo
-echo "[S7/8] Confirming buyer sees final order status..."
+echo "[S7/10] Confirming buyer sees final order status..."
 
 BUYER_FINAL_HTTP="$(curl -sS -o "$LOG_DIR/buyer-final-orders.json" \
   -w '%{http_code}' \
@@ -850,7 +850,7 @@ print("✓ Final order: {}".format(order.get("orderNumber")))
 ' "$LOG_DIR/buyer-final-orders.json" "$ORDER_ID"
 
 echo
-echo "[S8/8] Fetching order detail with status history..."
+echo "[S8/10] Fetching order detail with status history..."
 
 DETAIL_HTTP="$(curl -sS -o "$LOG_DIR/order-detail.json" \
   -w '%{http_code}' \
@@ -891,6 +891,96 @@ print(
     )
 )
 PYJSON
+
+echo
+echo "[S9/10] Supplier creating a public product listing..."
+
+SMOKE_TS="$(date +%s)"
+SMOKE_SLUG="smoke-test-listing-$SMOKE_TS"
+SMOKE_SKU="BON-SMK-$SMOKE_TS"
+
+SMOKE_CATEGORY_ID="$(curl -sS "$API_URL/api/categories" | python3 -c '
+import json, sys
+
+data = json.load(sys.stdin)
+match = next((c for c in data if c.get("slug") == "vegetables"), None)
+
+if not match:
+    raise SystemExit("ERROR: vegetables category not found")
+
+print(match["id"])
+')"
+
+CREATE_HTTP="$(curl -sS -o "$LOG_DIR/smoke-product-create.json" \
+  -w '%{http_code}' \
+  -X POST "$API_URL/api/products" \
+  -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"categoryId\":\"$SMOKE_CATEGORY_ID\",\"name\":\"Smoke Test Listing\",\"slug\":\"$SMOKE_SLUG\",\"sku\":\"$SMOKE_SKU\",\"price\":10,\"unit\":\"kg\",\"quantity\":5,\"status\":\"ACTIVE\"}")"
+
+if [ "$CREATE_HTTP" != "200" ] && [ "$CREATE_HTTP" != "201" ]; then
+  echo "ERROR: supplier product creation failed with HTTP $CREATE_HTTP"
+  cat "$LOG_DIR/smoke-product-create.json"
+  exit 1
+fi
+
+SMOKE_PRODUCT_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/smoke-product-create.json")"
+
+curl -sS "$API_URL/api/products" -o "$LOG_DIR/smoke-public-list.json"
+
+python3 -c '
+import json, sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+slugs = {p.get("slug") for p in data}
+
+if sys.argv[2] not in slugs:
+    raise SystemExit("ERROR: newly created listing is not publicly listed")
+' "$LOG_DIR/smoke-public-list.json" "$SMOKE_SLUG"
+
+GUARD_HTTP="$(curl -sS -o /dev/null -w '%{http_code}' "$API_URL/api/supplier/products")"
+
+if [ "$GUARD_HTTP" != "401" ]; then
+  echo "ERROR: anonymous supplier products access returned HTTP $GUARD_HTTP, expected 401"
+  exit 1
+fi
+
+echo "✓ Supplier created listing; publicly listed; vendor route guarded"
+
+echo
+echo "[S10/10] Deactivating hides the listing from the public marketplace..."
+
+DEACTIVATE_HTTP="$(curl -sS -o /dev/null -w '%{http_code}' \
+  -X PATCH "$API_URL/api/products/$SMOKE_PRODUCT_ID" \
+  -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"INACTIVE"}')"
+
+if [ "$DEACTIVATE_HTTP" != "200" ]; then
+  echo "ERROR: product deactivation failed with HTTP $DEACTIVATE_HTTP"
+  exit 1
+fi
+
+curl -sS "$API_URL/api/products" -o "$LOG_DIR/smoke-public-list-after.json"
+
+python3 -c '
+import json, sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+slugs = {p.get("slug") for p in data}
+
+if sys.argv[2] in slugs:
+    raise SystemExit("ERROR: deactivated listing is still publicly listed")
+' "$LOG_DIR/smoke-public-list-after.json" "$SMOKE_SLUG"
+
+HIDDEN_DETAIL_HTTP="$(curl -sS -o /dev/null -w '%{http_code}' "$API_URL/api/products/$SMOKE_PRODUCT_ID")"
+
+if [ "$HIDDEN_DETAIL_HTTP" != "404" ]; then
+  echo "ERROR: deactivated product detail returned HTTP $HIDDEN_DETAIL_HTTP, expected 404"
+  exit 1
+fi
+
+echo "✓ Deactivated listing hidden from list and detail (404)"
 
 echo
 echo "✓ SUPPLIER ORDER VISIBILITY / STATUS ACCEPTANCE PASSED"

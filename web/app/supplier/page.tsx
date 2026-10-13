@@ -221,18 +221,6 @@ export default function SupplierPage() {
     }
   };
 
-  const cancelOrder = async (order: SupplierOrder) => {
-    const confirmed = window.confirm(
-      `Cancel order ${order.orderNumber}? Reserved stock will be released.`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    await updateStatus(order.id, "CANCELLED");
-  };
-
   const filteredOrders = useMemo(() => {
     if (filter === "ALL") {
       return orders;
@@ -278,6 +266,20 @@ export default function SupplierPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              href="/supplier/products"
+              className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+            >
+              My listings
+            </Link>
+
+            <Link
+              href="/supplier/inventory"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              Inventory
+            </Link>
+
             <Link
               href="/"
               className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
@@ -497,17 +499,6 @@ export default function SupplierPage() {
                         )}
 
                         <div className="flex gap-2">
-                          {order.status === "PENDING" && (
-                            <button
-                              type="button"
-                              disabled={updating}
-                              onClick={() => void cancelOrder(order)}
-                              className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              Cancel
-                            </button>
-                          )}
-
                           {nextStatus && (
                             <button
                               type="button"

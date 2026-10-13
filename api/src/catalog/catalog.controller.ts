@@ -55,6 +55,13 @@ export class CatalogController {
     return this.catalogService.getSupplierInventory(request.user.id);
   }
 
+  @Get("supplier/products")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPPLIER")
+  getSupplierProducts(@Req() request: AuthenticatedRequest) {
+    return this.catalogService.getSupplierProducts(request.user.id);
+  }
+
   @Patch("supplier/inventory/:productId")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("SUPPLIER", "ADMIN")

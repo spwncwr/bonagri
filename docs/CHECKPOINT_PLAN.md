@@ -49,7 +49,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP1 | Supplier listing screens | 2026-10-13 | done (2d8c4bc) |
 | CP2 | Consumer flow completion | 2026-10-13 | done (f4249e1) |
 | CP3 | Admin management | 2026-10-13 | done (38fd535) |
-| CP4 | Agro dealers | — | pending |
+| CP4 | Agro dealers | 2026-10-13 | done (426fa27) |
 | CP5 | Disputes | — | pending |
 | CP6 | Glue & self-service | — | pending |
 
@@ -122,6 +122,24 @@ Extra gates:
 Role journey (deployed): dealer (seeded) logs in → hub shows dealer wording → lists
 "Electric Fence Energizer 12J" under Tools → buyer filters marketplace Tools segment
 → orders it → dealer walks fulfilment → buyer sees DELIVERED.
+
+Status **done** (`426fa27`, verified live 2026-10-13): 61 API unit tests (+12: dealer
+advance/ownership/detail, dealer product create/scoping, 5× `RolesGuard`); `AGRO_DEALER`
+added route-by-route to vendor `@Roles` sets (catalog listing/inventory/product-create
+and `GET /orders/supplier`) + `updateOrderStatus` vendor branch; `Roles` decorator now
+typed on `UserRole`; seed adds `dealer@bonagri.co.za` ("Limpopo Agro Equipment") with the
+`Electric Fence Energizer 12J` listing under `agricultural-tools`; web: `/supplier/**`
+guards widened (`allowedRoles`), hub renders "Agro Dealer Operations" for dealers,
+marketplace gains the **All / Produce / Tools** segment control (explicit name→slug map
+— slugifying "Agricultural Tools & Equipment" produces a wrong slug), new-listing form
+gets **Produce/Tool unit presets**; smoke **D1–D3** green (incl. buyers 403 on vendor
+routes, dealer cross-vendor edit 404). Deployed journey: dealer login → energizer listed
+under the dealer profile publicly → buyer@ orders it → dealer walks
+`PENDING→CONFIRMED→PROCESSING→READY_FOR_DELIVERY→OUT_FOR_DELIVERY→DELIVERED` → buyer
+sees DELIVERED with full history; live guards 403/404; all supplier web screens 200;
+buyer/supplier regressions 200. Smoke fixes along the way: buyer-order step pinned to
+the seeded `fresh-tomatoes` listing (catalog now contains a second vendor), and the
+admin category test made timestamp-unique (Category.name is `@unique`).
 
 ### CP5 — Disputes
 Extra gates:

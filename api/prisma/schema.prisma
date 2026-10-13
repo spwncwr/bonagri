@@ -82,6 +82,12 @@ enum SellerApplicationStatus {
   REJECTED
 }
 
+enum ProductRequestStatus {
+  OPEN
+  FULFILLED
+  WITHDRAWN
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -102,6 +108,7 @@ model User {
   resolvedDisputes Dispute[] @relation("DisputeResolver")
   sellerApplication SellerApplication?
   reviewedApplications SellerApplication[] @relation("ApplicationReviewer")
+  productRequests   ProductRequest[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -172,6 +179,7 @@ model Category {
   slug        String    @unique
   description String?
   products    Product[]
+  productRequests ProductRequest[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -292,6 +300,27 @@ model SellerApplication {
   reviewedBy User? @relation("ApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
+}
+
+model ProductRequest {
+  id              String               @id @default(uuid())
+  buyerId         String
+  title           String
+  categoryId      String?
+  quantity        Int
+  unit            String
+  destinationCity String?
+  requiredBy      DateTime?
+  notes           String?
+  status          ProductRequestStatus @default(OPEN)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  buyer    User      @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([buyerId])
 }
 
 model OrderItem {

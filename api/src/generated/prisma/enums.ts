@@ -109,3 +109,12 @@ export const SellerApplicationStatus = {
 } as const
 
 export type SellerApplicationStatus = (typeof SellerApplicationStatus)[keyof typeof SellerApplicationStatus]
+
+
+export const ProductRequestStatus = {
+  OPEN: 'OPEN',
+  FULFILLED: 'FULFILLED',
+  WITHDRAWN: 'WITHDRAWN'
+} as const
+
+export type ProductRequestStatus = (typeof ProductRequestStatus)[keyof typeof ProductRequestStatus]

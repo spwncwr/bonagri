@@ -2338,6 +2338,196 @@ echo "✓ GLUE + SELF-SERVICE FLOW ACCEPTANCE PASSED"
 fi
 
 echo
+echo "PRODUCT REQUESTS FLOW"
+echo "====================="
+
+echo
+echo "[G1/3] Buyer posts a request; the public demand board shows it..."
+
+# G reuses the main smoke buyer, which is still a BUYER at this point
+# (F promotes its own separate account; A2 promotes the main buyer later).
+
+G_FUTURE_DATE="$(date -v+14d +%Y-%m-%d 2>/dev/null || date -d '+14 days' +%Y-%m-%d)"
+SMOKE_G_TITLE="Smoke Buyer Demand $(date +%s)"
+
+G_CREATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/g-request.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"title\":\"$SMOKE_G_TITLE\",\"quantity\":250,\"unit\":\"kg\",\"destinationCity\":\"Polokwane\",\"requiredBy\":\"$G_FUTURE_DATE\",\"notes\":\"Automated CP7 request\"}")"
+
+if [[ "$G_CREATE_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/g-request.json"
+  fail "Product request creation failed. HTTP $G_CREATE_HTTP"
+fi
+
+G_REQUEST_ID="$(
+  python3 -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); print(d.get("id","")); assert d.get("status")=="OPEN"' "$LOG_DIR/g-request.json"
+)"
+
+if [[ -z "$G_REQUEST_ID" ]]; then
+  fail "Product request creation returned no id."
+fi
+
+G_PAST_HTTP="$(
+  curl -sS -o "$LOG_DIR/g-request-past.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"title\":\"Past demand\",\"quantity\":1,\"unit\":\"kg\",\"requiredBy\":\"2020-01-01\"}")"
+
+if [[ "$G_PAST_HTTP" != "400" ]]; then
+  fail "Past requiredBy returned HTTP $G_PAST_HTTP, expected 400"
+fi
+
+echo "✓ Request created OPEN; past requiredBy rejected (400)"
+
+# Public board: NO auth header at all.
+curl -sS "$API_URL$API_PREFIX/product-requests" > "$LOG_DIR/g-public.json"
+
+python3 - "$LOG_DIR/g-public.json" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if not isinstance(items, list) or not items:
+    raise SystemExit("ERROR: public demand board is empty")
+
+first = items[0]
+if "buyer" in first or "buyerId" in first:
+    raise SystemExit("ERROR: public board leaks buyer identity")
+
+print("✓ Public demand board reachable without auth and leaks no buyer identity")
+PYJSON
+
+python3 - "$LOG_DIR/g-public.json" "$SMOKE_G_TITLE" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+title = sys.argv[2]
+
+if not any(i.get("title") == title for i in items):
+    raise SystemExit("ERROR: created request missing from the public board")
+
+print("✓ Created request visible on the public demand board")
+PYJSON
+
+curl -sS "$API_URL$API_PREFIX/product-requests/mine" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/g-mine.json"
+
+python3 - "$LOG_DIR/g-mine.json" "$G_REQUEST_ID" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if not any(i.get("id") == sys.argv[2] for i in items):
+    raise SystemExit("ERROR: created request missing from /mine")
+
+print("✓ Buyer sees the request under /mine")
+PYJSON
+
+echo
+echo "[G2/3] Role guards hold..."
+
+G_ANON_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests" \
+    -H "Content-Type: application/json" \
+    -d "{\"title\":\"Anon\",\"quantity\":1,\"unit\":\"kg\"}")"
+
+if [[ "$G_ANON_HTTP" != "401" ]]; then
+  fail "Anonymous request creation returned HTTP $G_ANON_HTTP, expected 401"
+fi
+
+G_VENDOR_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"title\":\"Vendor\",\"quantity\":1,\"unit\":\"kg\"}")"
+
+if [[ "$G_VENDOR_HTTP" != "403" ]]; then
+  fail "Vendor request creation returned HTTP $G_VENDOR_HTTP, expected 403"
+fi
+
+G_FOREIGN_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/product-requests/00000000-0000-4000-8000-000000000000" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"WITHDRAWN\"}")"
+
+if [[ "$G_FOREIGN_HTTP" != "404" ]]; then
+  fail "Withdraw of a missing request returned HTTP $G_FOREIGN_HTTP, expected 404"
+fi
+
+echo "✓ Anon 401, vendor 403, missing-request withdraw 404"
+
+echo
+echo "[G3/3] Withdraw moves it off the board and closes the lifecycle..."
+
+G_WITHDRAW_HTTP="$(
+  curl -sS -o "$LOG_DIR/g-withdraw.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/product-requests/$G_REQUEST_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"WITHDRAWN\"}")"
+
+if [[ "$G_WITHDRAW_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/g-withdraw.json"
+  fail "Request withdraw failed. HTTP $G_WITHDRAW_HTTP"
+fi
+
+G_REWITHDRAW_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/product-requests/$G_REQUEST_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"FULFILLED\"}")"
+
+if [[ "$G_REWITHDRAW_HTTP" != "409" ]]; then
+  fail "Transition out of WITHDRAWN returned HTTP $G_REWITHDRAW_HTTP, expected 409"
+fi
+
+curl -sS "$API_URL$API_PREFIX/product-requests" > "$LOG_DIR/g-public-after.json"
+
+python3 - "$LOG_DIR/g-public-after.json" "$SMOKE_G_TITLE" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+title = sys.argv[2]
+
+if any(i.get("title") == title for i in items):
+    raise SystemExit("ERROR: withdrawn request still on the public board")
+
+print("✓ Withdrawn request no longer on the public demand board")
+PYJSON
+
+curl -sS "$API_URL$API_PREFIX/product-requests/mine" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/g-mine-after.json"
+
+python3 - "$LOG_DIR/g-mine-after.json" "$G_REQUEST_ID" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+match = [i for i in items if i.get("id") == sys.argv[2]]
+
+if not match or match[0].get("status") != "WITHDRAWN":
+    raise SystemExit("ERROR: /mine does not show the withdrawn request")
+
+print("✓ /mine shows the WITHDRAWN status")
+PYJSON
+
+echo
+echo "✓ PRODUCT REQUESTS FLOW ACCEPTANCE PASSED"
+
+echo
 echo "ADMIN MANAGEMENT FLOW"
 echo "========================================"
 

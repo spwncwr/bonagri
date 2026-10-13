@@ -62,6 +62,18 @@ type SupplierOrder = {
   };
 };
 
+type BuyerRequest = {
+  id: string;
+  title: string;
+  quantity: number;
+  unit: string;
+  destinationCity: string | null;
+  requiredBy: string | null;
+  notes: string | null;
+  createdAt: string;
+  category: { name: string; slug: string } | null;
+};
+
 type VendorDispute = {
   id: string;
   reason: string;
@@ -146,6 +158,7 @@ export default function SupplierPage() {
   const [filter, setFilter] = useState<"ALL" | OrderStatus>("ALL");
   const [vendorRole, setVendorRole] = useState<UserRole | null>(null);
   const [disputes, setDisputes] = useState<VendorDispute[]>([]);
+  const [buyerRequests, setBuyerRequests] = useState<BuyerRequest[]>([]);
 
   useEffect(() => {
     void fetchCurrentUser().then((user) => {
@@ -178,6 +191,37 @@ export default function SupplierPage() {
     };
 
     void loadDisputes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // Public demand board (CP7): OPEN requests buyers have posted.
+    const loadBuyerRequests = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/product-requests`, {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as BuyerRequest[];
+
+        if (!cancelled) {
+          setBuyerRequests(data.slice(0, 6));
+        }
+      } catch {
+        // The requests panel is non-blocking; leave it empty on failure.
+      }
+    };
+
+    void loadBuyerRequests();
 
     return () => {
       cancelled = true;
@@ -680,6 +724,62 @@ export default function SupplierPage() {
                 </article>
               ))}
             </div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Buyer requests</h2>
+          <p className="mt-1 text-sm text-[#69756c]">
+            Open demand buyers have posted on the marketplace. If you can supply
+            any of it, reach out through your usual channels.
+          </p>
+
+          {buyerRequests.length === 0 ? (
+            <p className="mt-4 text-sm text-[#69756c]">
+              No open buyer requests right now.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {buyerRequests.map((request) => (
+                <li
+                  key={request.id}
+                  className="rounded-xl border border-[#e3e8e1] bg-[#fafbf8] p-4 text-sm"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold">{request.title}</p>
+                      <p className="mt-1 text-xs text-[#69756c]">
+                        {request.quantity.toLocaleString("en-ZA")}{" "}
+                        {request.unit}
+                        {request.category ? ` • ${request.category.name}` : ""}
+                        {request.destinationCity
+                          ? ` • → ${request.destinationCity}`
+                          : ""}
+                        {request.requiredBy
+                          ? ` • by ${new Date(
+                              request.requiredBy,
+                            ).toLocaleDateString("en-ZA", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}`
+                          : ""}
+                      </p>
+
+                      {request.notes ? (
+                        <p className="mt-1 text-xs text-[#7a857d]">
+                          {request.notes}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <span className="rounded-full bg-[#e8f1e6] px-2.5 py-1 text-[10px] font-bold text-[#17633a]">
+                      OPEN
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
 

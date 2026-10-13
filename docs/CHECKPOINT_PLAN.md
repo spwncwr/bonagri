@@ -52,6 +52,8 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP4 | Agro dealers | 2026-10-13 | done (426fa27) |
 | CP5 | Disputes | 2026-10-13 | done (7545c5c) |
 | CP6 | Glue & self-service | 2026-10-13 | done (02afeeb) |
+| CP7 | Product requests (buyer demand) | — | pending |
+| CP8 | Landing-page wiring (dead CTAs) | — | pending |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
 

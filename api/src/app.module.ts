@@ -8,6 +8,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { OrdersModule } from "./orders/orders.module";
 import { AddressesModule } from "./addresses/addresses.module";
+import { RequestsModule } from "./requests/requests.module";
 import { SellerApplicationsModule } from "./seller-applications/seller-applications.module";
 
 @Module({
@@ -21,6 +22,7 @@ import { SellerApplicationsModule } from "./seller-applications/seller-applicati
     AdminModule,
     DisputesModule,
     NotificationsModule,
+    RequestsModule,
     SellerApplicationsModule,
   ],
 })

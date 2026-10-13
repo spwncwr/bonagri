@@ -62,6 +62,17 @@ type Address = {
   isDefault: boolean;
 };
 
+type PublicProductRequest = {
+  id: string;
+  title: string;
+  quantity: number;
+  unit: string;
+  destinationCity: string | null;
+  requiredBy: string | null;
+  createdAt: string;
+  category: { name: string; slug: string } | null;
+};
+
 const categories = [
   ["Fresh Produce", "Produce available from regional suppliers."],
   ["Fruits", "Fresh fruit from agricultural producers."],
@@ -173,6 +184,9 @@ export default function Home() {
   const [addressError, setAddressError] = useState("");
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
+  const [productRequests, setProductRequests] = useState<
+    PublicProductRequest[]
+  >([]);
   const [addressForm, setAddressForm] = useState({
     label: "Home",
     recipientName: "",
@@ -459,6 +473,32 @@ export default function Home() {
   useEffect(() => {
     void loadOrders();
   }, [loadOrders]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // Public demand board (CP7): OPEN product requests, no auth needed.
+    async function loadProductRequests() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/product-requests`, {
+          cache: "no-store",
+        });
+
+        if (response.ok && !cancelled) {
+          const data = (await response.json()) as PublicProductRequest[];
+          setProductRequests(data.slice(0, 3));
+        }
+      } catch {
+        // Demand board is optional content; the example card covers empty.
+      }
+    }
+
+    void loadProductRequests();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function cancelOrder(orderId: string, orderNumber: string) {
     const confirmed = window.confirm(
@@ -1366,49 +1406,121 @@ export default function Home() {
               needs.
             </p>
 
-            <button className="mt-7 rounded-xl bg-[#17633a] px-6 py-3.5 text-sm font-black text-white hover:bg-[#0f4d2b]">
+            <button
+              onClick={() =>
+                router.push(
+                  currentUser?.role === "BUYER" ? "/requests" : "/login",
+                )
+              }
+              className="mt-7 rounded-xl bg-[#17633a] px-6 py-3.5 text-sm font-black text-white hover:bg-[#0f4d2b]"
+            >
               Post a product request
             </button>
           </div>
 
           <div className="rounded-2xl border border-[#dce2d9] bg-[#f7f8f4] p-6">
             <div className="text-xs font-black tracking-[0.18em] text-[#7b867d]">
-              EXAMPLE REQUEST
+              {productRequests.length > 0 ? "OPEN REQUESTS" : "EXAMPLE REQUEST"}
             </div>
 
-            <div className="mt-5 rounded-xl border border-[#dfe5dc] bg-white p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-lg font-black">Tomatoes</div>
-                  <div className="mt-1 text-xs text-[#7a857d]">
-                    Fresh produce • Grade 1
+            {productRequests.length > 0 ? (
+              <div className="mt-5 space-y-4">
+                {productRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="rounded-xl border border-[#dfe5dc] bg-white p-5"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-lg font-black">
+                          {request.title}
+                        </div>
+                        <div className="mt-1 text-xs text-[#7a857d]">
+                          {request.category ? `${request.category.name} • ` : ""}
+                          Posted{" "}
+                          {new Date(request.createdAt).toLocaleDateString(
+                            "en-ZA",
+                            { day: "2-digit", month: "short" },
+                          )}
+                        </div>
+                      </div>
+                      <div className="rounded-full bg-[#e8f1e6] px-3 py-1 text-[9px] font-black text-[#17633a]">
+                        OPEN REQUEST
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-lg bg-[#f5f6f2] p-3">
+                        <div className="text-[9px] font-bold text-[#7d877f]">
+                          QUANTITY
+                        </div>
+                        <div className="mt-1 font-black">
+                          {request.quantity.toLocaleString("en-ZA")}{" "}
+                          {request.unit}
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg bg-[#f5f6f2] p-3">
+                        <div className="text-[9px] font-bold text-[#7d877f]">
+                          DESTINATION
+                        </div>
+                        <div className="mt-1 font-black">
+                          {request.destinationCity ?? "Any location"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {request.requiredBy ? (
+                      <div className="mt-3 rounded-lg bg-[#f5f6f2] p-3 text-xs text-[#657067]">
+                        Required by{" "}
+                        {new Date(request.requiredBy).toLocaleDateString(
+                          "en-ZA",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          },
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-xl border border-[#dfe5dc] bg-white p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-lg font-black">Tomatoes</div>
+                    <div className="mt-1 text-xs text-[#7a857d]">
+                      Fresh produce • Grade 1
+                    </div>
+                  </div>
+                  <div className="rounded-full bg-[#e8f1e6] px-3 py-1 text-[9px] font-black text-[#17633a]">
+                    OPEN REQUEST
                   </div>
                 </div>
-                <div className="rounded-full bg-[#e8f1e6] px-3 py-1 text-[9px] font-black text-[#17633a]">
-                  OPEN REQUEST
-                </div>
-              </div>
 
-              <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg bg-[#f5f6f2] p-3">
-                  <div className="text-[9px] font-bold text-[#7d877f]">
-                    QUANTITY
+                <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-lg bg-[#f5f6f2] p-3">
+                    <div className="text-[9px] font-bold text-[#7d877f]">
+                      QUANTITY
+                    </div>
+                    <div className="mt-1 font-black">3,000 kg</div>
                   </div>
-                  <div className="mt-1 font-black">3,000 kg</div>
-                </div>
 
-                <div className="rounded-lg bg-[#f5f6f2] p-3">
-                  <div className="text-[9px] font-bold text-[#7d877f]">
-                    DESTINATION
+                  <div className="rounded-lg bg-[#f5f6f2] p-3">
+                    <div className="text-[9px] font-bold text-[#7d877f]">
+                      DESTINATION
+                    </div>
+                    <div className="mt-1 font-black">Johannesburg</div>
                   </div>
-                  <div className="mt-1 font-black">Johannesburg</div>
+                </div>
+
+                <div className="mt-3 rounded-lg bg-[#f5f6f2] p-3 text-xs text-[#657067]">
+                  Required by 05 October • Delivery required
                 </div>
               </div>
-
-              <div className="mt-3 rounded-lg bg-[#f5f6f2] p-3 text-xs text-[#657067]">
-                Required by 05 October • Delivery required
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </section>

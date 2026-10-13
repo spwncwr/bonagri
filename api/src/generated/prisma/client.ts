@@ -95,6 +95,11 @@ export type Dispute = Prisma.DisputeModel
  */
 export type SellerApplication = Prisma.SellerApplicationModel
 /**
+ * Model ProductRequest
+ * 
+ */
+export type ProductRequest = Prisma.ProductRequestModel
+/**
  * Model OrderItem
  * 
  */

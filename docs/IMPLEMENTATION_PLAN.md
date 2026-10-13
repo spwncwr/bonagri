@@ -147,6 +147,53 @@ Phases 0→6 are ordered so every phase ships something demo-able.
 - Known follow-ups explicitly out of scope here: cart/multi-item orders, payments
   (OZOW/PAYFAST), delivery-driver module, refresh tokens, CI.
 
+### Phase 7 — Product requests (buyer demand, landing-page gap #1)
+The landing page's "Post a product request" CTA is a dead button and the whole
+`#requests` section is decorative (hardcoded example card); no backend exists.
+- **Schema**: `ProductRequest` model — `buyerId`, `title` (product wanted),
+  `categoryId?` (optional `Category` relation), `quantity` + `unit`,
+  `destinationCity?`, `requiredBy?` (date), `notes?`, `status`
+  (`OPEN` → `FULFILLED` | `WITHDRAWN`); migration + committed client.
+- **API** (new `requests/` feature folder, house layout):
+  - `POST /api/product-requests` (BUYER) — create (OPEN).
+  - `GET /api/product-requests?status=OPEN` — **public** (no guard) so the landing
+    section shows real demand to anonymous visitors; newest first, capped (e.g. 50).
+  - `GET /api/product-requests/mine` (BUYER) — own list incl. closed.
+  - `PATCH /api/product-requests/:id` (BUYER owner) — withdraw (OPEN → WITHDRAWN)
+    or mark FULFILLED; others' requests → 404; non-OPEN → 409.
+- **Web**:
+  - Landing `#requests`: CTA routes logged-in buyers to `/requests` (anon →
+    `/login`); the example card becomes the **empty-state** — when OPEN requests
+    exist, show up to 3 real ones (title, quantity, destination, required-by).
+  - New `/requests` page (BUYER guard): post form (title, category select,
+    quantity+unit, destination, required-by, notes) + "My requests" list with
+    status chips and withdraw/fulfil actions.
+  - Vendor hub: read-only "Buyer requests" section (OPEN only) so suppliers can
+    spot demand; responding/contact exchange is an explicit follow-up.
+- **Gates**: unit tests (create guards, owner-only withdraw, status transitions,
+  public list scoping); smoke **G1–G3** (create → public list shows it → withdraw
+  removes it from OPEN; anon 401 / non-buyer 403 / foreign withdraw 404).
+
+### Phase 8 — Landing-page wiring (dead buttons → real behaviour)
+Pure frontend; every control maps onto capability that already exists.
+- **Explore-categories cards** → onClick sets `activeSegment` + `activeCategory`
+  (deriving the segment from `SEGMENT_CATEGORIES` membership) and smooth-scrolls
+  to `#marketplace` — the filter chips then light up naturally. Derive the card
+  list from the same `SEGMENT_CATEGORIES`/`CATEGORY_SLUGS` universe as the chips
+  (kills the drift: the hardcoded list is missing Agricultural Tools, Seeds &
+  Chemicals, Poultry & Livestock; naive API fetch would leak smoke-test
+  categories).
+- **"Become a supplier"** → `<Link href="/apply">` (CP6 flow). `/apply` guard
+  tweak: vendors (SUPPLIER/AGRO_DEALER) hitting `/apply` redirect to `/supplier`
+  instead of bouncing to login.
+- **"Learn more"** → smooth-scroll to `#how-it-works` (the section directly
+  above answers exactly that); no new page.
+- **Footer** → add quick links (Marketplace, Product Requests, How it works,
+  Sell on BonAgri, Sign in) reusing the same anchors/routes.
+- **Gates**: web build + lint; smoke CTA check (curl the routes → 200); manual
+  journey: card click filters+scrolls, CTA lands on `/apply`, anon lands on
+  `/login`.
+
 ## 5. Risks
 
 1. **Neon free-tier migrations** — every phase ships a migration via Render build

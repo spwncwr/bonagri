@@ -52,8 +52,8 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP4 | Agro dealers | 2026-10-13 | done (426fa27) |
 | CP5 | Disputes | 2026-10-13 | done (7545c5c) |
 | CP6 | Glue & self-service | 2026-10-13 | done (02afeeb) |
-| CP7 | Product requests (buyer demand) | — | pending |
-| CP8 | Landing-page wiring (dead CTAs) | — | pending |
+| CP7 | Product requests (buyer demand) | 2026-10-13 | done (23417b1) |
+| CP8 | Landing-page wiring (dead CTAs) | 2026-10-14 | done |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
 
@@ -215,6 +215,52 @@ dispute resolved (`emailSent: true` + dispute notification), admin approved
 approval notification visible, `/mine` now 403; `/apply`, `/admin/applications`,
 `/supplier` all 200. Known residue (accepted): buyer@bonagri.co.za is now a SUPPLIER
 account.
+
+### CP7 — Product requests (buyer demand)
+Extra gates:
+- Unit tests: create guards (unknown category, past requiredBy), owner-only
+  withdraw (foreign/unknown → 404), OPEN→FULFILLED/WITHDRAWN transitions with
+  terminal states → 409, public list scoping (OPEN only, no buyer identity).
+Role journey (deployed): buyer posts a request → it appears on the **public**
+demand board (no auth, no buyer identity) → buyer withdraws it → it leaves the
+board and /mine shows WITHDRAWN; anon create 401, vendor create 403.
+
+Status **done** (`23417b1`, verified live 2026-10-14): 110 API unit tests (+10);
+new **`ProductRequest`** model (`OPEN` → `FULFILLED`/`WITHDRAWN`, optional
+`Category` relation, migration `20261013210321_add_product_requests`, generated
+client committed); new **`RequestsModule`** — public `GET /product-requests`
+(explicit `select`: the smoke caught Prisma's default `buyerId` scalar leaking,
+now excluded and asserted in both spec and smoke), buyer `POST` / `GET .../mine`
+/ `PATCH :id` (owner-only, 404 for foreign ids, 409 out of terminal states,
+`requiredBy` must not be in the past); web: `/requests` page (post form +
+my-requests with status chips + withdraw/fulfil), landing `#requests` shows
+real OPEN requests (example card became the empty-state), vendor hub gained a
+read-only **Buyer requests** section; smoke **G1–G3** (+ web route checks
+`/requests`, `/apply`) — suite now 121 ✓ across 7 acceptance flows. Live
+journey 2026-10-14 (approved temporary-demote of buyer@ on Neon, restored to
+SUPPLIER and re-verified): create OPEN → public board (no identity) → guards
+→ withdraw → board clean → 409 on re-transition.
+
+### CP8 — Landing-page wiring (dead CTAs)
+Extra gates:
+- web build + lint; smoke web-route checks (`/requests`, `/apply` → 200).
+Role journey (deployed): category card click filters the marketplace (segment +
+category chip light up, smooth scroll); "Become a supplier" lands buyers on
+`/apply` and vendors on a "you already sell" card linking to their hub;
+"Learn more" scrolls to `#how-it-works`; footer carries quick links.
+
+Status **done** (verified live 2026-10-14): the four dead landing controls are
+wired — **Explore-categories cards** now derive from the same
+`SEGMENT_CATEGORIES`/`CATEGORY_SLUGS` universe as the marketplace chips (kills
+the drift: 9 cards incl. Agricultural Tools, Seeds & Chemicals, Poultry &
+Livestock) and clicking sets segment + category + scrolls; **"Become a
+supplier"** → `/apply` (page widened to accept vendor roles — vendors get a
+"you already sell on BonAgri" card with a hub link instead of a guard bounce);
+**"Learn more"** → `#how-it-works` anchor; **footer** quick links
+(Marketplace, Product Requests, How it works, Sell on BonAgri, Sign in). One
+build hiccup on the way: the smoke's killed dev server left a corrupt
+`.next/dev/types/validator.ts` that broke `next build`'s typecheck — stale
+artifact, cleared, gitignored, never committed.
 
 ## 4. Checkpoint hygiene rules
 

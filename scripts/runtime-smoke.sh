@@ -2525,6 +2525,20 @@ print("✓ /mine shows the WITHDRAWN status")
 PYJSON
 
 echo
+echo "[web] request + apply routes respond..."
+
+for web_route in "/requests" "/apply"; do
+  WEB_ROUTE_CODE="$(
+    curl -sS -m 90 -o /dev/null -w "%{http_code}" "$WEB_URL$web_route")"
+
+  if [[ "$WEB_ROUTE_CODE" != "200" ]]; then
+    fail "Web route $web_route returned HTTP $WEB_ROUTE_CODE"
+  fi
+
+  echo "✓ Web route $web_route -> 200"
+done
+
+echo
 echo "✓ PRODUCT REQUESTS FLOW ACCEPTANCE PASSED"
 
 echo

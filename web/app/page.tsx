@@ -73,15 +73,6 @@ type PublicProductRequest = {
   category: { name: string; slug: string } | null;
 };
 
-const categories = [
-  ["Fresh Produce", "Produce available from regional suppliers."],
-  ["Fruits", "Fresh fruit from agricultural producers."],
-  ["Vegetables", "Source vegetables by quantity and location."],
-  ["Chilli & Sauces", "Fresh and processed chilli products."],
-  ["Processed Foods", "Value-added agricultural products."],
-  ["Farm Inputs", "Inputs and supplies for agricultural production."],
-];
-
 // Category-group segments so tool/equipment listings surface properly (CP4).
 const SEGMENT_CATEGORIES: Record<"Produce" | "Tools", string[]> = {
   Produce: [
@@ -98,6 +89,29 @@ const SEGMENT_CATEGORIES: Record<"Produce" | "Tools", string[]> = {
     "Seeds & Chemicals",
   ],
 };
+
+// Explore-categories cards derive from the same segment universe as the
+// marketplace chips (CP8) so a card click always maps to a working filter.
+const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  "Fresh Produce": "Produce available from regional suppliers.",
+  Fruits: "Fresh fruit from agricultural producers.",
+  Vegetables: "Source vegetables by quantity and location.",
+  "Chilli & Sauces": "Fresh and processed chilli products.",
+  "Processed Foods": "Value-added agricultural products.",
+  "Poultry & Livestock": "Eggs, poultry and livestock products.",
+  "Farm Inputs": "Inputs and supplies for agricultural production.",
+  "Seeds & Chemicals": "Certified seed, fertilisers and crop protection.",
+  "Agricultural Tools & Equipment": "Tools, equipment and machinery for the farm.",
+};
+
+const CATEGORY_CARDS: Array<[string, string]> = [
+  ...SEGMENT_CATEGORIES.Produce.map(
+    (name) => [name, CATEGORY_DESCRIPTIONS[name]] as [string, string],
+  ),
+  ...SEGMENT_CATEGORIES.Tools.map(
+    (name) => [name, CATEGORY_DESCRIPTIONS[name]] as [string, string],
+  ),
+];
 
 // Explicit pill-name -> API slug map (slugifying names would break
 // "Agricultural Tools & Equipment" -> "agricultural-tools-equipment").
@@ -1537,9 +1551,23 @@ export default function Home() {
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {categories.map(([name, description], index) => (
+          {CATEGORY_CARDS.map(([name, description], index) => (
             <button
               key={name}
+              onClick={() => {
+                const segment = Object.entries(SEGMENT_CATEGORIES).find(
+                  ([, names]) => names.includes(name),
+                )?.[0];
+
+                if (segment) {
+                  setActiveSegment(segment as "Produce" | "Tools");
+                }
+
+                setActiveCategory(name);
+                document
+                  .getElementById("marketplace")
+                  ?.scrollIntoView({ behavior: "smooth" });
+              }}
               className="group rounded-2xl border border-[#dce2d9] bg-white p-6 text-left transition hover:border-[#9ab39e] hover:bg-[#f1f5ef] hover:shadow-lg"
             >
               <div className="flex items-center justify-between">
@@ -1779,12 +1807,18 @@ export default function Home() {
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <button className="rounded-xl bg-[#17633a] px-6 py-3.5 text-sm font-black text-white hover:bg-[#0f4d2b]">
+              <Link
+                href="/apply"
+                className="rounded-xl bg-[#17633a] px-6 py-3.5 text-sm font-black text-white hover:bg-[#0f4d2b]"
+              >
                 Become a supplier
-              </button>
-              <button className="rounded-xl border border-[#bfcabd] bg-white px-6 py-3.5 text-sm font-black text-[#344238]">
+              </Link>
+              <a
+                href="#how-it-works"
+                className="rounded-xl border border-[#bfcabd] bg-white px-6 py-3.5 text-sm font-black text-[#344238]"
+              >
                 Learn more
-              </button>
+              </a>
             </div>
           </div>
         </div>
@@ -1806,6 +1840,24 @@ export default function Home() {
                 Agricultural trade, connected — from producers and suppliers to
                 buyers and markets.
               </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-10 gap-y-2 text-sm font-semibold text-[#4d5a50] sm:grid-cols-3">
+              <a href="#marketplace" className="hover:text-[#17633a]">
+                Marketplace
+              </a>
+              <a href="#requests" className="hover:text-[#17633a]">
+                Product Requests
+              </a>
+              <a href="#how-it-works" className="hover:text-[#17633a]">
+                How it works
+              </a>
+              <Link href="/apply" className="hover:text-[#17633a]">
+                Sell on BonAgri
+              </Link>
+              <Link href="/login" className="hover:text-[#17633a]">
+                Sign in
+              </Link>
             </div>
 
             <div className="text-sm text-[#69746b]">

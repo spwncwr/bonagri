@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthGuard from "../../components/auth/auth-guard";
-import { authHeaders } from "../../lib/auth";
+import { authHeaders, fetchCurrentUser, type UserRole } from "../../lib/auth";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -27,6 +27,7 @@ const ROLE_LABELS: Record<SellerApplication["desiredRole"], string> = {
 export default function ApplyToSellPage() {
   const [application, setApplication] = useState<SellerApplication | null>(null);
   const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<UserRole | null>(null);
 
   const [desiredRole, setDesiredRole] = useState<"SUPPLIER" | "AGRO_DEALER">(
     "SUPPLIER",
@@ -41,6 +42,19 @@ export default function ApplyToSellPage() {
 
     const load = async () => {
       try {
+        const user = await fetchCurrentUser();
+
+        if (cancelled) {
+          return;
+        }
+
+        setRole(user?.role ?? null);
+
+        // /mine is BUYER-only; vendors already sell and skip the fetch.
+        if (!user || user.role !== "BUYER") {
+          return;
+        }
+
         const response = await fetch(
           `${API_BASE_URL}/api/seller-applications/mine`,
           {
@@ -108,9 +122,10 @@ export default function ApplyToSellPage() {
   }
 
   const showForm = !application || application.status === "REJECTED";
+  const isVendor = role === "SUPPLIER" || role === "AGRO_DEALER";
 
   return (
-    <AuthGuard allowedRoles={["BUYER"]}>
+    <AuthGuard allowedRoles={["BUYER", "SUPPLIER", "AGRO_DEALER"]}>
       <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
         <header className="border-b border-[#dce2d9] bg-white">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
@@ -133,6 +148,31 @@ export default function ApplyToSellPage() {
         </header>
 
         <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
+          {isVendor ? (
+            <section className="rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">
+                  You already sell on BonAgri
+                </h2>
+                <span className="rounded-full bg-[#e5f1e4] px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#17633a]">
+                  {role === "AGRO_DEALER" ? "Agro dealer" : "Supplier"}
+                </span>
+              </div>
+
+              <p className="mt-3 text-sm text-[#344238]">
+                This account already has a vendor profile, so there is nothing
+                to apply for. Head to your hub to manage listings and orders.
+              </p>
+
+              <Link
+                href="/supplier"
+                className="mt-5 inline-block rounded-xl bg-[#17633a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#12512f]"
+              >
+                Open my vendor hub →
+              </Link>
+            </section>
+          ) : (
+            <>
           {error ? (
             <div
               role="alert"
@@ -305,6 +345,8 @@ export default function ApplyToSellPage() {
               </div>
             </section>
           ) : null}
+            </>
+          )}
         </div>
       </main>
     </AuthGuard>

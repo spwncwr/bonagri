@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import NotificationsPanel from "../components/notifications/notifications-panel";
 import { authHeaders, fetchCurrentUser, clearAuth, type AuthUser } from "../lib/auth";
 
 const API_BASE_URL =
@@ -582,6 +583,14 @@ export default function Home() {
                 >
                   Addresses
                 </Link>
+                {currentUser?.role === "BUYER" ? (
+                  <Link
+                    href="/apply"
+                    className="hidden rounded-lg border border-[#ccd5ca] px-4 py-2.5 text-sm font-bold sm:block"
+                  >
+                    Sell on BonAgri
+                  </Link>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -1601,6 +1610,12 @@ export default function Home() {
               </div>
             )}
           </div>
+
+          {currentUser ? (
+            <div className="mt-8">
+              <NotificationsPanel title="Notifications" />
+            </div>
+          ) : null}
         </div>
       </section>
 

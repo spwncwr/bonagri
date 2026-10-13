@@ -20,12 +20,27 @@ function makeService() {
   const mailService = {
     sendVerificationEmail: jest.fn(),
     sendDisputeResolutionEmail: jest.fn(),
+    sendNotificationEmail: jest.fn(),
+  };
+
+  const notifications = {
+    onOrderStatusChanged: jest.fn(),
+    onDisputeClosed: jest.fn(),
+    onSellerApplicationDecided: jest.fn(),
+    onSupplierVerified: jest.fn(),
+    getMyNotifications: jest.fn(),
+    markRead: jest.fn(),
   };
 
   return {
-    service: new DisputesService(prisma as never, mailService as never),
+    service: new DisputesService(
+      prisma as never,
+      mailService as never,
+      notifications as never,
+    ),
     prisma,
     mailService,
+    notifications,
   };
 }
 

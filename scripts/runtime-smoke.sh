@@ -85,13 +85,16 @@ cd "$API"
 
 CAPTURE_FILE="$ROOT/.e2e/verification-url.txt"
 DISPUTE_CAPTURE_FILE="$ROOT/.e2e/dispute-resolution.txt"
+NOTIFY_CAPTURE_FILE="$ROOT/.e2e/notifications.txt"
 mkdir -p "$ROOT/.e2e"
 rm -f "$CAPTURE_FILE"
 rm -f "$DISPUTE_CAPTURE_FILE"
+rm -f "$NOTIFY_CAPTURE_FILE"
 
 E2E_CAPTURE_MAIL=true \
 E2E_MAIL_CAPTURE_FILE="$CAPTURE_FILE" \
 E2E_DISPUTE_CAPTURE_FILE="$DISPUTE_CAPTURE_FILE" \
+E2E_NOTIFY_CAPTURE_FILE="$NOTIFY_CAPTURE_FILE" \
 npm run start:dev >"$LOG_DIR/api.log" 2>&1 &
 API_PID=$!
 
@@ -1886,6 +1889,451 @@ echo "✓ Only admins can act on disputes (403 for vendor and buyer)"
 
 echo
 echo "✓ DISPUTE FLOW ACCEPTANCE PASSED"
+
+fi
+
+echo
+echo "SELLER APPLICATION + NOTIFICATIONS FLOW"
+echo "========================================"
+
+if [ -z "$ADMIN_E2E_PASSWORD" ]; then
+  echo "⚠ Glue section SKIPPED: no admin credentials available."
+else
+
+echo
+echo "[F1/3] Fresh buyer applies to sell; admin sees the queue..."
+
+# F uses its own registered + verified buyer so it never collides with
+# the A2 promote journey (which targets the main smoke buyer).
+F_EMAIL="cp6_buyer_$(date +%s)_$$@bonagri.local"
+F_PASSWORD="$TEST_PASSWORD"
+
+rm -f "$CAPTURE_FILE"
+
+F_REGISTER_HTTP="$(
+  curl -sS -o "$LOG_DIR/f-register.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/register" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$F_EMAIL\",\"password\":\"$F_PASSWORD\",\"firstName\":\"Glue\",\"lastName\":\"Tester\"}")"
+
+if [[ "$F_REGISTER_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/f-register.json"
+  fail "Glue-flow buyer registration failed. HTTP $F_REGISTER_HTTP"
+fi
+
+for _ in $(seq 1 30); do
+  if [[ -s "$CAPTURE_FILE" ]]; then
+    break
+  fi
+  sleep 0.5
+done
+
+if [[ ! -s "$CAPTURE_FILE" ]]; then
+  fail "Glue-flow verification URL was not captured."
+fi
+
+F_VERIFY_TOKEN="$(cat "$CAPTURE_FILE")"
+F_VERIFY_TOKEN="${F_VERIFY_TOKEN##*token=}"
+
+F_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/f-verify.json" -w "%{http_code}" \
+    "$API_URL$API_PREFIX/auth/verify-email?token=$F_VERIFY_TOKEN")"
+
+if [[ "$F_VERIFY_HTTP" != "200" && "$F_VERIFY_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/f-verify.json"
+  fail "Glue-flow email verification failed. HTTP $F_VERIFY_HTTP"
+fi
+
+F_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/f-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$F_EMAIL" "$F_PASSWORD")"
+)"
+
+if [[ "$F_LOGIN_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/f-login.json"
+  fail "Glue-flow buyer login failed. HTTP $F_LOGIN_HTTP"
+fi
+
+F_TOKEN="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("accessToken",""))' "$LOG_DIR/f-login.json"
+)"
+
+if [[ -z "$F_TOKEN" ]]; then
+  fail "Glue-flow buyer login returned no access token"
+fi
+
+F_ADDRESS_HTTP="$(
+  curl -sS -o "$LOG_DIR/f-address.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/addresses" \
+    -H "Authorization: Bearer $F_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "label":"Glue Delivery Address",
+      "recipientName":"Glue Tester",
+      "phone":"+27820000009",
+      "addressLine1":"1 Glue Test Street",
+      "city":"Polokwane",
+      "province":"Limpopo",
+      "postalCode":"0700",
+      "country":"South Africa",
+      "isDefault":true
+    }'
+)"
+
+if [[ "$F_ADDRESS_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/f-address.json"
+  fail "Glue-flow address creation failed. HTTP $F_ADDRESS_HTTP"
+fi
+
+F_ADDRESS_ID="$(
+  python3 -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); a=d.get("address") if isinstance(d.get("address"),dict) else d; print(a.get("id",""))' "$LOG_DIR/f-address.json"
+)"
+
+if [[ -z "$F_ADDRESS_ID" ]]; then
+  fail "Glue-flow address id missing."
+fi
+
+echo "✓ Glue-flow buyer registered, verified, logged in and has an address"
+
+APPLY_HTTP="$(
+  curl -sS -o "$LOG_DIR/app-create.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/seller-applications" \
+    -H "Authorization: Bearer $F_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"desiredRole\":\"SUPPLIER\",\"businessName\":\"E2E Fresh Produce\",\"message\":\"Automated seller application\"}")"
+
+if [[ "$APPLY_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/app-create.json"
+  fail "Seller application creation failed. HTTP $APPLY_HTTP"
+fi
+
+APPLICATION_ID="$(
+  python3 -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); print(d.get("id","")); assert d.get("status")=="PENDING"' "$LOG_DIR/app-create.json"
+)"
+
+if [[ -z "$APPLICATION_ID" ]]; then
+  fail "Seller application creation returned no id."
+fi
+
+echo "✓ Buyer applied to sell (PENDING)"
+
+DUP_APPLY_HTTP="$(
+  curl -sS -o "$LOG_DIR/app-dup.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/seller-applications" \
+    -H "Authorization: Bearer $F_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"desiredRole\":\"SUPPLIER\",\"businessName\":\"E2E Fresh Produce duplicate\"}")"
+
+if [[ "$DUP_APPLY_HTTP" != "409" ]]; then
+  cat "$LOG_DIR/app-dup.json"
+  fail "Duplicate seller application returned HTTP $DUP_APPLY_HTTP, expected 409"
+fi
+
+echo "✓ Duplicate application rejected (409)"
+
+DEALER_APPLY_HTTP="$(
+  curl -sS -o "$LOG_DIR/app-dealer.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/seller-applications" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"desiredRole\":\"SUPPLIER\",\"businessName\":\"Dealer applying again\"}")"
+
+if [[ "$DEALER_APPLY_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/app-dealer.json"
+  fail "Non-buyer seller application returned HTTP $DEALER_APPLY_HTTP, expected 403"
+fi
+
+echo "✓ Vendor accounts cannot apply (403)"
+
+curl -sS "$API_URL$API_PREFIX/seller-applications/mine" \
+  -H "Authorization: Bearer $F_TOKEN" > "$LOG_DIR/app-mine.json"
+
+python3 - "$LOG_DIR/app-mine.json" "$APPLICATION_ID" <<'PYJSON'
+import json
+import sys
+
+application = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if application.get("id") != sys.argv[2]:
+    raise SystemExit("ERROR: /mine does not return the applicant own application")
+
+if application.get("status") != "PENDING":
+    raise SystemExit("ERROR: expected PENDING application")
+
+print("✓ Applicant can check their own application status")
+PYJSON
+
+curl -sS "$API_URL$API_PREFIX/seller-applications" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" > "$LOG_DIR/app-queue.json"
+
+python3 - "$LOG_DIR/app-queue.json" "$APPLICATION_ID" "$F_EMAIL" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+application_id = sys.argv[2]
+buyer_email = sys.argv[3]
+
+match = [a for a in items if a.get("id") == application_id]
+
+if not match:
+    raise SystemExit("ERROR: application missing from the admin queue")
+
+if (match[0].get("user") or {}).get("email") != sys.argv[3]:
+    raise SystemExit("ERROR: queue application does not belong to the glue-flow buyer")
+
+print("✓ Admin queue shows the application")
+PYJSON
+
+echo
+echo "[F2/3] Order transitions notify the right people..."
+
+NOTIFY_CAPTURE_FILE="$ROOT/.e2e/notifications.txt"
+
+GLUE_ORDER_HTTP="$(
+  curl -sS -o "$LOG_DIR/glue-order.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $F_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$F_ADDRESS_ID\",\"productId\":\"$PRODUCT_ID\",\"quantity\":1,\"notes\":\"CP6 notification journey\"}")"
+
+if [[ "$GLUE_ORDER_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/glue-order.json"
+  fail "Glue-flow order creation failed. HTTP $GLUE_ORDER_HTTP"
+fi
+
+GLUE_ORDER_ID="$(
+  python3 -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); o=d.get("order") if isinstance(d.get("order"),dict) else d; print(o["id"])' "$LOG_DIR/glue-order.json"
+)"
+GLUE_ORDER_NUMBER="$(
+  python3 -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); o=d.get("order") if isinstance(d.get("order"),dict) else d; print(o["orderNumber"])' "$LOG_DIR/glue-order.json"
+)"
+
+CONFIRM_HTTP="$(
+  curl -sS -o "$LOG_DIR/glue-confirm.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$GLUE_ORDER_ID/status" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"CONFIRMED\"}")"
+
+if [[ "$CONFIRM_HTTP" != "200" ]]; then
+  fail "Glue-flow confirm failed. HTTP $CONFIRM_HTTP"
+fi
+
+curl -sS "$API_URL$API_PREFIX/notifications" \
+  -H "Authorization: Bearer $F_TOKEN" > "$LOG_DIR/notify-buyer.json"
+
+python3 - "$LOG_DIR/notify-buyer.json" "$GLUE_ORDER_NUMBER" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+number = sys.argv[2]
+
+if not any(number in (n.get("title") or "") and "confirmed" in (n.get("title") or "").lower() for n in items):
+    raise SystemExit("ERROR: buyer has no confirmation notification for the order")
+
+print("✓ Buyer got the order-confirmed notification")
+PYJSON
+
+python3 - "$NOTIFY_CAPTURE_FILE" "$GLUE_ORDER_NUMBER" <<'PYJSON'
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if sys.argv[2] not in payload.get("title", ""):
+    raise SystemExit("ERROR: captured notification email is not the confirmation for this order")
+
+print("✓ Confirmation email captured")
+PYJSON
+
+for transition in PROCESSING READY_FOR_DELIVERY OUT_FOR_DELIVERY DELIVERED; do
+  GLUE_TRANSITION_HTTP="$(
+    curl -sS -o "$LOG_DIR/glue-transition.json" -w "%{http_code}" \
+      -X PATCH "$API_URL$API_PREFIX/orders/$GLUE_ORDER_ID/status" \
+      -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"status\":\"$transition\"}")"
+
+  if [[ "$GLUE_TRANSITION_HTTP" != "200" ]]; then
+    fail "Glue-flow transition to $transition failed. HTTP $GLUE_TRANSITION_HTTP"
+  fi
+done
+
+curl -sS "$API_URL$API_PREFIX/notifications" \
+  -H "Authorization: Bearer $F_TOKEN" > "$LOG_DIR/notify-buyer.json"
+
+python3 - "$LOG_DIR/notify-buyer.json" "$GLUE_ORDER_NUMBER" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+number = sys.argv[2]
+
+if not any(number in (n.get("title") or "") and "delivered" in (n.get("title") or "").lower() for n in items):
+    raise SystemExit("ERROR: buyer has no delivery notification for the order")
+
+print("✓ Buyer got the order-delivered notification")
+PYJSON
+
+python3 - "$NOTIFY_CAPTURE_FILE" "$GLUE_ORDER_NUMBER" <<'PYJSON'
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if "delivered" not in payload.get("title", "").lower():
+    raise SystemExit("ERROR: captured notification email is not the delivery one")
+
+print("✓ Delivery email captured")
+PYJSON
+
+# Closing the dispute also notifies the buyer (row only - CP5 emailed).
+GLUE_DISPUTE_HTTP="$(
+  curl -sS -o "$LOG_DIR/glue-dispute.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$GLUE_ORDER_ID/dispute" \
+    -H "Authorization: Bearer $F_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"reason\":\"WRONG_ITEM\",\"description\":\"Received the wrong crate size\"}")"
+
+if [[ "$GLUE_DISPUTE_HTTP" != "201" ]]; then
+  fail "Glue-flow dispute failed. HTTP $GLUE_DISPUTE_HTTP"
+fi
+
+GLUE_DISPUTE_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/glue-dispute.json"
+)"
+
+GLUE_RESOLVE_HTTP="$(
+  curl -sS -o "$LOG_DIR/glue-resolve.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/disputes/$GLUE_DISPUTE_ID" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"RESOLVED\",\"resolutionNote\":\"Wrong crate replaced; buyer compensated\"}")"
+
+if [[ "$GLUE_RESOLVE_HTTP" != "200" ]]; then
+  fail "Glue-flow dispute resolution failed. HTTP $GLUE_RESOLVE_HTTP"
+fi
+
+curl -sS "$API_URL$API_PREFIX/notifications" \
+  -H "Authorization: Bearer $F_TOKEN" > "$LOG_DIR/notify-buyer.json"
+
+python3 - "$LOG_DIR/notify-buyer.json" "$GLUE_ORDER_NUMBER" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+number = sys.argv[2]
+
+if not any(number in (n.get("title") or "") and "dispute" in (n.get("title") or "").lower() for n in items):
+    raise SystemExit("ERROR: buyer has no dispute-resolution notification")
+
+print("✓ Buyer got the dispute-resolution notification")
+PYJSON
+
+echo
+echo "[F3/3] Admin approval promotes the role exactly once..."
+
+APPROVE_HTTP="$(
+  curl -sS -o "$LOG_DIR/app-approve.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/seller-applications/$APPLICATION_ID" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"APPROVED\",\"note\":\"Welcome to BonAgri\"}")"
+
+if [[ "$APPROVE_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/app-approve.json"
+  fail "Seller application approval failed. HTTP $APPROVE_HTTP"
+fi
+
+python3 - "$LOG_DIR/app-approve.json" <<'PYJSON'
+import json
+import sys
+
+application = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if application.get("status") != "APPROVED":
+    raise SystemExit("ERROR: expected APPROVED application")
+
+print("✓ Application approved")
+PYJSON
+
+REAPPROVE_HTTP="$(
+  curl -sS -o "$LOG_DIR/app-reapprove.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/seller-applications/$APPLICATION_ID" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"APPROVED\",\"note\":\"again\"}")"
+
+if [[ "$REAPPROVE_HTTP" != "409" ]]; then
+  cat "$LOG_DIR/app-reapprove.json"
+  fail "Re-approval returned HTTP $REAPPROVE_HTTP, expected 409 (promote exactly once)"
+fi
+
+echo "✓ Second approval rejected (409) - promotion happens exactly once"
+
+PROMOTED_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/promoted-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$F_EMAIL" "$F_PASSWORD")"
+)"
+
+if [[ "$PROMOTED_LOGIN_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/promoted-login.json"
+  fail "Promoted user re-login failed. HTTP $PROMOTED_LOGIN_HTTP"
+fi
+
+PROMOTED_TOKEN="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("accessToken",""))' "$LOG_DIR/promoted-login.json"
+)"
+
+curl -sS "$API_URL$API_PREFIX/auth/me" \
+  -H "Authorization: Bearer $PROMOTED_TOKEN" > "$LOG_DIR/promoted-me.json"
+
+python3 - "$LOG_DIR/promoted-me.json" <<'PYJSON'
+import json
+import sys
+
+me = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if me.get("role") != "SUPPLIER":
+    raise SystemExit("ERROR: promoted user role is {}, expected SUPPLIER".format(me.get("role")))
+
+print("✓ Applicant re-logs-in as SUPPLIER")
+PYJSON
+
+VENDOR_QUEUE_CODE="$(
+  curl -sS -o "$LOG_DIR/promoted-vendor-queue.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $PROMOTED_TOKEN" \
+    "$API_URL$API_PREFIX/orders/supplier")"
+
+if [[ "$VENDOR_QUEUE_CODE" != "200" ]]; then
+  fail "Promoted user cannot load the vendor order queue. HTTP $VENDOR_QUEUE_CODE"
+fi
+
+echo "✓ Promoted user loads the vendor hub (GET /orders/supplier -> 200)"
+
+curl -sS "$API_URL$API_PREFIX/notifications" \
+  -H "Authorization: Bearer $PROMOTED_TOKEN" > "$LOG_DIR/promoted-notifications.json"
+
+python3 - "$LOG_DIR/promoted-notifications.json" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if not any("approved" in (n.get("title") or "").lower() for n in items):
+    raise SystemExit("ERROR: promoted user has no approval notification")
+
+print("✓ Applicant was notified of the approval")
+PYJSON
+
+echo
+echo "✓ GLUE + SELF-SERVICE FLOW ACCEPTANCE PASSED"
 
 fi
 

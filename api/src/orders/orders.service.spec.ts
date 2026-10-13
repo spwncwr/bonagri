@@ -34,9 +34,14 @@ function makeService(tx: TxMock) {
     orderStatusHistory: { create: jest.fn() },
   };
 
+  const notifications = {
+    onOrderStatusChanged: jest.fn(),
+  };
+
   return {
-    service: new OrdersService(prisma as never),
+    service: new OrdersService(prisma as never, notifications as never),
     prisma,
+    notifications,
   };
 }
 

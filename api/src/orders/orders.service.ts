@@ -5,12 +5,16 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { UserRole } from "../common/types";
+import { NotificationsService } from "../notifications/notifications.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   private generateOrderNumber() {
     const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -358,7 +362,7 @@ export class OrdersService {
     actorRole: UserRole,
     dto: UpdateOrderStatusDto,
   ) {
-    return this.prisma.$transaction(async (tx) => {
+    const updatedOrder = await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
         include: {
@@ -566,5 +570,11 @@ export class OrdersService {
 
       return updated;
     });
+
+    // Notification rows + emails fire after the transaction commits
+    // (CP6); the hook never throws into the transition.
+    await this.notificationsService.onOrderStatusChanged(updatedOrder);
+
+    return updatedOrder;
   }
 }

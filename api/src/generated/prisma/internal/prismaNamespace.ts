@@ -407,6 +407,7 @@ export const ModelName = {
   Order: 'Order',
   OrderStatusHistory: 'OrderStatusHistory',
   Dispute: 'Dispute',
+  SellerApplication: 'SellerApplication',
   OrderItem: 'OrderItem',
   Payment: 'Payment',
   Delivery: 'Delivery',
@@ -427,7 +428,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "orderItem" | "payment" | "delivery" | "notification" | "invoice"
+    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "sellerApplication" | "orderItem" | "payment" | "delivery" | "notification" | "invoice"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1171,6 +1172,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    SellerApplication: {
+      payload: Prisma.$SellerApplicationPayload<ExtArgs>
+      fields: Prisma.SellerApplicationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SellerApplicationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SellerApplicationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SellerApplicationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SellerApplicationPayload>
+        }
+        findFirst: {
+          args: Prisma.SellerApplicationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SellerApplicationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SellerApplicationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SellerApplicationPayload>
+        }
+        findMany: {
+          args: Prisma.SellerApplicationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SellerApplicationPayload>[]
+        }
+        create: {
+          args: Prisma.SellerApplicationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SellerApplicationPayload>
+        }
+        createMany: {
+          args: Prisma.SellerApplicationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SellerApplicationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SellerApplicationPayload>[]
+        }
+        delete: {
+          args: Prisma.SellerApplicationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SellerApplicationPayload>
+        }
+        update: {
+          args: Prisma.SellerApplicationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SellerApplicationPayload>
+        }
+        deleteMany: {
+          args: Prisma.SellerApplicationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SellerApplicationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SellerApplicationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SellerApplicationPayload>[]
+        }
+        upsert: {
+          args: Prisma.SellerApplicationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SellerApplicationPayload>
+        }
+        aggregate: {
+          args: Prisma.SellerApplicationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSellerApplication>
+        }
+        groupBy: {
+          args: Prisma.SellerApplicationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SellerApplicationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SellerApplicationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SellerApplicationCountAggregateOutputType> | number
+        }
+      }
+    }
     OrderItem: {
       payload: Prisma.$OrderItemPayload<ExtArgs>
       fields: Prisma.OrderItemFieldRefs
@@ -1739,6 +1814,23 @@ export const DisputeScalarFieldEnum = {
 export type DisputeScalarFieldEnum = (typeof DisputeScalarFieldEnum)[keyof typeof DisputeScalarFieldEnum]
 
 
+export const SellerApplicationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  desiredRole: 'desiredRole',
+  businessName: 'businessName',
+  message: 'message',
+  status: 'status',
+  reviewedById: 'reviewedById',
+  reviewNote: 'reviewNote',
+  reviewedAt: 'reviewedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SellerApplicationScalarFieldEnum = (typeof SellerApplicationScalarFieldEnum)[keyof typeof SellerApplicationScalarFieldEnum]
+
+
 export const OrderItemScalarFieldEnum = {
   id: 'id',
   orderId: 'orderId',
@@ -1989,6 +2081,20 @@ export type ListEnumDisputeStatusFieldRefInput<$PrismaModel> = FieldRefInputType
 
 
 /**
+ * Reference to a field of type 'SellerApplicationStatus'
+ */
+export type EnumSellerApplicationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SellerApplicationStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'SellerApplicationStatus[]'
+ */
+export type ListEnumSellerApplicationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SellerApplicationStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'PaymentProvider'
  */
 export type EnumPaymentProviderFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentProvider'>
@@ -2204,6 +2310,7 @@ export type GlobalOmitConfig = {
   order?: Prisma.OrderOmit
   orderStatusHistory?: Prisma.OrderStatusHistoryOmit
   dispute?: Prisma.DisputeOmit
+  sellerApplication?: Prisma.SellerApplicationOmit
   orderItem?: Prisma.OrderItemOmit
   payment?: Prisma.PaymentOmit
   delivery?: Prisma.DeliveryOmit

@@ -196,4 +196,73 @@ export class MailService {
       throw error;
     }
   }
+
+  async sendNotificationEmail(
+    email: string,
+    firstName: string,
+    title: string,
+    message: string,
+  ) {
+    if (
+      process.env.E2E_CAPTURE_MAIL === "true" &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      const captureFile =
+        process.env.E2E_NOTIFY_CAPTURE_FILE ??
+        ".e2e/notifications.txt";
+
+      const { mkdir, writeFile } = await import("node:fs/promises");
+      const { dirname } = await import("node:path");
+
+      await mkdir(dirname(captureFile), { recursive: true });
+      await writeFile(
+        captureFile,
+        JSON.stringify({ email, firstName, title, message }),
+        "utf8",
+      );
+
+      // Capture mode short-circuits: E2E runs must never hit real SMTP.
+      return;
+    }
+
+    if (!this.transporter) {
+      throw new ServiceUnavailableException(
+        "Email delivery is not configured",
+      );
+    }
+
+    const from =
+      process.env.SMTP_FROM ??
+      process.env.SMTP_USER;
+
+    try {
+      await this.transporter.sendMail({
+        from,
+        to: email,
+        subject: `BonAgri: ${title}`,
+        text: [
+          `Hello ${firstName},`,
+          "",
+          message,
+          "",
+          "You can view the full details in your BonAgri account.",
+          "",
+          "BonAgri",
+          "Agricultural trade, connected.",
+        ].join("\n"),
+        html: `
+          <div style="font-family:Arial,sans-serif;line-height:1.6;max-width:600px;margin:auto">
+            <h2>${title}</h2>
+            <p>Hello ${firstName},</p>
+            <p>${message}</p>
+            <p>You can view the full details in your BonAgri account.</p>
+            <p>BonAgri<br />Agricultural trade, connected.</p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.error("BonAgri SMTP delivery error:", error);
+      throw error;
+    }
+  }
 }

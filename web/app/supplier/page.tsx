@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AuthGuard from "../../components/auth/auth-guard";
+import NotificationsPanel from "../../components/notifications/notifications-panel";
 import { authHeaders, clearAuth, fetchCurrentUser, type UserRole } from "../../lib/auth";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -681,6 +682,10 @@ export default function SupplierPage() {
             </div>
           )}
         </section>
+
+        <div className="mt-8">
+          <NotificationsPanel title="Notifications" />
+        </div>
       </div>
       </main>
     </AuthGuard>

@@ -61,6 +61,7 @@ export const ModelName = {
   Order: 'Order',
   OrderStatusHistory: 'OrderStatusHistory',
   Dispute: 'Dispute',
+  SellerApplication: 'SellerApplication',
   OrderItem: 'OrderItem',
   Payment: 'Payment',
   Delivery: 'Delivery',
@@ -241,6 +242,23 @@ export const DisputeScalarFieldEnum = {
 } as const
 
 export type DisputeScalarFieldEnum = (typeof DisputeScalarFieldEnum)[keyof typeof DisputeScalarFieldEnum]
+
+
+export const SellerApplicationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  desiredRole: 'desiredRole',
+  businessName: 'businessName',
+  message: 'message',
+  status: 'status',
+  reviewedById: 'reviewedById',
+  reviewNote: 'reviewNote',
+  reviewedAt: 'reviewedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SellerApplicationScalarFieldEnum = (typeof SellerApplicationScalarFieldEnum)[keyof typeof SellerApplicationScalarFieldEnum]
 
 
 export const OrderItemScalarFieldEnum = {

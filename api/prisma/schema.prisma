@@ -76,6 +76,12 @@ enum DisputeStatus {
   REJECTED
 }
 
+enum SellerApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -94,6 +100,8 @@ model User {
   actedOnOrders   OrderStatusHistory[]
   openedDisputes  Dispute[] @relation("DisputeOpener")
   resolvedDisputes Dispute[] @relation("DisputeResolver")
+  sellerApplication SellerApplication?
+  reviewedApplications SellerApplication[] @relation("ApplicationReviewer")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -265,6 +273,25 @@ model Dispute {
 
   @@index([status, createdAt])
   @@index([openedById])
+}
+
+model SellerApplication {
+  id           String                  @id @default(uuid())
+  userId       String                  @unique
+  desiredRole  UserRole
+  businessName String
+  message      String?
+  status       SellerApplicationStatus @default(PENDING)
+  reviewedById String?
+  reviewNote   String?
+  reviewedAt   DateTime?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("ApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
 }
 
 model OrderItem {

@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { UserRole } from "../common/types";
 import { OpenDisputeDto } from "./dto/open-dispute.dto";
 import { ResolveDisputeDto } from "./dto/resolve-dispute.dto";
@@ -37,6 +38,7 @@ export class DisputesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async openDispute(
@@ -260,6 +262,18 @@ export class DisputesService {
         emailSent = true;
       } catch (error) {
         console.error("BonAgri dispute resolution email failed:", error);
+      }
+
+      // In-app notification row for the buyer (CP6); the dedicated
+      // resolution email above already covers delivery.
+      try {
+        await this.notificationsService.onDisputeClosed(
+          dispute.order.orderNumber,
+          dispute.order.user,
+          dto.status as "RESOLVED" | "REJECTED",
+        );
+      } catch (error) {
+        console.error("BonAgri dispute notification failed:", error);
       }
     }
 

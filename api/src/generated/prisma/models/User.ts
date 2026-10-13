@@ -238,6 +238,8 @@ export type UserWhereInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryListRelationFilter
   openedDisputes?: Prisma.DisputeListRelationFilter
   resolvedDisputes?: Prisma.DisputeListRelationFilter
+  sellerApplication?: Prisma.XOR<Prisma.SellerApplicationNullableScalarRelationFilter, Prisma.SellerApplicationWhereInput> | null
+  reviewedApplications?: Prisma.SellerApplicationListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -260,6 +262,8 @@ export type UserOrderByWithRelationInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryOrderByRelationAggregateInput
   openedDisputes?: Prisma.DisputeOrderByRelationAggregateInput
   resolvedDisputes?: Prisma.DisputeOrderByRelationAggregateInput
+  sellerApplication?: Prisma.SellerApplicationOrderByWithRelationInput
+  reviewedApplications?: Prisma.SellerApplicationOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -285,6 +289,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   actedOnOrders?: Prisma.OrderStatusHistoryListRelationFilter
   openedDisputes?: Prisma.DisputeListRelationFilter
   resolvedDisputes?: Prisma.DisputeListRelationFilter
+  sellerApplication?: Prisma.XOR<Prisma.SellerApplicationNullableScalarRelationFilter, Prisma.SellerApplicationWhereInput> | null
+  reviewedApplications?: Prisma.SellerApplicationListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -341,6 +347,8 @@ export type UserCreateInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -363,6 +371,8 @@ export type UserUncheckedCreateInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserUpdateInput = {
@@ -385,6 +395,8 @@ export type UserUpdateInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -407,6 +419,8 @@ export type UserUncheckedUpdateInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -629,6 +643,36 @@ export type UserUpdateOneWithoutResolvedDisputesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutResolvedDisputesInput, Prisma.UserUpdateWithoutResolvedDisputesInput>, Prisma.UserUncheckedUpdateWithoutResolvedDisputesInput>
 }
 
+export type UserCreateNestedOneWithoutSellerApplicationInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSellerApplicationInput, Prisma.UserUncheckedCreateWithoutSellerApplicationInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSellerApplicationInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutReviewedApplicationsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutReviewedApplicationsInput, Prisma.UserUncheckedCreateWithoutReviewedApplicationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutReviewedApplicationsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutSellerApplicationNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSellerApplicationInput, Prisma.UserUncheckedCreateWithoutSellerApplicationInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSellerApplicationInput
+  upsert?: Prisma.UserUpsertWithoutSellerApplicationInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSellerApplicationInput, Prisma.UserUpdateWithoutSellerApplicationInput>, Prisma.UserUncheckedUpdateWithoutSellerApplicationInput>
+}
+
+export type UserUpdateOneWithoutReviewedApplicationsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutReviewedApplicationsInput, Prisma.UserUncheckedCreateWithoutReviewedApplicationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutReviewedApplicationsInput
+  upsert?: Prisma.UserUpsertWithoutReviewedApplicationsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutReviewedApplicationsInput, Prisma.UserUpdateWithoutReviewedApplicationsInput>, Prisma.UserUncheckedUpdateWithoutReviewedApplicationsInput>
+}
+
 export type UserCreateNestedOneWithoutNotificationsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutNotificationsInput, Prisma.UserUncheckedCreateWithoutNotificationsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutNotificationsInput
@@ -662,6 +706,8 @@ export type UserCreateWithoutEmailVerificationTokensInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserUncheckedCreateWithoutEmailVerificationTokensInput = {
@@ -683,6 +729,8 @@ export type UserUncheckedCreateWithoutEmailVerificationTokensInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserCreateOrConnectWithoutEmailVerificationTokensInput = {
@@ -720,6 +768,8 @@ export type UserUpdateWithoutEmailVerificationTokensInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEmailVerificationTokensInput = {
@@ -741,6 +791,8 @@ export type UserUncheckedUpdateWithoutEmailVerificationTokensInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserCreateWithoutSupplierProfileInput = {
@@ -762,6 +814,8 @@ export type UserCreateWithoutSupplierProfileInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserUncheckedCreateWithoutSupplierProfileInput = {
@@ -783,6 +837,8 @@ export type UserUncheckedCreateWithoutSupplierProfileInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserCreateOrConnectWithoutSupplierProfileInput = {
@@ -820,6 +876,8 @@ export type UserUpdateWithoutSupplierProfileInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSupplierProfileInput = {
@@ -841,6 +899,8 @@ export type UserUncheckedUpdateWithoutSupplierProfileInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserCreateWithoutAddressesInput = {
@@ -862,6 +922,8 @@ export type UserCreateWithoutAddressesInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserUncheckedCreateWithoutAddressesInput = {
@@ -883,6 +945,8 @@ export type UserUncheckedCreateWithoutAddressesInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserCreateOrConnectWithoutAddressesInput = {
@@ -920,6 +984,8 @@ export type UserUpdateWithoutAddressesInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAddressesInput = {
@@ -941,6 +1007,8 @@ export type UserUncheckedUpdateWithoutAddressesInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserCreateWithoutOrdersInput = {
@@ -962,6 +1030,8 @@ export type UserCreateWithoutOrdersInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserUncheckedCreateWithoutOrdersInput = {
@@ -983,6 +1053,8 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserCreateOrConnectWithoutOrdersInput = {
@@ -1020,6 +1092,8 @@ export type UserUpdateWithoutOrdersInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutOrdersInput = {
@@ -1041,6 +1115,8 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserCreateWithoutActedOnOrdersInput = {
@@ -1062,6 +1138,8 @@ export type UserCreateWithoutActedOnOrdersInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserUncheckedCreateWithoutActedOnOrdersInput = {
@@ -1083,6 +1161,8 @@ export type UserUncheckedCreateWithoutActedOnOrdersInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserCreateOrConnectWithoutActedOnOrdersInput = {
@@ -1120,6 +1200,8 @@ export type UserUpdateWithoutActedOnOrdersInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutActedOnOrdersInput = {
@@ -1141,6 +1223,8 @@ export type UserUncheckedUpdateWithoutActedOnOrdersInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserCreateWithoutOpenedDisputesInput = {
@@ -1162,6 +1246,8 @@ export type UserCreateWithoutOpenedDisputesInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserUncheckedCreateWithoutOpenedDisputesInput = {
@@ -1183,6 +1269,8 @@ export type UserUncheckedCreateWithoutOpenedDisputesInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserCreateOrConnectWithoutOpenedDisputesInput = {
@@ -1209,6 +1297,8 @@ export type UserCreateWithoutResolvedDisputesInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserUncheckedCreateWithoutResolvedDisputesInput = {
@@ -1230,6 +1320,8 @@ export type UserUncheckedCreateWithoutResolvedDisputesInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserCreateOrConnectWithoutResolvedDisputesInput = {
@@ -1267,6 +1359,8 @@ export type UserUpdateWithoutOpenedDisputesInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutOpenedDisputesInput = {
@@ -1288,6 +1382,8 @@ export type UserUncheckedUpdateWithoutOpenedDisputesInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserUpsertWithoutResolvedDisputesInput = {
@@ -1320,6 +1416,8 @@ export type UserUpdateWithoutResolvedDisputesInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutResolvedDisputesInput = {
@@ -1341,6 +1439,224 @@ export type UserUncheckedUpdateWithoutResolvedDisputesInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+}
+
+export type UserCreateWithoutSellerApplicationInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  emailVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
+}
+
+export type UserUncheckedCreateWithoutSellerApplicationInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  emailVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+}
+
+export type UserCreateOrConnectWithoutSellerApplicationInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutSellerApplicationInput, Prisma.UserUncheckedCreateWithoutSellerApplicationInput>
+}
+
+export type UserCreateWithoutReviewedApplicationsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  emailVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutReviewedApplicationsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  emailVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutReviewedApplicationsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutReviewedApplicationsInput, Prisma.UserUncheckedCreateWithoutReviewedApplicationsInput>
+}
+
+export type UserUpsertWithoutSellerApplicationInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutSellerApplicationInput, Prisma.UserUncheckedUpdateWithoutSellerApplicationInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSellerApplicationInput, Prisma.UserUncheckedCreateWithoutSellerApplicationInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutSellerApplicationInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutSellerApplicationInput, Prisma.UserUncheckedUpdateWithoutSellerApplicationInput>
+}
+
+export type UserUpdateWithoutSellerApplicationInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutSellerApplicationInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+}
+
+export type UserUpsertWithoutReviewedApplicationsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutReviewedApplicationsInput, Prisma.UserUncheckedUpdateWithoutReviewedApplicationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutReviewedApplicationsInput, Prisma.UserUncheckedCreateWithoutReviewedApplicationsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutReviewedApplicationsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutReviewedApplicationsInput, Prisma.UserUncheckedUpdateWithoutReviewedApplicationsInput>
+}
+
+export type UserUpdateWithoutReviewedApplicationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutReviewedApplicationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
 }
 
 export type UserCreateWithoutNotificationsInput = {
@@ -1362,6 +1678,8 @@ export type UserCreateWithoutNotificationsInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserUncheckedCreateWithoutNotificationsInput = {
@@ -1383,6 +1701,8 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
 }
 
 export type UserCreateOrConnectWithoutNotificationsInput = {
@@ -1420,6 +1740,8 @@ export type UserUpdateWithoutNotificationsInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotificationsInput = {
@@ -1441,6 +1763,8 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
 }
 
 
@@ -1456,6 +1780,7 @@ export type UserCountOutputType = {
   actedOnOrders: number
   openedDisputes: number
   resolvedDisputes: number
+  reviewedApplications: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1466,6 +1791,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   actedOnOrders?: boolean | UserCountOutputTypeCountActedOnOrdersArgs
   openedDisputes?: boolean | UserCountOutputTypeCountOpenedDisputesArgs
   resolvedDisputes?: boolean | UserCountOutputTypeCountResolvedDisputesArgs
+  reviewedApplications?: boolean | UserCountOutputTypeCountReviewedApplicationsArgs
 }
 
 /**
@@ -1527,6 +1853,13 @@ export type UserCountOutputTypeCountResolvedDisputesArgs<ExtArgs extends runtime
   where?: Prisma.DisputeWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountReviewedApplicationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SellerApplicationWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1548,6 +1881,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   actedOnOrders?: boolean | Prisma.User$actedOnOrdersArgs<ExtArgs>
   openedDisputes?: boolean | Prisma.User$openedDisputesArgs<ExtArgs>
   resolvedDisputes?: boolean | Prisma.User$resolvedDisputesArgs<ExtArgs>
+  sellerApplication?: boolean | Prisma.User$sellerApplicationArgs<ExtArgs>
+  reviewedApplications?: boolean | Prisma.User$reviewedApplicationsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -1603,6 +1938,8 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   actedOnOrders?: boolean | Prisma.User$actedOnOrdersArgs<ExtArgs>
   openedDisputes?: boolean | Prisma.User$openedDisputesArgs<ExtArgs>
   resolvedDisputes?: boolean | Prisma.User$resolvedDisputesArgs<ExtArgs>
+  sellerApplication?: boolean | Prisma.User$sellerApplicationArgs<ExtArgs>
+  reviewedApplications?: boolean | Prisma.User$reviewedApplicationsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1619,6 +1956,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     actedOnOrders: Prisma.$OrderStatusHistoryPayload<ExtArgs>[]
     openedDisputes: Prisma.$DisputePayload<ExtArgs>[]
     resolvedDisputes: Prisma.$DisputePayload<ExtArgs>[]
+    sellerApplication: Prisma.$SellerApplicationPayload<ExtArgs> | null
+    reviewedApplications: Prisma.$SellerApplicationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2034,6 +2373,8 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   actedOnOrders<T extends Prisma.User$actedOnOrdersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$actedOnOrdersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   openedDisputes<T extends Prisma.User$openedDisputesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$openedDisputesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DisputePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   resolvedDisputes<T extends Prisma.User$resolvedDisputesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$resolvedDisputesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DisputePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  sellerApplication<T extends Prisma.User$sellerApplicationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sellerApplicationArgs<ExtArgs>>): Prisma.Prisma__SellerApplicationClient<runtime.Types.Result.GetResult<Prisma.$SellerApplicationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  reviewedApplications<T extends Prisma.User$reviewedApplicationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$reviewedApplicationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SellerApplicationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2651,6 +2992,49 @@ export type User$resolvedDisputesArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.DisputeScalarFieldEnum | Prisma.DisputeScalarFieldEnum[]
+}
+
+/**
+ * User.sellerApplication
+ */
+export type User$sellerApplicationArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SellerApplication
+   */
+  select?: Prisma.SellerApplicationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SellerApplication
+   */
+  omit?: Prisma.SellerApplicationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SellerApplicationInclude<ExtArgs> | null
+  where?: Prisma.SellerApplicationWhereInput
+}
+
+/**
+ * User.reviewedApplications
+ */
+export type User$reviewedApplicationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SellerApplication
+   */
+  select?: Prisma.SellerApplicationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SellerApplication
+   */
+  omit?: Prisma.SellerApplicationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SellerApplicationInclude<ExtArgs> | null
+  where?: Prisma.SellerApplicationWhereInput
+  orderBy?: Prisma.SellerApplicationOrderByWithRelationInput | Prisma.SellerApplicationOrderByWithRelationInput[]
+  cursor?: Prisma.SellerApplicationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SellerApplicationScalarFieldEnum | Prisma.SellerApplicationScalarFieldEnum[]
 }
 
 /**

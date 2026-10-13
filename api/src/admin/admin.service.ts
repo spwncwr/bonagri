@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { ListUsersQueryDto } from "./dto/list-users-query.dto";
 import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
 import { PromoteSupplierDto } from "./dto/promote-supplier.dto";
@@ -41,7 +42,10 @@ function slugify(value: string) {
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async getUsers(query: ListUsersQueryDto) {
     return this.prisma.user.findMany({
@@ -197,14 +201,17 @@ export class AdminService {
   ) {
     const profile = await this.prisma.supplierProfile.findUnique({
       where: { id: supplierId },
-      select: { id: true },
+      select: {
+        id: true,
+        user: { select: { id: true, email: true, firstName: true } },
+      },
     });
 
     if (!profile) {
       throw new NotFoundException("Supplier profile not found");
     }
 
-    return this.prisma.supplierProfile.update({
+    const updated = await this.prisma.supplierProfile.update({
       where: { id: supplierId },
       data: { verified: dto.verified },
       select: {
@@ -216,6 +223,20 @@ export class AdminService {
         },
       },
     });
+
+    // Verification is granted only here (CP6): tell the vendor.
+    if (dto.verified) {
+      try {
+        await this.notificationsService.onSupplierVerified(
+          profile.user,
+          updated.businessName,
+        );
+      } catch (error) {
+        console.error("BonAgri verification notification failed:", error);
+      }
+    }
+
+    return updated;
   }
 
   async getSupplierProfiles() {

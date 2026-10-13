@@ -32,10 +32,15 @@ function makeService() {
     category: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
   };
 
+  const notifications = {
+    onSupplierVerified: jest.fn(),
+  };
+
   return {
-    service: new AdminService(prisma as never),
+    service: new AdminService(prisma as never, notifications as never),
     prisma,
     tx,
+    notifications,
   };
 }
 

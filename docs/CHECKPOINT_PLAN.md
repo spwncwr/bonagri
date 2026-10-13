@@ -45,8 +45,8 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 
 | CP | Phase | Date | Status |
 |---|---|---|---|
-| CP0 | Role & audit foundations | 2026-10-13 | done (in progress of deploy) |
-| CP1 | Supplier listing screens | 2026-10-13 | done (in progress of deploy) |
+| CP0 | Role & audit foundations | 2026-10-13 | done (b07b321) |
+| CP1 | Supplier listing screens | 2026-10-13 | done (2d8c4bc) |
 | CP2 | Consumer flow completion | — | pending |
 | CP3 | Admin management | — | pending |
 | CP4 | Agro dealers | — | pending |

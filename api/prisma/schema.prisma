@@ -116,6 +116,7 @@ model User {
   sellerApplication SellerApplication?
   reviewedApplications SellerApplication[] @relation("ApplicationReviewer")
   productRequests   ProductRequest[]
+  cartItems         CartItem[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -208,6 +209,7 @@ model Product {
   category    Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   inventory   Inventory?
   orderItems  OrderItem[]
+  cartItems   CartItem[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
@@ -232,6 +234,7 @@ model Order {
   orderNumber       String      @unique
   userId            String
   deliveryAddressId String
+  orderGroupId      String?
   status            OrderStatus @default(PENDING)
   subtotal          Decimal     @db.Decimal(12, 2)
   deliveryFee       Decimal     @default(0) @db.Decimal(12, 2)
@@ -251,6 +254,7 @@ model Order {
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+  @@index([orderGroupId])
 }
 
 model OrderStatusHistory {
@@ -349,6 +353,21 @@ model RequestResponse {
 
   @@unique([requestId, supplierId])
   @@index([supplierId])
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
 }
 
 model OrderItem {

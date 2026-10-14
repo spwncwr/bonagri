@@ -83,6 +83,11 @@ export type ProductRequest = Prisma.ProductRequestModel
  */
 export type RequestResponse = Prisma.RequestResponseModel
 /**
+ * Model CartItem
+ * 
+ */
+export type CartItem = Prisma.CartItemModel
+/**
  * Model OrderItem
  * 
  */

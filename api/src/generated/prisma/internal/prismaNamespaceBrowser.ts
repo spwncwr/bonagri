@@ -64,6 +64,7 @@ export const ModelName = {
   SellerApplication: 'SellerApplication',
   ProductRequest: 'ProductRequest',
   RequestResponse: 'RequestResponse',
+  CartItem: 'CartItem',
   OrderItem: 'OrderItem',
   Payment: 'Payment',
   Delivery: 'Delivery',
@@ -203,6 +204,7 @@ export const OrderScalarFieldEnum = {
   orderNumber: 'orderNumber',
   userId: 'userId',
   deliveryAddressId: 'deliveryAddressId',
+  orderGroupId: 'orderGroupId',
   status: 'status',
   subtotal: 'subtotal',
   deliveryFee: 'deliveryFee',
@@ -294,6 +296,18 @@ export const RequestResponseScalarFieldEnum = {
 } as const
 
 export type RequestResponseScalarFieldEnum = (typeof RequestResponseScalarFieldEnum)[keyof typeof RequestResponseScalarFieldEnum]
+
+
+export const CartItemScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  productId: 'productId',
+  quantity: 'quantity',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CartItemScalarFieldEnum = (typeof CartItemScalarFieldEnum)[keyof typeof CartItemScalarFieldEnum]
 
 
 export const OrderItemScalarFieldEnum = {

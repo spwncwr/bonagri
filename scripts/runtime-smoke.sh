@@ -2822,6 +2822,318 @@ echo
 echo "✓ REQUEST RESPONSE FLOW ACCEPTANCE PASSED"
 
 echo
+echo "CART & MULTI-ITEM CHECKOUT FLOW"
+echo "========================================"
+
+echo
+echo "[I1/4] Buyer cart splits checkout into one order per supplier..."
+
+# Start clean in case a previous run crashed mid-checkout.
+curl -sS -o /dev/null -X DELETE "$API_URL$API_PREFIX/cart" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+
+I_TS="$(date +%s)"
+I_SLUG_A="cp10-cart-a-$I_TS"
+I_SKU_A="BON-CP10-A-$I_TS"
+I_SLUG_B="cp10-cart-b-$I_TS"
+I_SKU_B="BON-CP10-B-$I_TS"
+
+I_CREATE_A_HTTP="$(
+  curl -sS -o "$LOG_DIR/i-product-a.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/products" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"categoryId\":\"$SMOKE_CATEGORY_ID\",\"name\":\"CP10 Cart Tomatoes\",\"slug\":\"$I_SLUG_A\",\"sku\":\"$I_SKU_A\",\"price\":12,\"unit\":\"kg\",\"quantity\":10,\"status\":\"ACTIVE\"}")"
+
+if [[ "$I_CREATE_A_HTTP" != "200" && "$I_CREATE_A_HTTP" != "201" ]]; then
+  fail "Cart product A creation failed. HTTP $I_CREATE_A_HTTP"
+fi
+
+I_CREATE_B_HTTP="$(
+  curl -sS -o "$LOG_DIR/i-product-b.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/products" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"categoryId\":\"$DEALER_TOOLS_CATEGORY_ID\",\"name\":\"CP10 Cart Wheelbarrow\",\"slug\":\"$I_SLUG_B\",\"sku\":\"$I_SKU_B\",\"price\":30,\"unit\":\"each\",\"quantity\":10,\"status\":\"ACTIVE\"}")"
+
+if [[ "$I_CREATE_B_HTTP" != "200" && "$I_CREATE_B_HTTP" != "201" ]]; then
+  fail "Cart product B creation failed. HTTP $I_CREATE_B_HTTP"
+fi
+
+I_PRODUCT_A="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/i-product-a.json")"
+
+I_PRODUCT_B="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/i-product-b.json")"
+
+I_ADD_A_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/items" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"productId\":\"$I_PRODUCT_A\",\"quantity\":2}")"
+
+if [[ "$I_ADD_A_HTTP" != "201" ]]; then
+  fail "Adding product A to cart failed. HTTP $I_ADD_A_HTTP"
+fi
+
+I_ADD_B_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/items" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"productId\":\"$I_PRODUCT_B\",\"quantity\":3}")"
+
+if [[ "$I_ADD_B_HTTP" != "201" ]]; then
+  fail "Adding product B to cart failed. HTTP $I_ADD_B_HTTP"
+fi
+
+curl -sS "$API_URL$API_PREFIX/cart" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/i-cart.json"
+
+python3 - "$LOG_DIR/i-cart.json" "$I_PRODUCT_A" "$I_PRODUCT_B" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if len(items) != 2:
+    raise SystemExit("ERROR: cart should hold 2 items, got {}".format(len(items)))
+
+by_product = {i["product"]["id"]: i for i in items}
+
+if by_product.get(sys.argv[2], {}).get("quantity") != 2:
+    raise SystemExit("ERROR: product A cart quantity wrong")
+
+if by_product.get(sys.argv[3], {}).get("quantity") != 3:
+    raise SystemExit("ERROR: product B cart quantity wrong")
+
+print("OK Cart holds both suppliers items with correct quantities")
+PYJSON
+
+I_CHECKOUT_HTTP="$(
+  curl -sS -o "$LOG_DIR/i-checkout.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/checkout" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"notes\":\"CP10 checkout\"}")"
+
+if [[ "$I_CHECKOUT_HTTP" != "200" && "$I_CHECKOUT_HTTP" != "201" ]]; then
+  fail "Checkout failed. HTTP $I_CHECKOUT_HTTP"
+  cat "$LOG_DIR/i-checkout.json"
+fi
+
+python3 - "$LOG_DIR/i-checkout.json" <<'PYJSON'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if data.get("orderCount") != 2:
+    raise SystemExit("ERROR: expected 2 orders, got {}".format(data.get("orderCount")))
+
+if not data.get("orderGroupId"):
+    raise SystemExit("ERROR: missing orderGroupId on checkout")
+
+totals = sorted(float(o["total"]) for o in data.get("orders", []))
+
+if totals != [24.0, 90.0]:
+    raise SystemExit("ERROR: order totals wrong: {}".format(totals))
+
+print("OK Checkout split into 2 orders under one orderGroupId (R24 + R90)")
+PYJSON
+
+I_CART_AFTER="$(curl -sS "$API_URL$API_PREFIX/cart" \
+  -H "Authorization: Bearer $ACCESS_TOKEN")"
+
+if [[ "$I_CART_AFTER" != "[]" ]]; then
+  fail "Cart was not cleared after checkout: $I_CART_AFTER"
+fi
+
+curl -sS "$API_URL$API_PREFIX/products/$I_PRODUCT_A" \
+  -o "$LOG_DIR/i-product-a-after.json"
+curl -sS "$API_URL$API_PREFIX/products/$I_PRODUCT_B" \
+  -o "$LOG_DIR/i-product-b-after.json"
+
+python3 - "$LOG_DIR/i-product-a-after.json" "$LOG_DIR/i-product-b-after.json" <<'PYJSON'
+import json
+import sys
+
+a = json.load(open(sys.argv[1], encoding="utf-8"))
+b = json.load(open(sys.argv[2], encoding="utf-8"))
+
+reserved_a = (a.get("inventory") or {}).get("reservedQuantity")
+reserved_b = (b.get("inventory") or {}).get("reservedQuantity")
+
+if reserved_a != 2:
+    raise SystemExit("ERROR: product A reservedQuantity expected 2, got {}".format(reserved_a))
+
+if reserved_b != 3:
+    raise SystemExit("ERROR: product B reservedQuantity expected 3, got {}".format(reserved_b))
+
+print("OK Inventory reserved per cart quantity (2 kg, 3 units)")
+PYJSON
+
+curl -sS "$API_URL$API_PREFIX/orders" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/i-orders.json"
+
+python3 - "$LOG_DIR/i-orders.json" "$LOG_DIR/i-checkout.json" <<'PYJSON'
+import json
+import sys
+
+orders = json.load(open(sys.argv[1], encoding="utf-8"))
+placed = json.load(open(sys.argv[2], encoding="utf-8"))
+group = placed.get("orderGroupId")
+placed_numbers = {o.get("orderNumber") for o in placed.get("orders", [])}
+matches = [o for o in orders if o.get("orderNumber") in placed_numbers]
+
+if len(matches) != 2:
+    raise SystemExit("ERROR: expected both new orders in the buyer list, got {}".format(len(matches)))
+
+if any(o.get("orderGroupId") != group for o in matches):
+    raise SystemExit("ERROR: buyer list orders do not share the orderGroupId")
+
+print("OK Buyer orders list shows both orders under the shared group")
+PYJSON
+
+echo
+echo "[I2/4] Single-supplier checkout stays one order; caps and empty cart hold..."
+
+I_ADD_SOLE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/items" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"productId\":\"$I_PRODUCT_B\",\"quantity\":1}")"
+
+if [[ "$I_ADD_SOLE_HTTP" != "201" ]]; then
+  fail "Adding sole supplier item failed. HTTP $I_ADD_SOLE_HTTP"
+fi
+
+I_SOLE_CHECKOUT_HTTP="$(
+  curl -sS -o "$LOG_DIR/i-checkout-sole.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/checkout" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\"}")"
+
+if [[ "$I_SOLE_CHECKOUT_HTTP" != "200" && "$I_SOLE_CHECKOUT_HTTP" != "201" ]]; then
+  fail "Sole supplier checkout failed. HTTP $I_SOLE_CHECKOUT_HTTP"
+fi
+
+I_SOLE_COUNT="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("orderCount",""))' "$LOG_DIR/i-checkout-sole.json")"
+
+if [[ "$I_SOLE_COUNT" != "1" ]]; then
+  fail "Single-supplier cart produced $I_SOLE_COUNT orders, expected 1"
+fi
+
+I_OVER_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/items" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"productId\":\"$I_PRODUCT_B\",\"quantity\":9999}")"
+
+if [[ "$I_OVER_HTTP" != "400" ]]; then
+  fail "Over-stock add returned HTTP $I_OVER_HTTP, expected 400"
+fi
+
+I_DEACTIVATE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/products/$I_PRODUCT_A" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"INACTIVE"}')"
+
+if [[ "$I_DEACTIVATE_HTTP" != "200" ]]; then
+  fail "Deactivating product A failed. HTTP $I_DEACTIVATE_HTTP"
+fi
+
+I_DELISTED_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/items" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"productId\":\"$I_PRODUCT_A\",\"quantity\":1}")"
+
+if [[ "$I_DELISTED_HTTP" != "400" ]]; then
+  fail "Delisted product add returned HTTP $I_DELISTED_HTTP, expected 400"
+fi
+
+I_EMPTY_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/checkout" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\"}")"
+
+if [[ "$I_EMPTY_HTTP" != "400" ]]; then
+  fail "Empty cart checkout returned HTTP $I_EMPTY_HTTP, expected 400"
+fi
+
+echo "OK Single supplier stays 1 order; over-stock 400; delisted add 400; empty checkout 400"
+
+echo
+echo "[I3/4] Cart role and ownership guards hold..."
+
+I_ANON_GET_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" "$API_URL$API_PREFIX/cart")"
+
+if [[ "$I_ANON_GET_HTTP" != "401" ]]; then
+  fail "Anonymous cart read returned HTTP $I_ANON_GET_HTTP, expected 401"
+fi
+
+I_ANON_POST_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/items" \
+    -H "Content-Type: application/json" \
+    -d "{\"productId\":\"$I_PRODUCT_B\",\"quantity\":1}")"
+
+if [[ "$I_ANON_POST_HTTP" != "401" ]]; then
+  fail "Anonymous cart add returned HTTP $I_ANON_POST_HTTP, expected 401"
+fi
+
+I_VENDOR_POST_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/items" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"productId\":\"$I_PRODUCT_B\",\"quantity\":1}")"
+
+if [[ "$I_VENDOR_POST_HTTP" != "403" ]]; then
+  fail "Vendor cart add returned HTTP $I_VENDOR_POST_HTTP, expected 403"
+fi
+
+I_FOREIGN_PATCH_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/cart/items/00000000-0000-4000-8000-000000000000" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"quantity\":2}")"
+
+if [[ "$I_FOREIGN_PATCH_HTTP" != "404" ]]; then
+  fail "Unknown cart item patch returned HTTP $I_FOREIGN_PATCH_HTTP, expected 404"
+fi
+
+echo "OK Anon read/add 401, vendor add 403, unknown item patch 404"
+
+echo
+echo "[I4/4] Checkout page serves..."
+
+I_WEB_CODE="$(
+  curl -sS -m 90 -o /dev/null -w "%{http_code}" "$WEB_URL/checkout")"
+
+if [[ "$I_WEB_CODE" != "200" ]]; then
+  fail "Web route /checkout returned HTTP $I_WEB_CODE"
+fi
+
+echo "✓ Web route /checkout -> 200"
+
+echo
+echo "✓ CART & MULTI-ITEM CHECKOUT FLOW ACCEPTANCE PASSED"
+
+echo
 echo "ADMIN MANAGEMENT FLOW"
 echo "========================================"
 

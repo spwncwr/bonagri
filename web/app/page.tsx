@@ -33,6 +33,21 @@ type ApiProduct = {
   } | null;
 };
 
+type CartItem = {
+  id: string;
+  quantity: number;
+  lineTotal: number;
+  availableQuantity: number;
+  inStock: boolean;
+  product: {
+    id: string;
+    name: string;
+    unit: string;
+    price: string;
+    supplierName: string;
+  };
+};
+
 type Product = {
   id: string;
   name: string;
@@ -225,6 +240,7 @@ export default function Home() {
     Array<{
       id: string;
       orderNumber: string;
+      orderGroupId?: string | null;
       status: string;
       total: string;
       createdAt: string;
@@ -247,6 +263,10 @@ export default function Home() {
     null,
   );
   const [orderActionError, setOrderActionError] = useState("");
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [cartError, setCartError] = useState("");
+  const [addingToCart, setAddingToCart] = useState(false);
 
   async function handleStartOrder() {
     if (!selectedProduct || ordering) return;
@@ -311,6 +331,56 @@ export default function Home() {
       );
     } finally {
       setOrdering(false);
+    }
+  }
+
+  // Add the modal's product + quantity to the buyer cart, then open the
+  // drawer so the addition is immediately visible.
+  async function handleAddToCart() {
+    if (!selectedProduct || addingToCart) return;
+
+    if (!currentUser) {
+      router.push("/login");
+      return;
+    }
+
+    setAddingToCart(true);
+    setOrderError("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/cart/items`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({
+          productId: selectedProduct.id,
+          quantity: orderQuantity,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          Array.isArray(data?.message)
+            ? data.message.join(", ")
+            : data?.message || "Unable to add to cart",
+        );
+      }
+
+      await loadCart();
+      setSelectedProduct(null);
+      setCartOpen(true);
+    } catch (error) {
+      setOrderError(
+        error instanceof Error
+          ? error.message
+          : "Unable to add to cart. Please try again.",
+      );
+    } finally {
+      setAddingToCart(false);
     }
   }
 
@@ -489,6 +559,148 @@ export default function Home() {
     void loadOrders();
   }, [loadOrders]);
 
+  const loadCart = useCallback(async () => {
+    if (!currentUser || currentUser.role !== "BUYER") {
+      setCartItems([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/cart`, {
+        cache: "no-store",
+        headers: authHeaders(),
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+
+      setCartItems(Array.isArray(data) ? (data as CartItem[]) : []);
+    } catch {
+      // Silent: a stale cart badge is better than breaking the page.
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    void loadCart();
+  }, [loadCart]);
+
+  async function patchCartItem(itemId: string, quantity: number) {
+    setCartError("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/cart/items/${itemId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ quantity }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          Array.isArray(data?.message)
+            ? data.message.join(", ")
+            : data?.message || "Unable to update cart",
+        );
+      }
+
+      await loadCart();
+    } catch (error) {
+      setCartError(
+        error instanceof Error ? error.message : "Unable to update cart",
+      );
+      await loadCart();
+    }
+  }
+
+  async function removeCartItem(itemId: string) {
+    setCartError("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/cart/items/${itemId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to remove item from cart");
+      }
+
+      await loadCart();
+    } catch (error) {
+      setCartError(
+        error instanceof Error ? error.message : "Unable to remove item",
+      );
+    }
+  }
+
+  async function clearCart() {
+    setCartError("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/cart`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to clear cart");
+      }
+
+      await loadCart();
+    } catch (error) {
+      setCartError(
+        error instanceof Error ? error.message : "Unable to clear cart",
+      );
+    }
+  }
+
+  const cartCount = cartItems.reduce(
+    (total, item) => total + item.quantity,
+    0,
+  );
+  const cartTotal = cartItems.reduce(
+    (total, item) => total + Number(item.lineTotal),
+    0,
+  );
+  const cartSupplierGroups = Array.from(
+    cartItems.reduce((groups, item) => {
+      const key = item.product.supplierName;
+      const group = groups.get(key) ?? { supplierName: key, items: [] };
+      group.items.push(item);
+      groups.set(key, group);
+      return groups;
+    }, new Map<string, { supplierName: string; items: CartItem[] }>()).values(),
+  );
+
+  // Multi-supplier checkouts share one orderGroupId - render each checkout
+  // as a single block (group header + its orders) so a buyer sees one entry
+  // per checkout instead of loose per-supplier orders.
+  const orderRenderList: Array<{ key: string; orders: typeof orders }> = [];
+  const groupedKeys = new Set<string>();
+
+  for (const order of orders) {
+    if (order.orderGroupId) {
+      if (groupedKeys.has(order.orderGroupId)) {
+        continue;
+      }
+
+      groupedKeys.add(order.orderGroupId);
+      orderRenderList.push({
+        key: order.orderGroupId,
+        orders: orders.filter((o) => o.orderGroupId === order.orderGroupId),
+      });
+    } else {
+      orderRenderList.push({ key: order.id, orders: [order] });
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -638,6 +850,21 @@ export default function Home() {
                 >
                   Addresses
                 </Link>
+                {currentUser.role === "BUYER" ? (
+                  <button
+                    type="button"
+                    onClick={() => setCartOpen(true)}
+                    className="relative hidden rounded-lg border border-[#ccd5ca] px-4 py-2.5 text-sm font-bold sm:block"
+                    aria-label={`Open cart, ${cartCount} items`}
+                  >
+                    Cart
+                    {cartCount > 0 ? (
+                      <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#17633a] px-1 text-[10px] font-black text-white">
+                        {cartCount}
+                      </span>
+                    ) : null}
+                  </button>
+                ) : null}
                 {currentUser?.role === "BUYER" ? (
                   <Link
                     href="/apply"
@@ -1347,20 +1574,227 @@ export default function Home() {
                         : "Supplier profile"}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleStartOrder}
-                      disabled={ordering}
-                      className="rounded-xl bg-[#17633a] px-5 py-3 text-xs font-black text-white hover:bg-[#0f4d2b] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {ordering ? "Placing order..." : "Start order"}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAddToCart}
+                        disabled={addingToCart || ordering}
+                        className="rounded-xl border border-[#17633a] px-5 py-3 text-xs font-black text-[#17633a] hover:bg-[#eaf3ec] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {addingToCart ? "Adding..." : "Add to cart"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleStartOrder}
+                        disabled={ordering || addingToCart}
+                        className="rounded-xl bg-[#17633a] px-5 py-3 text-xs font-black text-white hover:bg-[#0f4d2b] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {ordering ? "Placing order..." : "Start order"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         )}
+
+        {cartOpen && currentUser?.role === "BUYER" ? (
+          <div
+            className="fixed inset-0 z-[70] flex justify-end bg-black/40"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Shopping cart"
+            onClick={() => setCartOpen(false)}
+          >
+            <div
+              className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-[#dfe4dc] px-5 py-4">
+                <div>
+                  <div className="text-sm font-black text-[#17251b]">
+                    Your cart
+                  </div>
+                  <div className="mt-0.5 text-xs text-[#69756c]">
+                    {cartCount} {cartCount === 1 ? "item" : "items"} • R
+                    {cartTotal.toFixed(2)}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {cartItems.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={clearCart}
+                      className="text-xs font-bold text-[#7b867d] hover:text-red-600"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => setCartOpen(false)}
+                    className="text-lg font-bold text-[#7b867d] hover:text-[#344238]"
+                    aria-label="Close cart"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              {cartError ? (
+                <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+                  {cartError}
+                </div>
+              ) : null}
+
+              <div className="flex-1 overflow-y-auto px-5 py-4">
+                {cartItems.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[#cbd5ca] p-8 text-center">
+                    <div className="text-sm font-black text-[#243229]">
+                      Your cart is empty
+                    </div>
+                    <div className="mt-1 text-xs leading-5 text-[#69756c]">
+                      Browse the marketplace and add produce to your cart.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {cartSupplierGroups.map((group) => (
+                      <div
+                        key={group.supplierName}
+                        className="rounded-2xl border border-[#dce2d9] bg-[#fbfcf9] p-4"
+                      >
+                        <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#7b867d]">
+                          {group.supplierName}
+                        </div>
+
+                        <div className="mt-3 space-y-4">
+                          {group.items.map((item) => (
+                            <div
+                              key={item.id}
+                              className="border-b border-[#e9ede7] pb-3 last:border-b-0 last:pb-0"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm font-black text-[#17251b]">
+                                    {item.product.name}
+                                  </div>
+                                  <div className="mt-0.5 text-xs text-[#69756c]">
+                                    R{Number(item.product.price)}/
+                                    {item.product.unit} •{" "}
+                                    {item.availableQuantity} available
+                                  </div>
+                                  {!item.inStock ? (
+                                    <div className="mt-1 text-[10px] font-black uppercase tracking-wide text-red-600">
+                                      Only {item.availableQuantity} left —
+                                      reduce quantity to check out
+                                    </div>
+                                  ) : null}
+                                </div>
+
+                                <div className="text-right">
+                                  <div className="text-sm font-black text-[#17633a]">
+                                    R{Number(item.lineTotal).toFixed(2)}
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => removeCartItem(item.id)}
+                                    className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[#7b867d] hover:text-red-600"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="mt-2 flex items-center gap-2">
+                                <div className="flex items-center rounded-lg border border-[#cfd8ce] bg-white">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      patchCartItem(
+                                        item.id,
+                                        Math.max(1, item.quantity - 1),
+                                      )
+                                    }
+                                    disabled={item.quantity <= 1}
+                                    className="h-8 w-8 text-sm font-black text-[#17633a] disabled:opacity-40"
+                                    aria-label={`Decrease ${item.product.name} quantity`}
+                                  >
+                                    −
+                                  </button>
+                                  <span className="w-8 text-center text-xs font-black text-[#243229]">
+                                    {item.quantity}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      patchCartItem(item.id, item.quantity + 1)
+                                    }
+                                    disabled={
+                                      item.quantity >= item.availableQuantity
+                                    }
+                                    className="h-8 w-8 text-sm font-black text-[#17633a] disabled:opacity-40"
+                                    aria-label={`Increase ${item.product.name} quantity`}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+
+                                <span className="text-[10px] font-bold uppercase tracking-wide text-[#7b867d]">
+                                  {item.product.unit}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-[#dfe4dc] px-5 py-4">
+                <div className="flex items-center justify-between text-sm font-black text-[#243229]">
+                  <span>Subtotal</span>
+                  <span className="text-[#17633a]">
+                    R{cartTotal.toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[#7b867d]">
+                  {cartSupplierGroups.length === 1
+                    ? "1 order"
+                    : `${cartSupplierGroups.length} orders`}{" "}
+                  will be placed — one per supplier
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCartOpen(false)}
+                    className="flex-1 rounded-xl border border-[#ccd5ca] px-4 py-3 text-xs font-black text-[#243229] hover:bg-[#f2f4ef]"
+                  >
+                    Continue shopping
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => router.push("/checkout")}
+                    disabled={cartItems.length === 0}
+                    className="flex-1 rounded-xl bg-[#17633a] px-4 py-3 text-xs font-black text-white hover:bg-[#0f4d2b] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Checkout
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {orderSuccess && (
           <div className="fixed bottom-6 right-6 z-[60] w-full max-w-sm rounded-2xl border border-[#cfe0cf] bg-white p-5 shadow-2xl">
@@ -1656,7 +2090,19 @@ export default function Home() {
               </div>
             ) : (
               <div className="space-y-4">
-                {orders.map((order) => (
+                {orderRenderList.map((group) => (
+                  <div key={group.key} className="space-y-4">
+                    {group.orders.length > 1 ? (
+                      <div className="rounded-xl border border-[#cfe0cf] bg-[#eaf3ec] px-4 py-3 text-xs font-black text-[#17633a]">
+                        Multi-supplier checkout • {group.orders.length} orders
+                        • combined R
+                        {group.orders
+                          .reduce((sum, o) => sum + Number(o.total), 0)
+                          .toFixed(2)}
+                      </div>
+                    ) : null}
+
+                    {group.orders.map((order) => (
                   <article
                     key={order.id}
                     className="rounded-2xl border border-[#dce2d9] bg-[#fbfcf9] p-5"
@@ -1756,6 +2202,8 @@ export default function Home() {
                       ) : null}
                     </div>
                   </article>
+                    ))}
+                  </div>
                 ))}
               </div>
             )}

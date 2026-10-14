@@ -53,7 +53,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP5 | Disputes | 2026-10-13 | done (7545c5c) |
 | CP6 | Glue & self-service | 2026-10-13 | done (02afeeb) |
 | CP7 | Product requests (buyer demand) | 2026-10-13 | done (23417b1) |
-| CP8 | Landing-page wiring (dead CTAs) | 2026-10-14 | done |
+| CP8 | Landing-page wiring (dead CTAs) | 2026-10-14 | done (372a595) |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
 

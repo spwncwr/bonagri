@@ -1,4 +1,8 @@
-import { NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from "@nestjs/common";
 import { OrdersService } from "./orders.service";
 
 type TxMock = {
@@ -9,6 +13,7 @@ type TxMock = {
   order: { create: jest.Mock; update: jest.Mock; findUnique: jest.Mock };
   orderStatusHistory: { create: jest.Mock };
   supplierProfile: { findUnique: jest.Mock };
+  invoice: { upsert: jest.Mock };
 };
 
 function makeTx(): TxMock {
@@ -20,6 +25,7 @@ function makeTx(): TxMock {
     order: { create: jest.fn(), update: jest.fn(), findUnique: jest.fn() },
     orderStatusHistory: { create: jest.fn() },
     supplierProfile: { findUnique: jest.fn() },
+    invoice: { upsert: jest.fn() },
   };
 }
 
@@ -32,10 +38,12 @@ function makeService(tx: TxMock) {
     order: { findMany: jest.fn(), findUnique: jest.fn() },
     supplierProfile: { findUnique: jest.fn() },
     orderStatusHistory: { create: jest.fn() },
+    payment: { create: jest.fn(), update: jest.fn() },
   };
 
   const notifications = {
     onOrderStatusChanged: jest.fn(),
+    onPaymentDecision: jest.fn(),
   };
 
   return {
@@ -493,5 +501,428 @@ describe("OrdersService (CP4 agro dealers)", () => {
     await expect(
       service.getOrderDetail("order-2", "dealer-user-1", "AGRO_DEALER"),
     ).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe("OrdersService (CP11 manual EFT payments)", () => {
+  function primeBuyerOrder(
+    prisma: { order: { findUnique: jest.Mock } },
+    overrides: Record<string, unknown> = {},
+  ) {
+    prisma.order.findUnique.mockResolvedValue({
+      id: "order-1",
+      orderNumber: "BON-20261014-111111",
+      userId: "buyer-1",
+      status: "PENDING",
+      subtotal: 40,
+      deliveryFee: 0,
+      total: 40,
+      payment: null,
+      items: [
+        {
+          productId: "prod-1",
+          quantity: 2,
+          productName: "Fresh Tomatoes",
+          product: {
+            supplierId: "sup-1",
+            inventory: { quantity: 10, reservedQuantity: 2 },
+          },
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  describe("recordPayment", () => {
+    it("records manual EFT evidence against the buyer's pending order", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeBuyerOrder(prisma);
+      prisma.payment.create.mockResolvedValue({
+        id: "pay-1",
+        status: "PENDING",
+      });
+
+      const result = await service.recordPayment("order-1", "buyer-1", {
+        transactionRef: "  EFT-12345  ",
+      } as never);
+
+      expect(prisma.payment.create).toHaveBeenCalledWith({
+        data: {
+          orderId: "order-1",
+          provider: "MANUAL",
+          status: "PENDING",
+          amount: 40,
+          transactionRef: "EFT-12345",
+        },
+      });
+      expect(result).toEqual({ id: "pay-1", status: "PENDING" });
+    });
+
+    it("hides an order owned by a different buyer (404)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeBuyerOrder(prisma, { userId: "other-buyer" });
+
+      await expect(
+        service.recordPayment("order-1", "buyer-1", {
+          transactionRef: "EFT-12345",
+        } as never),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
+
+    it("hides a missing order (404)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      prisma.order.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.recordPayment("missing", "buyer-1", {
+          transactionRef: "EFT-12345",
+        } as never),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("rejects recording evidence on a non-pending order (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeBuyerOrder(prisma, { status: "CONFIRMED" });
+
+      await expect(
+        service.recordPayment("order-1", "buyer-1", {
+          transactionRef: "EFT-12345",
+        } as never),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects a duplicate while awaiting verification (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeBuyerOrder(prisma, {
+        payment: { id: "pay-1", status: "PENDING" },
+      });
+
+      await expect(
+        service.recordPayment("order-1", "buyer-1", {
+          transactionRef: "EFT-12345",
+        } as never),
+      ).rejects.toThrow(
+        "Payment already recorded for this order and is awaiting supplier verification",
+      );
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects re-recording after verification (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeBuyerOrder(prisma, {
+        payment: { id: "pay-1", status: "PAID" },
+      });
+
+      await expect(
+        service.recordPayment("order-1", "buyer-1", {
+          transactionRef: "EFT-12345",
+        } as never),
+      ).rejects.toThrow(
+        "Payment for this order has already been verified",
+      );
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
+
+    it("lets the buyer re-record a corrected reference after a rejection", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeBuyerOrder(prisma, {
+        payment: { id: "pay-1", status: "FAILED", paidAt: null },
+      });
+      prisma.payment.update.mockResolvedValue({
+        id: "pay-1",
+        status: "PENDING",
+      });
+
+      const result = await service.recordPayment("order-1", "buyer-1", {
+        transactionRef: "EFT-CORRECTED",
+      } as never);
+
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: "pay-1" },
+        data: {
+          status: "PENDING",
+          transactionRef: "EFT-CORRECTED",
+          paidAt: null,
+        },
+      });
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(result).toEqual({ id: "pay-1", status: "PENDING" });
+    });
+
+    it("rejects a reference that trims below 3 characters", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeBuyerOrder(prisma);
+
+      await expect(
+        service.recordPayment("order-1", "buyer-1", {
+          transactionRef: "  a  ",
+        } as never),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("updatePayment", () => {
+    function primeDecision(
+      prisma: {
+        order: { findUnique: jest.Mock };
+        supplierProfile: { findUnique: jest.Mock };
+      },
+      payment: Record<string, unknown> | null,
+    ) {
+      primeBuyerOrder(prisma, { payment });
+      prisma.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+    }
+
+    it("lets the owning supplier verify the evidence and notifies the buyer", async () => {
+      const tx = makeTx();
+      const { service, prisma, notifications } = makeService(tx);
+
+      primeDecision(prisma, { id: "pay-1", status: "PENDING" });
+      prisma.payment.update.mockResolvedValue({
+        id: "pay-1",
+        status: "PAID",
+        paidAt: new Date(),
+      });
+
+      await service.updatePayment("order-1", "supplier-user-1", "SUPPLIER", {
+        status: "PAID",
+      } as never);
+
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: "pay-1" },
+        data: { status: "PAID", paidAt: expect.any(Date) },
+      });
+      expect(notifications.onPaymentDecision).toHaveBeenCalledWith(
+        { orderNumber: "BON-20261014-111111", userId: "buyer-1" },
+        "PAID",
+      );
+    });
+
+    it("lets the supplier reject the evidence without stamping paidAt", async () => {
+      const tx = makeTx();
+      const { service, prisma, notifications } = makeService(tx);
+
+      primeDecision(prisma, { id: "pay-1", status: "PENDING" });
+      prisma.payment.update.mockResolvedValue({
+        id: "pay-1",
+        status: "FAILED",
+        paidAt: null,
+      });
+
+      await service.updatePayment("order-1", "supplier-user-1", "SUPPLIER", {
+        status: "FAILED",
+      } as never);
+
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: "pay-1" },
+        data: { status: "FAILED", paidAt: null },
+      });
+      expect(notifications.onPaymentDecision).toHaveBeenCalledWith(
+        { orderNumber: "BON-20261014-111111", userId: "buyer-1" },
+        "FAILED",
+      );
+    });
+
+    it("hides an order the supplier does not own (404)", async () => {
+      const tx = makeTx();
+      const { service, prisma, notifications } = makeService(tx);
+
+      primeDecision(prisma, { id: "pay-1", status: "PENDING" });
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-other-vendor",
+      });
+
+      await expect(
+        service.updatePayment("order-1", "supplier-user-1", "SUPPLIER", {
+          status: "PAID",
+        } as never),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+      expect(notifications.onPaymentDecision).not.toHaveBeenCalled();
+    });
+
+    it("hides the order from a supplier without a profile (404)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDecision(prisma, { id: "pay-1", status: "PENDING" });
+      prisma.supplierProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updatePayment("order-1", "supplier-user-1", "SUPPLIER", {
+          status: "PAID",
+        } as never),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("rejects a decision when no payment was recorded (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDecision(prisma, null);
+
+      await expect(
+        service.updatePayment("order-1", "supplier-user-1", "SUPPLIER", {
+          status: "PAID",
+        } as never),
+      ).rejects.toThrow("No payment has been recorded for this order");
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects double verification (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDecision(prisma, {
+        id: "pay-1",
+        status: "PAID",
+        paidAt: new Date(),
+      });
+
+      await expect(
+        service.updatePayment("order-1", "supplier-user-1", "SUPPLIER", {
+          status: "PAID",
+        } as never),
+      ).rejects.toThrow(
+        "Payment for this order has already been verified",
+      );
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects repeating a rejection (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDecision(prisma, { id: "pay-1", status: "FAILED", paidAt: null });
+
+      await expect(
+        service.updatePayment("order-1", "supplier-user-1", "SUPPLIER", {
+          status: "FAILED",
+        } as never),
+      ).rejects.toThrow(
+        "Payment for this order has already been rejected",
+      );
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    it("lets an admin decide on any order without an ownership lookup", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDecision(prisma, { id: "pay-1", status: "PENDING" });
+      prisma.payment.update.mockResolvedValue({
+        id: "pay-1",
+        status: "PAID",
+        paidAt: new Date(),
+      });
+
+      await service.updatePayment("order-1", "admin-1", "ADMIN", {
+        status: "PAID",
+      } as never);
+
+      expect(prisma.supplierProfile.findUnique).not.toHaveBeenCalled();
+      expect(prisma.payment.update).toHaveBeenCalled();
+    });
+
+    it("rejects a buyer trying to decide on payment (400)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDecision(prisma, { id: "pay-1", status: "PENDING" });
+
+      await expect(
+        service.updatePayment("order-1", "buyer-1", "BUYER", {
+          status: "PAID",
+        } as never),
+      ).rejects.toThrow("Unsupported user role");
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("invoice on first CONFIRMED", () => {
+    function primeConfirmedOrder(tx: TxMock) {
+      tx.order.findUnique.mockResolvedValue({
+        id: "order-1",
+        orderNumber: "BON-20261014-222222",
+        userId: "buyer-1",
+        status: "PENDING",
+        subtotal: 40,
+        deliveryFee: 0,
+        total: 40,
+        items: [
+          {
+            productId: "prod-1",
+            quantity: 2,
+            productName: "Fresh Tomatoes",
+            product: {
+              supplierId: "sup-1",
+              inventory: { quantity: 10, reservedQuantity: 2 },
+            },
+          },
+        ],
+      });
+      tx.order.update.mockImplementation(({ data }: { data: unknown }) =>
+        Promise.resolve({ id: "order-1", ...(data as object) }),
+      );
+      tx.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+      tx.inventory.update.mockResolvedValue({});
+    }
+
+    it("issues INV-<orderNumber> atomically with the transition", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primeConfirmedOrder(tx);
+      tx.invoice.upsert.mockResolvedValue({ id: "inv-1" });
+
+      await service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
+        status: "CONFIRMED",
+      } as never);
+
+      expect(tx.invoice.upsert).toHaveBeenCalledWith({
+        where: { orderId: "order-1" },
+        create: {
+          orderId: "order-1",
+          invoiceNumber: "INV-BON-20261014-222222",
+          subtotal: 40,
+          deliveryFee: 0,
+          total: 40,
+        },
+        update: {},
+      });
+    });
+
+    it("issues no invoice when the buyer cancels instead", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primeConfirmedOrder(tx);
+      tx.inventory.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.updateOrderStatus("order-1", "buyer-1", "BUYER", {
+        status: "CANCELLED",
+      } as never);
+
+      expect(tx.invoice.upsert).not.toHaveBeenCalled();
+    });
   });
 });

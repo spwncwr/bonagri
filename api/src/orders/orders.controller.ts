@@ -14,7 +14,9 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { UserRole } from "../common/types";
 import { CreateOrderDto } from "./dto/create-order.dto";
+import { RecordPaymentDto } from "./dto/record-payment.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
+import { VerifyPaymentDto } from "./dto/verify-payment.dto";
 import { OrdersService } from "./orders.service";
 
 type AuthenticatedRequest = Request & {
@@ -83,6 +85,33 @@ export class OrdersController {
     @Body() dto: UpdateOrderStatusDto,
   ) {
     return this.ordersService.updateOrderStatus(
+      id,
+      request.user.id,
+      request.user.role,
+      dto,
+    );
+  }
+
+  @Post(":id/payment")
+  @Roles("BUYER")
+  @UseGuards(RolesGuard)
+  recordPayment(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() dto: RecordPaymentDto,
+  ) {
+    return this.ordersService.recordPayment(id, request.user.id, dto);
+  }
+
+  @Patch(":id/payment")
+  @Roles("SUPPLIER", "AGRO_DEALER", "ADMIN")
+  @UseGuards(RolesGuard)
+  updatePayment(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() dto: VerifyPaymentDto,
+  ) {
+    return this.ordersService.updatePayment(
       id,
       request.user.id,
       request.user.role,

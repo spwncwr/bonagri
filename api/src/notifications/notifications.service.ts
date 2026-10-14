@@ -156,6 +156,36 @@ export class NotificationsService {
     );
   }
 
+  // CP11: the supplier decided on the buyer's manual EFT evidence.
+  async onPaymentDecision(order: {
+    orderNumber: string;
+    userId: string;
+  }, outcome: "PAID" | "FAILED") {
+    const buyer = await this.prisma.user.findUnique({
+      where: { id: order.userId },
+      select: { id: true, email: true, firstName: true },
+    });
+
+    if (!buyer) {
+      return;
+    }
+
+    if (outcome === "PAID") {
+      await this.deliver(
+        buyer,
+        `Payment received for order ${order.orderNumber}`,
+        "The supplier verified your EFT payment for this order. Nothing else is needed from you - the order continues as usual.",
+      );
+      return;
+    }
+
+    await this.deliver(
+      buyer,
+      `Payment check failed for order ${order.orderNumber}`,
+      "The supplier could not match your EFT reference on this order. Record the correct reference on the order page so they can verify it.",
+    );
+  }
+
   async getMyNotifications(userId: string) {
     return this.prisma.notification.findMany({
       where: { userId },

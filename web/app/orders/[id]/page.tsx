@@ -62,6 +62,22 @@ type OrderDetail = {
     postalCode: string | null;
     country: string;
   };
+  payment: {
+    id: string;
+    status: string;
+    provider: string;
+    amount: string;
+    transactionRef: string | null;
+    paidAt: string | null;
+  } | null;
+  invoice: {
+    id: string;
+    invoiceNumber: string;
+    subtotal: string;
+    deliveryFee: string;
+    total: string;
+    issuedAt: string;
+  } | null;
   history: OrderHistoryEntry[];
   dispute: OrderDispute | null;
 };
@@ -128,6 +144,24 @@ function statusBadgeClass(status: string) {
   return "bg-amber-100 text-amber-700";
 }
 
+const PAYMENT_LABELS: Record<string, string> = {
+  PENDING: "Awaiting check",
+  PAID: "Paid via EFT",
+  FAILED: "Reference rejected",
+};
+
+function paymentBadgeClass(status: string) {
+  if (status === "PAID") {
+    return "bg-[#e5f1e4] text-[#17633a]";
+  }
+
+  if (status === "FAILED") {
+    return "bg-red-100 text-red-700";
+  }
+
+  return "bg-amber-100 text-amber-700";
+}
+
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
   const orderId = params.id;
@@ -143,6 +177,11 @@ export default function OrderDetailPage() {
   const [disputeDescription, setDisputeDescription] = useState("");
   const [submittingDispute, setSubmittingDispute] = useState(false);
   const [disputeError, setDisputeError] = useState("");
+
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentRef, setPaymentRef] = useState("");
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -245,6 +284,64 @@ export default function OrderDetailPage() {
       setError(err instanceof Error ? err.message : "Unable to cancel this order");
     } finally {
       setCancelling(false);
+    }
+  }
+
+  // CP11: the buyer records their manual EFT reference (evidence only —
+  // the supplier verifies it separately).
+  async function recordPayment() {
+    if (!order) return;
+
+    const reference = paymentRef.trim();
+
+    if (reference.length < 3) {
+      setPaymentError(
+        "Enter the EFT reference from your bank (at least 3 characters).",
+      );
+      return;
+    }
+
+    setSubmittingPayment(true);
+    setPaymentError("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/orders/${order.id}/payment`,
+        {
+          method: "POST",
+          headers: {
+            ...authHeaders(),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ transactionRef: reference }),
+        },
+      );
+
+      const data = (await response.json().catch(() => null)) as {
+        message?: string | string[];
+      } | null;
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message
+            ? Array.isArray(data.message)
+              ? data.message.join(", ")
+              : data.message
+            : "Unable to record the payment",
+        );
+      }
+
+      const payment = data as NonNullable<OrderDetail["payment"]>;
+
+      setOrder({ ...order, payment });
+      setShowPaymentForm(false);
+      setPaymentRef("");
+    } catch (err) {
+      setPaymentError(
+        err instanceof Error ? err.message : "Unable to record the payment",
+      );
+    } finally {
+      setSubmittingPayment(false);
     }
   }
 
@@ -664,6 +761,145 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
               </section>
+
+              {/* Payment + invoice (CP11) */}
+              {order.payment ||
+              (viewerRole === "BUYER" && order.status === "PENDING") ? (
+                <section className="rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[#7b867d]">
+                      Payment
+                    </h2>
+
+                    {order.payment ? (
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${paymentBadgeClass(
+                          order.payment.status,
+                        )}`}
+                      >
+                        {PAYMENT_LABELS[order.payment.status] ??
+                          order.payment.status}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {order.payment ? (
+                    <div className="mt-4 space-y-1 text-sm text-[#344238]">
+                      <p>
+                        Manual EFT · R{order.payment.amount} · reference{" "}
+                        <span className="font-bold">
+                          {order.payment.transactionRef}
+                        </span>
+                      </p>
+                      {order.payment.paidAt ? (
+                        <p className="text-xs text-[#69756c]">
+                          Verified{" "}
+                          {new Date(order.payment.paidAt).toLocaleString(
+                            "en-ZA",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}
+                          .
+                        </p>
+                      ) : order.payment.status === "PENDING" ? (
+                        <p className="text-xs text-[#69756c]">
+                          Recorded — the supplier will match it against their
+                          bank statement. The order only moves on when the
+                          supplier confirms it.
+                        </p>
+                      ) : (
+                        <p className="text-xs text-red-700">
+                          The supplier could not match this reference. Record
+                          the correct one below.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-sm text-[#69756c]">
+                      Pay by EFT using your bank app, then record the reference
+                      below — the supplier verifies it against their statement.
+                    </p>
+                  )}
+
+                  {viewerRole === "BUYER" &&
+                  order.status === "PENDING" &&
+                  (!order.payment || order.payment.status === "FAILED") ? (
+                    <div className="mt-4 space-y-3">
+                      {paymentError ? (
+                        <div
+                          role="alert"
+                          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                        >
+                          {paymentError}
+                        </div>
+                      ) : null}
+
+                      {showPaymentForm ? (
+                        <div className="flex flex-wrap items-center gap-3">
+                          <input
+                            type="text"
+                            value={paymentRef}
+                            onChange={(event) => setPaymentRef(event.target.value)}
+                            placeholder="EFT reference (e.g. EFT123456)"
+                            className="w-64 rounded-xl border border-[#dce2d9] bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#17633a] focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            disabled={submittingPayment}
+                            onClick={() => void recordPayment()}
+                            className="rounded-xl bg-[#17633a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#12512f] disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {submittingPayment
+                              ? "Submitting..."
+                              : "Submit reference"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={submittingPayment}
+                            onClick={() => {
+                              setShowPaymentForm(false);
+                              setPaymentError("");
+                            }}
+                            className="rounded-xl border border-[#dce2d9] px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPaymentForm(true);
+                            setPaymentError("");
+                          }}
+                          className="rounded-xl border border-[#bcd6c0] px-4 py-2 text-sm font-semibold text-[#17633a] transition hover:bg-[#eaf3ec]"
+                        >
+                          {order.payment?.status === "FAILED"
+                            ? "Record a corrected reference"
+                            : "I've sent the EFT"}
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {order.invoice ? (
+                    <div className="mt-4 border-t border-[#e3e8e0] pt-4">
+                      <Link
+                        href={`/orders/${order.id}/invoice`}
+                        className="text-sm font-medium text-[#17633a] transition hover:text-[#12512f]"
+                      >
+                        Invoice {order.invoice.invoiceNumber} — open printable
+                        view →
+                      </Link>
+                    </div>
+                  ) : null}
+                </section>
+              ) : null}
 
               {/* Delivery address */}
               <section className="rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm">

@@ -255,6 +255,70 @@ describe("NotificationsService (CP6 glue)", () => {
     });
   });
 
+  describe("onPaymentDecision (CP11)", () => {
+    it("tells the buyer their payment was verified", async () => {
+      const { service, prisma, mailService } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue(buyer);
+      mailService.sendNotificationEmail.mockResolvedValue(undefined);
+
+      await service.onPaymentDecision(
+        { orderNumber: "BON-1", userId: "buyer-1" },
+        "PAID",
+      );
+
+      expect(prisma.notification.create).toHaveBeenCalledWith({
+        data: {
+          userId: "buyer-1",
+          title: "Payment received for order BON-1",
+          message: expect.stringContaining("verified your EFT payment"),
+        },
+      });
+      expect(mailService.sendNotificationEmail).toHaveBeenCalledWith(
+        "thandi@example.com",
+        "Thandi",
+        "Payment received for order BON-1",
+        expect.stringContaining("verified your EFT payment"),
+      );
+    });
+
+    it("tells the buyer their reference was rejected", async () => {
+      const { service, prisma, mailService } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue(buyer);
+      mailService.sendNotificationEmail.mockResolvedValue(undefined);
+
+      await service.onPaymentDecision(
+        { orderNumber: "BON-1", userId: "buyer-1" },
+        "FAILED",
+      );
+
+      expect(prisma.notification.create).toHaveBeenCalledWith({
+        data: {
+          userId: "buyer-1",
+          title: "Payment check failed for order BON-1",
+          message: expect.stringContaining("Record the correct reference"),
+        },
+      });
+      expect(mailService.sendNotificationEmail).toHaveBeenCalled();
+    });
+
+    it("skips silently when the buyer record is missing", async () => {
+      const { service, prisma, mailService } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue(null);
+      mailService.sendNotificationEmail.mockResolvedValue(undefined);
+
+      await service.onPaymentDecision(
+        { orderNumber: "BON-1", userId: "buyer-1" },
+        "PAID",
+      );
+
+      expect(prisma.notification.create).not.toHaveBeenCalled();
+      expect(mailService.sendNotificationEmail).not.toHaveBeenCalled();
+    });
+  });
+
   describe("inbox", () => {
     it("lists only the caller's notifications, newest first", async () => {
       const { service, prisma } = makeService();

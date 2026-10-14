@@ -255,6 +255,11 @@ export default function Home() {
         province: string;
         country: string;
       };
+      payment: {
+        status: string;
+        transactionRef: string | null;
+        paidAt: string | null;
+      } | null;
     }>
   >([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -263,6 +268,13 @@ export default function Home() {
     null,
   );
   const [orderActionError, setOrderActionError] = useState("");
+  const [paymentEntryOrderId, setPaymentEntryOrderId] = useState<string | null>(
+    null,
+  );
+  const [paymentRef, setPaymentRef] = useState("");
+  const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(
+    null,
+  );
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [cartError, setCartError] = useState("");
@@ -767,6 +779,55 @@ export default function Home() {
       );
     } finally {
       setCancellingOrderId(null);
+    }
+  }
+
+  // CP11: buyer records their manual EFT reference against a pending order.
+  async function recordPayment(orderId: string) {
+    const reference = paymentRef.trim();
+
+    if (reference.length < 3) {
+      setOrderActionError(
+        "Enter the EFT reference from your bank (at least 3 characters).",
+      );
+      return;
+    }
+
+    setRecordingPaymentId(orderId);
+    setOrderActionError("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/orders/${orderId}/payment`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+          },
+          body: JSON.stringify({ transactionRef: reference }),
+        },
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+
+        throw new Error(
+          Array.isArray(data?.message)
+            ? data.message.join(", ")
+            : data?.message || "Unable to record the payment",
+        );
+      }
+
+      setPaymentEntryOrderId(null);
+      setPaymentRef("");
+      await loadOrders();
+    } catch (error) {
+      setOrderActionError(
+        error instanceof Error ? error.message : "Unable to record the payment",
+      );
+    } finally {
+      setRecordingPaymentId(null);
     }
   }
 
@@ -2117,6 +2178,24 @@ export default function Home() {
                           <span className="rounded-full bg-[#e5f1e4] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#17633a]">
                             {order.status.replaceAll("_", " ")}
                           </span>
+
+                          {order.payment ? (
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                                order.payment.status === "PAID"
+                                  ? "bg-[#e5f1e4] text-[#17633a]"
+                                  : order.payment.status === "FAILED"
+                                    ? "bg-red-100 text-red-700"
+                                    : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {order.payment.status === "PAID"
+                                ? "Paid via EFT"
+                                : order.payment.status === "FAILED"
+                                  ? "EFT ref rejected"
+                                  : "EFT awaiting check"}
+                            </span>
+                          ) : null}
                         </div>
 
                         <div className="mt-2 text-xs text-[#7b867d]">
@@ -2185,6 +2264,65 @@ export default function Home() {
                       >
                         View timeline &amp; details →
                       </Link>
+
+                      {order.status === "PENDING" &&
+                      (!order.payment || order.payment.status === "FAILED") ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {paymentEntryOrderId === order.id ? (
+                            <>
+                              <input
+                                type="text"
+                                value={paymentRef}
+                                onChange={(event) =>
+                                  setPaymentRef(event.target.value)
+                                }
+                                placeholder="EFT reference"
+                                className="w-44 rounded-lg border border-[#dce2d9] bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-[#17633a] focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                disabled={recordingPaymentId === order.id}
+                                onClick={() => void recordPayment(order.id)}
+                                className="rounded-lg bg-[#17633a] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#12512f] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {recordingPaymentId === order.id
+                                  ? "Submitting..."
+                                  : "Submit reference"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={recordingPaymentId === order.id}
+                                onClick={() => {
+                                  setPaymentEntryOrderId(null);
+                                  setPaymentRef("");
+                                  setOrderActionError("");
+                                }}
+                                className="rounded-lg border border-[#dce2d9] px-3 py-1.5 text-xs font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPaymentEntryOrderId(order.id);
+                                setPaymentRef("");
+                                setOrderActionError("");
+                              }}
+                              className="rounded-lg border border-[#bcd6c0] px-3 py-1.5 text-xs font-semibold text-[#17633a] transition hover:bg-[#eaf3ec]"
+                            >
+                              {order.payment?.status === "FAILED"
+                                ? "Re-record EFT"
+                                : "I've sent the EFT"}
+                            </button>
+                          )}
+                        </div>
+                      ) : order.payment?.status === "PENDING" ? (
+                        <span className="text-xs font-semibold text-[#7b867d]">
+                          EFT recorded — awaiting supplier check
+                        </span>
+                      ) : null}
 
                       {order.status === "PENDING" ? (
                         <button

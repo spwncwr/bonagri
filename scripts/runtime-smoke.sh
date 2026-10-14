@@ -3134,6 +3134,339 @@ echo
 echo "✓ CART & MULTI-ITEM CHECKOUT FLOW ACCEPTANCE PASSED"
 
 echo
+echo "MANUAL EFT PAYMENT + INVOICE FLOW"
+echo "========================================"
+
+echo
+echo "[J1/3] Buyer records EFT evidence against a pending order..."
+
+J_TS="$(date +%s)"
+J_SLUG="cp11-eft-$J_TS"
+J_SKU="BON-CP11-$J_TS"
+
+J_CREATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/j-product.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/products" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"categoryId\":\"$SMOKE_CATEGORY_ID\",\"name\":\"CP11 EFT Tomatoes\",\"slug\":\"$J_SLUG\",\"sku\":\"$J_SKU\",\"price\":20,\"unit\":\"kg\",\"quantity\":6,\"status\":\"ACTIVE\"}")"
+
+if [[ "$J_CREATE_HTTP" != "200" && "$J_CREATE_HTTP" != "201" ]]; then
+  fail "CP11 product creation failed. HTTP $J_CREATE_HTTP"
+fi
+
+J_PRODUCT="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/j-product.json")"
+
+J_ORDER_HTTP="$(
+  curl -sS -o "$LOG_DIR/j-order.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"productId\":\"$J_PRODUCT\",\"quantity\":2,\"notes\":\"CP11 EFT order\"}")"
+
+if [[ "$J_ORDER_HTTP" != "200" && "$J_ORDER_HTTP" != "201" ]]; then
+  fail "CP11 order creation failed. HTTP $J_ORDER_HTTP"
+  cat "$LOG_DIR/j-order.json"
+fi
+
+J_ORDER="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/j-order.json")"
+
+J_ORDER_NUMBER="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("orderNumber",""))' "$LOG_DIR/j-order.json")"
+
+J_PAY_HTTP="$(
+  curl -sS -o "$LOG_DIR/j-payment.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"transactionRef\":\"EFT-J-$J_TS\"}")"
+
+if [[ "$J_PAY_HTTP" != "200" && "$J_PAY_HTTP" != "201" ]]; then
+  fail "Recording EFT payment failed. HTTP $J_PAY_HTTP"
+  cat "$LOG_DIR/j-payment.json"
+fi
+
+python3 - "$LOG_DIR/j-payment.json" <<'PYJSON'
+import json
+import sys
+
+payment = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if payment.get("status") != "PENDING":
+    raise SystemExit("ERROR: payment should start PENDING, got {}".format(payment.get("status")))
+
+if payment.get("provider") != "MANUAL":
+    raise SystemExit("ERROR: provider should be MANUAL, got {}".format(payment.get("provider")))
+
+if float(payment.get("amount") or 0) != 40.0:
+    raise SystemExit("ERROR: payment amount should be 40.0 (2 x R20), got {}".format(payment.get("amount")))
+
+print("OK Payment recorded: MANUAL, PENDING, amount R40")
+PYJSON
+
+J_DUP_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"transactionRef\":\"EFT-J-$J_TS-B\"}")"
+
+if [[ "$J_DUP_HTTP" != "409" ]]; then
+  fail "Duplicate EFT record returned HTTP $J_DUP_HTTP, expected 409"
+fi
+
+curl -sS "$API_URL$API_PREFIX/orders/$J_ORDER" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/j-order-after-pay.json"
+
+python3 - "$LOG_DIR/j-order-after-pay.json" <<'PYJSON'
+import json
+import sys
+
+order = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if order.get("status") != "PENDING":
+    raise SystemExit("ERROR: recording payment must not move the order (got {})".format(order.get("status")))
+
+payment = order.get("payment") or {}
+
+if payment.get("status") != "PENDING":
+    raise SystemExit("ERROR: order payload is missing the pending payment")
+
+if not str(payment.get("transactionRef") or "").startswith("EFT-J-"):
+    raise SystemExit("ERROR: payment transactionRef not carried on the order")
+
+if order.get("invoice") is not None:
+    raise SystemExit("ERROR: invoice must not exist before CONFIRMED")
+
+print("OK Order stays PENDING with payment attached; no invoice yet")
+PYJSON
+
+echo "OK Duplicate record 409; payment is evidence only"
+
+echo
+echo "[J2/3] Supplier verifies, buyer notified, confirm issues the invoice..."
+
+J_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/j-verify.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"PAID"}')"
+
+if [[ "$J_VERIFY_HTTP" != "200" ]]; then
+  fail "Payment verification failed. HTTP $J_VERIFY_HTTP"
+  cat "$LOG_DIR/j-verify.json"
+fi
+
+python3 - "$LOG_DIR/j-verify.json" <<'PYJSON'
+import json
+import sys
+
+payment = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if payment.get("status") != "PAID":
+    raise SystemExit("ERROR: payment should be PAID, got {}".format(payment.get("status")))
+
+if not payment.get("paidAt"):
+    raise SystemExit("ERROR: paidAt must be stamped on verification")
+
+print("OK Payment verified: PAID with paidAt stamped")
+PYJSON
+
+curl -sS "$API_URL$API_PREFIX/notifications" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/j-notifications.json"
+
+python3 - "$LOG_DIR/j-notifications.json" "$J_ORDER_NUMBER" <<'PYJSON'
+import json
+import sys
+
+rows = json.load(open(sys.argv[1], encoding="utf-8"))
+title = "Payment received for order {}".format(sys.argv[2])
+
+if not any(n.get("title") == title for n in rows):
+    raise SystemExit("ERROR: buyer has no payment notification for {}".format(sys.argv[2]))
+
+print("OK Buyer received the payment-received notification")
+PYJSON
+
+J_CONFIRM_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$J_ORDER/status" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"CONFIRMED"}')"
+
+if [[ "$J_CONFIRM_HTTP" != "200" ]]; then
+  fail "Confirming the CP11 order failed. HTTP $J_CONFIRM_HTTP"
+fi
+
+curl -sS "$API_URL$API_PREFIX/orders/$J_ORDER" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/j-order-confirmed.json"
+
+python3 - "$LOG_DIR/j-order-confirmed.json" "$J_ORDER_NUMBER" <<'PYJSON'
+import json
+import sys
+
+order = json.load(open(sys.argv[1], encoding="utf-8"))
+order_number = sys.argv[2]
+
+if order.get("status") != "CONFIRMED":
+    raise SystemExit("ERROR: order should be CONFIRMED, got {}".format(order.get("status")))
+
+invoice = order.get("invoice") or {}
+expected_number = "INV-{}".format(order_number)
+
+if invoice.get("invoiceNumber") != expected_number:
+    raise SystemExit("ERROR: invoiceNumber should be {}, got {}".format(expected_number, invoice.get("invoiceNumber")))
+
+for key, expected in (("subtotal", 40.0), ("deliveryFee", 0.0), ("total", 40.0)):
+    if float(invoice.get(key) or 0) != expected:
+        raise SystemExit("ERROR: invoice {} should be {}, got {}".format(key, expected, invoice.get(key)))
+
+payment = order.get("payment") or {}
+
+if payment.get("status") != "PAID":
+    raise SystemExit("ERROR: payment should stay PAID through confirmation")
+
+print("OK Invoice {} issued with matching totals; payment stays PAID".format(expected_number))
+PYJSON
+
+J_REVERIFY_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"PAID"}')"
+
+if [[ "$J_REVERIFY_HTTP" != "409" ]]; then
+  fail "Re-verifying a PAID payment returned HTTP $J_REVERIFY_HTTP, expected 409"
+fi
+
+J_REPAY_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"transactionRef\":\"EFT-J-$J_TS-C\"}")"
+
+if [[ "$J_REPAY_HTTP" != "409" ]]; then
+  fail "Re-recording after verification returned HTTP $J_REPAY_HTTP, expected 409"
+fi
+
+echo "OK Confirm issued the invoice; repeat verify/record rejected with 409"
+
+echo
+echo "[J3/3] Payment guard matrix and the printable invoice route..."
+
+J_ANON_POST_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Content-Type: application/json" \
+    -d '{"transactionRef":"EFT-ANON"}')"
+
+if [[ "$J_ANON_POST_HTTP" != "401" ]]; then
+  fail "Anonymous payment record returned HTTP $J_ANON_POST_HTTP, expected 401"
+fi
+
+J_ANON_PATCH_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"PAID"}')"
+
+if [[ "$J_ANON_PATCH_HTTP" != "401" ]]; then
+  fail "Anonymous payment verify returned HTTP $J_ANON_PATCH_HTTP, expected 401"
+fi
+
+J_DEALER_POST_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"transactionRef\":\"EFT-J-$J_TS-D\"}")"
+
+if [[ "$J_DEALER_POST_HTTP" != "403" ]]; then
+  fail "Vendor payment record returned HTTP $J_DEALER_POST_HTTP, expected 403"
+fi
+
+J_BUYER_PATCH_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"PAID"}')"
+
+if [[ "$J_BUYER_PATCH_HTTP" != "403" ]]; then
+  fail "Buyer payment verify returned HTTP $J_BUYER_PATCH_HTTP, expected 403"
+fi
+
+J_FOREIGN_PATCH_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"PAID"}')"
+
+if [[ "$J_FOREIGN_PATCH_HTTP" != "404" ]]; then
+  fail "Foreign supplier payment verify returned HTTP $J_FOREIGN_PATCH_HTTP, expected 404"
+fi
+
+J_ORDER2_HTTP="$(
+  curl -sS -o "$LOG_DIR/j-order2.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"productId\":\"$J_PRODUCT\",\"quantity\":1}")"
+
+if [[ "$J_ORDER2_HTTP" != "200" && "$J_ORDER2_HTTP" != "201" ]]; then
+  fail "CP11 second order creation failed. HTTP $J_ORDER2_HTTP"
+fi
+
+J_ORDER2="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/j-order2.json")"
+
+J_NOPAY_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$J_ORDER2/payment" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"PAID"}')"
+
+if [[ "$J_NOPAY_HTTP" != "409" ]]; then
+  fail "Verifying an order without payment returned HTTP $J_NOPAY_HTTP, expected 409"
+fi
+
+J_WRONG_STATE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"transactionRef\":\"EFT-J-$J_TS-E\"}")"
+
+if [[ "$J_WRONG_STATE_HTTP" != "409" ]]; then
+  fail "Recording on a CONFIRMED order returned HTTP $J_WRONG_STATE_HTTP, expected 409"
+fi
+
+echo "OK Anon 401/401, vendor 403, buyer 403, foreign 404, no-payment 409, wrong-state 409"
+
+echo
+echo "Printable invoice route..."
+
+J_WEB_CODE="$(
+  curl -sS -m 90 -o /dev/null -w "%{http_code}" "$WEB_URL/orders/$J_ORDER/invoice")"
+
+if [[ "$J_WEB_CODE" != "200" ]]; then
+  fail "Web route /orders/$J_ORDER/invoice returned HTTP $J_WEB_CODE"
+fi
+
+echo "✓ Web route /orders/<id>/invoice -> 200"
+
+echo
+echo "✓ MANUAL EFT PAYMENT + INVOICE FLOW ACCEPTANCE PASSED"
+
+echo
 echo "ADMIN MANAGEMENT FLOW"
 echo "========================================"
 

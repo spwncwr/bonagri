@@ -60,6 +60,18 @@ type SupplierOrder = {
     province?: string | null;
     postalCode?: string | null;
   };
+  payment: {
+    id: string;
+    status: string;
+    provider: string;
+    amount: number | string;
+    transactionRef: string | null;
+    paidAt: string | null;
+  } | null;
+  invoice: {
+    id: string;
+    invoiceNumber: string;
+  } | null;
 };
 
 type BuyerRequest = {
@@ -178,6 +190,9 @@ export default function SupplierPage() {
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [decidingPaymentId, setDecidingPaymentId] = useState<string | null>(
+    null,
+  );
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"ALL" | OrderStatus>("ALL");
   const [vendorRole, setVendorRole] = useState<UserRole | null>(null);
@@ -533,6 +548,46 @@ export default function SupplierPage() {
     }
   };
 
+  // CP11: verify or reject the buyer's recorded manual EFT evidence. This
+  // updates the payment only — the order advances through updateStatus.
+  const decidePayment = async (
+    orderId: string,
+    status: "PAID" | "FAILED",
+  ) => {
+    setDecidingPaymentId(orderId);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/orders/${orderId}/payment`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+          },
+          body: JSON.stringify({ status }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message ?? "Unable to update the payment");
+      }
+
+      await loadOrders();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to update the payment",
+      );
+    } finally {
+      setDecidingPaymentId(null);
+    }
+  };
+
   const filteredOrders = useMemo(() => {
     if (filter === "ALL") {
       return orders;
@@ -800,6 +855,86 @@ export default function SupplierPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Manual EFT payment (CP11) */}
+                    {order.payment ? (
+                      <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                              Manual EFT payment
+                            </p>
+                            <p className="mt-1.5 flex flex-wrap items-center gap-2 text-sm">
+                              <span
+                                className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                  order.payment.status === "PAID"
+                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                    : order.payment.status === "FAILED"
+                                      ? "border-red-200 bg-red-50 text-red-700"
+                                      : "border-amber-200 bg-amber-50 text-amber-700"
+                                }`}
+                              >
+                                {order.payment.status === "PAID"
+                                  ? "Verified"
+                                  : order.payment.status === "FAILED"
+                                    ? "Rejected"
+                                    : "Awaiting check"}
+                              </span>
+                              <span className="text-slate-600">
+                                R{order.payment.amount} · ref{" "}
+                                <span className="font-semibold">
+                                  {order.payment.transactionRef}
+                                </span>
+                              </span>
+                            </p>
+                            {order.payment.paidAt ? (
+                              <p className="mt-1 text-xs text-slate-500">
+                                Verified {formatDate(order.payment.paidAt)}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          {order.payment.status === "PENDING" ? (
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                disabled={decidingPaymentId === order.id}
+                                onClick={() =>
+                                  void decidePayment(order.id, "PAID")
+                                }
+                                className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {decidingPaymentId === order.id
+                                  ? "Saving..."
+                                  : "Verify payment"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={decidingPaymentId === order.id}
+                                onClick={() =>
+                                  void decidePayment(order.id, "FAILED")
+                                }
+                                className="rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Reject reference
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {order.invoice ? (
+                      <div className="mt-4">
+                        <Link
+                          href={`/orders/${order.id}/invoice`}
+                          className="text-sm font-medium text-emerald-700 transition hover:text-emerald-800"
+                        >
+                          Invoice {order.invoice.invoiceNumber} — open
+                          printable view →
+                        </Link>
+                      </div>
+                    ) : null}
 
                     {(nextStatus || order.status === "PENDING") && (
                       <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">

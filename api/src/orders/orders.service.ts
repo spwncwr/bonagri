@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -7,7 +8,9 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UserRole } from "../common/types";
 import { NotificationsService } from "../notifications/notifications.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
+import { RecordPaymentDto } from "./dto/record-payment.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
+import { VerifyPaymentDto } from "./dto/verify-payment.dto";
 
 @Injectable()
 export class OrdersService {
@@ -498,6 +501,21 @@ export class OrdersService {
             },
           });
         }
+
+        // CP11: issue the invoice atomically with the first CONFIRMED
+        // transition. orderId is unique and update:{} preserves the
+        // original numbers, so the write is idempotent.
+        await tx.invoice.upsert({
+          where: { orderId },
+          create: {
+            orderId,
+            invoiceNumber: `INV-${order.orderNumber}`,
+            subtotal: order.subtotal,
+            deliveryFee: order.deliveryFee,
+            total: order.total,
+          },
+          update: {},
+        });
       }
 
       const deliveryUpdate =
@@ -576,5 +594,142 @@ export class OrdersService {
     await this.notificationsService.onOrderStatusChanged(updatedOrder);
 
     return updatedOrder;
+  }
+
+  // CP11: the buyer records manual EFT evidence against a pending order.
+  // The row is evidence only - it never moves the order status itself.
+  async recordPayment(orderId: string, userId: string, dto: RecordPaymentDto) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { payment: true },
+    });
+
+    if (!order || order.userId !== userId) {
+      throw new NotFoundException("Order not found");
+    }
+
+    if (order.status !== "PENDING") {
+      throw new ConflictException(
+        "EFT payment can only be recorded while the order is pending",
+      );
+    }
+
+    const transactionRef = dto.transactionRef.trim();
+
+    if (transactionRef.length < 3) {
+      throw new BadRequestException(
+        "Transaction reference must be at least 3 characters",
+      );
+    }
+
+    if (order.payment) {
+      if (order.payment.status === "PENDING") {
+        throw new ConflictException(
+          "Payment already recorded for this order and is awaiting supplier verification",
+        );
+      }
+
+      if (order.payment.status === "PAID") {
+        throw new ConflictException(
+          "Payment for this order has already been verified",
+        );
+      }
+
+      // FAILED: the buyer is re-recording with a corrected reference.
+      return this.prisma.payment.update({
+        where: { id: order.payment.id },
+        data: {
+          status: "PENDING",
+          transactionRef,
+          paidAt: null,
+        },
+      });
+    }
+
+    return this.prisma.payment.create({
+      data: {
+        orderId: order.id,
+        provider: "MANUAL",
+        status: "PENDING",
+        amount: order.total,
+        transactionRef,
+      },
+    });
+  }
+
+  // CP11: the supplier of the order decides on the recorded evidence.
+  // Payment is evidence, not authority - the order only advances through
+  // updateOrderStatus.
+  async updatePayment(
+    orderId: string,
+    actorUserId: string,
+    actorRole: UserRole,
+    dto: VerifyPaymentDto,
+  ) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        payment: true,
+        items: { select: { product: { select: { supplierId: true } } } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException("Order not found");
+    }
+
+    if (actorRole === "SUPPLIER" || actorRole === "AGRO_DEALER") {
+      const supplier = await this.prisma.supplierProfile.findUnique({
+        where: { userId: actorUserId },
+        select: { id: true },
+      });
+
+      if (!supplier) {
+        throw new NotFoundException("Supplier profile not found");
+      }
+
+      const ownsOrder = order.items.some(
+        (item) => item.product.supplierId === supplier.id,
+      );
+
+      if (!ownsOrder) {
+        throw new NotFoundException("Order not found");
+      }
+    } else if (actorRole !== "ADMIN") {
+      throw new BadRequestException("Unsupported user role");
+    }
+
+    if (!order.payment) {
+      throw new ConflictException("No payment has been recorded for this order");
+    }
+
+    if (order.payment.status === "PAID") {
+      throw new ConflictException(
+        "Payment for this order has already been verified",
+      );
+    }
+
+    if (order.payment.status === "FAILED" && dto.status === "FAILED") {
+      throw new ConflictException(
+        "Payment for this order has already been rejected",
+      );
+    }
+
+    const payment = await this.prisma.payment.update({
+      where: { id: order.payment.id },
+      data: {
+        status: dto.status,
+        paidAt: dto.status === "PAID" ? new Date() : null,
+      },
+    });
+
+    // Notification rows + emails fire after the write commits; the hook
+    // never throws into the decision (CP6/CP11 house pattern).
+    await this.notificationsService.onPaymentDecision(
+      { orderNumber: order.orderNumber, userId: order.userId },
+      dto.status,
+    );
+
+    return payment;
   }
 }

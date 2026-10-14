@@ -54,7 +54,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP6 | Glue & self-service | 2026-10-13 | done (02afeeb) |
 | CP7 | Product requests (buyer demand) | 2026-10-13 | done (23417b1) |
 | CP8 | Landing-page wiring (dead CTAs) | 2026-10-14 | done (372a595) |
-| CP9 | Request responses (demand loop) | 2026-10-14 | done (pending hash) |
+| CP9 | Request responses (demand loop) | 2026-10-14 | done (ca46630) |
 | CP10 | Cart & multi-item checkout | — | pending |
 | CP11 | Payments (manual EFT + invoices) | — | pending |
 | CP12 | Delivery tracking | — | pending |
@@ -277,10 +277,10 @@ Extra gates:
 Role journey (deployed): two vendors respond to one buyer request → buyer sees
 both with business names (no ids) → accepts one → the other is auto-DECLINED
 in the same transaction → the accepted vendor gets a notification → the public
-board shows "2 SUPPLIERS INTERESTED" (count only) → vendor withdraws their own
-OPEN response; late respond on a withdrawn request → 409.
+board shows a live-only interested count → vendor withdraws their own OPEN
+response; late respond on a withdrawn request → 409.
 
-Status **done** (verified live 2026-10-14): 119 API unit tests (+9); new
+Status **done** (`ca46630`, verified live 2026-10-14): 119 API unit tests (+9); new
 **`RequestResponse`** model (unique `[requestId, supplierId]` — one response
 per vendor per request; `quotedPrice?` + `quotedUnit?`; migration
 `20261014062241_add_request_responses`, generated client committed);
@@ -297,11 +297,23 @@ a filtered `_count` of live responses (no identity). Web: vendor hub
 and a **My responses** panel with status chips + withdraw; `/requests` gained
 per-request **View responses (n)** expand with Accept/Decline (accepting
 locally closes the others to mirror the server transaction) and verified-badge
-business names; landing `#requests` cards show the "n SUPPLIERS INTERESTED"
-badge. Smoke **H1–H3** — one smoke bug found and fixed on the way: the
-"buyer cannot withdraw a response" check mistakenly used the dealer token
-(owner), which correctly 409s on a state check; split into buyer-wrong-actor
-404 + vendor-re-act 409 (stronger coverage). Suite now 8 acceptance flows.
+business names; landing `#requests` cards show the interested-supplier badge
+(live-only count: OPEN + ACCEPTED responses, so an accepted-then-closed field
+reads 1, not the historical total — verified in the live journey). Smoke
+**H1–H3** — one smoke bug found and fixed on the way: the "buyer cannot
+withdraw a response" check mistakenly used the dealer token (owner), which
+correctly 409s on a state check; split into buyer-wrong-actor 404 +
+vendor-re-act 409 (stronger coverage). Suite now **8 acceptance flows,
+124 ✓**. Live journey 2026-10-14 (same approved buyer@ temporary-demote,
+purges its own leftover requests, restored to SUPPLIER and re-verified):
+both vendors respond → duplicate 409 → buyer accepts dev@ → dealer@ auto-
+DECLINED → acceptance notification visible to dev@ → live-only interested
+count → guards (foreign-vendor withdraw 404, owner-on-ACCEPTED 409, anon 401,
+buyer respond 403) → request withdrawn → late respond 409 → `/`, `/requests`,
+`/supplier` all 200. Two live-script bugs on the way (both in the script, not
+the API): the count assertion expected the historical total, and the
+wrong-actor check reused the owner token — same class of bug as the smoke one,
+same fix pattern.
 
 ## 4. Checkpoint hygiene rules
 

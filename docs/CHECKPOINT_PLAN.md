@@ -55,7 +55,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP7 | Product requests (buyer demand) | 2026-10-13 | done (23417b1) |
 | CP8 | Landing-page wiring (dead CTAs) | 2026-10-14 | done (372a595) |
 | CP9 | Request responses (demand loop) | 2026-10-14 | done (ca46630) |
-| CP10 | Cart & multi-item checkout | — | pending |
+| CP10 | Cart & multi-item checkout | 2026-10-14 | done (0475e89) |
 | CP11 | Payments (manual EFT + invoices) | — | pending |
 | CP12 | Delivery tracking | — | pending |
 | CP13 | Trust & ops hygiene (CI, tokens, reviews) | — | pending |
@@ -314,6 +314,69 @@ buyer respond 403) → request withdrawn → late respond 409 → `/`, `/request
 the API): the count assertion expected the historical total, and the
 wrong-actor check reused the owner token — same class of bug as the smoke one,
 same fix pattern.
+
+### CP10 — Cart & multi-item checkout
+Extra gates:
+- Unit tests: cart add (creates / increments / stock cap → 400 / inactive →
+  400 / no inventory → 400 / unknown → 404), owner-only update+remove
+  (foreign/unknown → 404, cap → 400, delisted → 409), clear, checkout
+  (splits one order per supplier under a shared orderGroupId, reserves each
+  item's quantity, writes history rows, clears the cart; non-buyer → 400,
+  foreign address → 404, empty cart → 400, short stock → 409 naming the item,
+  delisted → 409, nothing written on rollback).
+Role journey (deployed): buyer adds one product from each of two suppliers →
+cart drawer shows both grouped by supplier with live caps → `/checkout`
+preview shows two order cards → "Place 2 orders" → two PENDING orders sharing
+one orderGroupId → buyer orders list renders them under one group header →
+inventory reserved for both products → cart empty.
+
+Status **done** (`0475e89`, live journey 2026-10-14 below): 135 API unit tests
+(+16); new **`CartItem`** model (`@@unique([userId, productId])` — one line
+per product, add = increment; cascade on user/product delete) + **`Order.
+orderGroupId?`** (indexed) + migration `20261014073321_add_cart`, generated
+client committed; new **`cart/`** module — `GET /cart` (per-line live caps,
+lineTotal, inStock flag), `POST /cart/items` (ACTIVE + inventory + combined
+quantity cap), `PATCH`/`DELETE /cart/items/:id` (owner-only, foreign/unknown
+→ 404), `DELETE /cart`, and `POST /cart/checkout`: validates buyer + address,
+re-checks stock for every line (any short item → **409 naming it**, whole
+transaction rolls back), groups lines by `supplierId` and creates **one order
+per supplier** under one `orderGroupId` in a single transaction (inventory
+reservations, status history, cart cleared) — existing single-supplier
+lifecycle/transitions/disputes/notifications work per order untouched.
+Web: header **Cart** button with count badge (BUYER) + right-side **drawer**
+(per-supplier groups, qty steppers, remove, clear, subtotal, "N orders will
+be placed — one per supplier"), **Add to cart** in the product modal beside
+"Start order" (on success closes the modal and opens the drawer), new
+**`/checkout`** page (address picker + manage link, per-supplier order
+cards, optional delivery notes, summary sidebar "Place N orders", success
+screen with order numbers), buyer `#orders` list renders each `orderGroupId`
+as one block with a "Multi-supplier checkout" header + combined total.
+Smoke **I1–I4** — suite now **9 acceptance flows, 126 ✓**.
+
+Live journey **green 2026-10-14** (API run + browser run + self-cleanup):
+- *API run*: preflight `GET /cart` anon → **401** proved the CP10 build was
+  deployed → buyer@ temporarily demoted via Neon → two fresh ACTIVE listings
+  created (dev@ vegetables R12/kg ×10, dealer@ tools R30 ×10) → address +
+  clean cart → added 2 × A + 3 × B → checkout returned **2 PENDING orders
+  under one orderGroupId with totals R24 + R90** → cart `[]` →
+  `reservedQuantity` 2/3 on the fresh products → buyer order list carried the
+  shared group id → guards: anon add 401, vendor add 403, over-stock 400,
+  empty-checkout 400, unknown-item patch 404 → web `/checkout` 200, `/` 200.
+- *Browser run* (buyer@ demoted again): logged in → header **Cart** badge
+  (0 → 2 items) → product modal **Add to cart** → drawer showed both lines
+  grouped by supplier (`Limpopo Agro Equipment` / `BonAgri Farm`) with
+  steppers, line totals, **Subtotal R42.00** and "**2 orders will be placed —
+  one per supplier**" → `/checkout`: address picker (default pre-selected),
+  two per-supplier order cards with subtotals, summary sidebar → **Place 2
+  orders** → success screen "**2 orders placed**" listing
+  `BON-20261014-159232` (R30, Limpopo Agro Equipment) + `BON-20261014-327708`
+  (R12, BonAgri Farm) → `#orders` rendered the "**Multi-supplier checkout • 2
+  orders • combined R42.00**" group header over both orders. Screenshots
+  captured (checkout page, success screen).
+- *Self-cleaning*: purge deleted the journey's orders, `cp10-live-%` products,
+  the CP10 Live address and cart rows; post-run verify = buyer@ **SUPPLIER**,
+  residue **0/0/0/0** — this time no prod leftovers (improvement over CP6/CP9
+  residue).
 
 ## 4. Checkpoint hygiene rules
 

@@ -54,6 +54,11 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP6 | Glue & self-service | 2026-10-13 | done (02afeeb) |
 | CP7 | Product requests (buyer demand) | 2026-10-13 | done (23417b1) |
 | CP8 | Landing-page wiring (dead CTAs) | 2026-10-14 | done (372a595) |
+| CP9 | Request responses (demand loop) | — | pending |
+| CP10 | Cart & multi-item checkout | — | pending |
+| CP11 | Payments (manual EFT + invoices) | — | pending |
+| CP12 | Delivery tracking | — | pending |
+| CP13 | Trust & ops hygiene (CI, tokens, reviews) | — | pending |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
 

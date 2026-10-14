@@ -24,6 +24,28 @@ type ProductRequest = {
   status: "OPEN" | "FULFILLED" | "WITHDRAWN";
   createdAt: string;
   category: { name: string; slug: string } | null;
+  _count?: { responses: number };
+};
+
+type RequestResponse = {
+  id: string;
+  message: string;
+  quotedPrice: string | null;
+  quotedUnit: string | null;
+  status: "OPEN" | "ACCEPTED" | "DECLINED" | "WITHDRAWN";
+  createdAt: string;
+  supplier: {
+    businessName: string;
+    city: string | null;
+    verified: boolean;
+  };
+};
+
+const RESPONSE_STYLES: Record<RequestResponse["status"], string> = {
+  OPEN: "bg-emerald-100 text-emerald-800",
+  ACCEPTED: "bg-[#e8f1e6] text-[#17633a]",
+  DECLINED: "bg-slate-200 text-slate-600",
+  WITHDRAWN: "bg-amber-100 text-amber-700",
 };
 
 const STATUS_STYLES: Record<ProductRequest["status"], string> = {
@@ -57,6 +79,11 @@ export default function RequestsPage() {
   const [actingId, setActingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [responses, setResponses] = useState<RequestResponse[]>([]);
+  const [responsesLoading, setResponsesLoading] = useState(false);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -196,6 +223,101 @@ export default function RequestsPage() {
       setError(err instanceof Error ? err.message : "Unable to update this request");
     } finally {
       setActingId(null);
+    }
+  }
+
+  async function toggleResponses(requestId: string) {
+    if (expandedId === requestId) {
+      setExpandedId(null);
+      return;
+    }
+
+    setExpandedId(requestId);
+    setResponses([]);
+    setResponsesLoading(true);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/product-requests/${requestId}/responses`,
+        {
+          cache: "no-store",
+          headers: authHeaders(),
+        },
+      );
+
+      if (response.ok) {
+        setResponses((await response.json()) as RequestResponse[]);
+      }
+    } catch {
+      // Panel stays empty on failure; user can retry by re-expanding.
+    } finally {
+      setResponsesLoading(false);
+    }
+  }
+
+  async function decideResponse(
+    responseId: string,
+    status: "ACCEPTED" | "DECLINED",
+  ) {
+    setRespondingId(responseId);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/product-requests/responses/${responseId}`,
+        {
+          method: "PATCH",
+          headers: {
+            ...authHeaders(),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status }),
+        },
+      );
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          message?: string | string[];
+        } | null;
+
+        throw new Error(
+          data?.message
+            ? Array.isArray(data.message)
+              ? data.message.join(", ")
+              : data.message
+            : "Unable to update this response",
+        );
+      }
+
+      setResponses((current) =>
+        current.map((item) => {
+          if (item.id === responseId) {
+            return { ...item, status };
+          }
+
+          // Accepting closes every other live response server-side too.
+          if (
+            status === "ACCEPTED" &&
+            item.id !== responseId &&
+            item.status === "OPEN"
+          ) {
+            return { ...item, status: "DECLINED" as const };
+          }
+
+          return item;
+        }),
+      );
+
+      setNotice(
+        status === "ACCEPTED"
+          ? "Response accepted — the supplier has been notified."
+          : "Response declined.",
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update this response");
+    } finally {
+      setRespondingId(null);
     }
   }
 
@@ -443,6 +565,16 @@ export default function RequestsPage() {
                         <div className="flex shrink-0 gap-2">
                           <button
                             type="button"
+                            onClick={() => void toggleResponses(request.id)}
+                            className="rounded-lg border border-[#dce2d9] bg-white px-3 py-1.5 text-xs font-semibold text-[#344238] transition hover:bg-[#f7f8f4]"
+                          >
+                            {expandedId === request.id
+                              ? "Hide responses"
+                              : `View responses (${request._count?.responses ?? 0})`}
+                          </button>
+
+                          <button
+                            type="button"
                             disabled={actingId === request.id}
                             onClick={() =>
                               void updateRequest(request.id, "FULFILLED")
@@ -467,6 +599,100 @@ export default function RequestsPage() {
                         </div>
                       ) : null}
                     </div>
+
+                    {expandedId === request.id ? (
+                      <div className="mt-3 space-y-2 rounded-xl border border-[#dce2d9] bg-[#fafbf8] p-3">
+                        {responsesLoading ? (
+                          <p className="text-xs text-[#69756c]">
+                            Loading responses...
+                          </p>
+                        ) : responses.length === 0 ? (
+                          <p className="text-xs text-[#69756c]">
+                            No responses yet.
+                          </p>
+                        ) : (
+                          responses.map((response) => (
+                            <div
+                              key={response.id}
+                              className="rounded-lg border border-[#e3e8e1] bg-white p-3 text-xs"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="font-semibold">
+                                      {response.supplier.businessName}
+                                    </p>
+                                    {response.supplier.verified ? (
+                                      <span className="rounded-full bg-[#e8f1e6] px-2 py-0.5 text-[9px] font-bold text-[#17633a]">
+                                        VERIFIED
+                                      </span>
+                                    ) : null}
+                                    <span
+                                      className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${RESPONSE_STYLES[response.status]}`}
+                                    >
+                                      {response.status}
+                                    </span>
+                                  </div>
+
+                                  <p className="mt-1 text-[#7a857d]">
+                                    {response.message}
+                                  </p>
+
+                                  {response.quotedPrice ? (
+                                    <p className="mt-1 font-semibold text-[#17633a]">
+                                      R{" "}
+                                      {Number(
+                                        response.quotedPrice,
+                                      ).toLocaleString("en-ZA", {
+                                        minimumFractionDigits: 2,
+                                      })}
+                                      {response.quotedUnit
+                                        ? ` ${response.quotedUnit}`
+                                        : ""}
+                                    </p>
+                                  ) : null}
+                                </div>
+
+                                {response.status === "OPEN" &&
+                                request.status === "OPEN" ? (
+                                  <div className="flex shrink-0 gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={respondingId === response.id}
+                                      onClick={() =>
+                                        void decideResponse(
+                                          response.id,
+                                          "ACCEPTED",
+                                        )
+                                      }
+                                      className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      {respondingId === response.id
+                                        ? "Working..."
+                                        : "Accept"}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      disabled={respondingId === response.id}
+                                      onClick={() =>
+                                        void decideResponse(
+                                          response.id,
+                                          "DECLINED",
+                                        )
+                                      }
+                                      className="rounded-lg border border-[#e5d9c5] bg-white px-3 py-1.5 text-[11px] font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      Decline
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>

@@ -409,6 +409,7 @@ export const ModelName = {
   Dispute: 'Dispute',
   SellerApplication: 'SellerApplication',
   ProductRequest: 'ProductRequest',
+  RequestResponse: 'RequestResponse',
   OrderItem: 'OrderItem',
   Payment: 'Payment',
   Delivery: 'Delivery',
@@ -429,7 +430,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "sellerApplication" | "productRequest" | "orderItem" | "payment" | "delivery" | "notification" | "invoice"
+    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "sellerApplication" | "productRequest" | "requestResponse" | "orderItem" | "payment" | "delivery" | "notification" | "invoice"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1321,6 +1322,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    RequestResponse: {
+      payload: Prisma.$RequestResponsePayload<ExtArgs>
+      fields: Prisma.RequestResponseFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RequestResponseFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RequestResponsePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RequestResponseFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RequestResponsePayload>
+        }
+        findFirst: {
+          args: Prisma.RequestResponseFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RequestResponsePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RequestResponseFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RequestResponsePayload>
+        }
+        findMany: {
+          args: Prisma.RequestResponseFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RequestResponsePayload>[]
+        }
+        create: {
+          args: Prisma.RequestResponseCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RequestResponsePayload>
+        }
+        createMany: {
+          args: Prisma.RequestResponseCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RequestResponseCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RequestResponsePayload>[]
+        }
+        delete: {
+          args: Prisma.RequestResponseDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RequestResponsePayload>
+        }
+        update: {
+          args: Prisma.RequestResponseUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RequestResponsePayload>
+        }
+        deleteMany: {
+          args: Prisma.RequestResponseDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RequestResponseUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RequestResponseUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RequestResponsePayload>[]
+        }
+        upsert: {
+          args: Prisma.RequestResponseUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RequestResponsePayload>
+        }
+        aggregate: {
+          args: Prisma.RequestResponseAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRequestResponse>
+        }
+        groupBy: {
+          args: Prisma.RequestResponseGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RequestResponseGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RequestResponseCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RequestResponseCountAggregateOutputType> | number
+        }
+      }
+    }
     OrderItem: {
       payload: Prisma.$OrderItemPayload<ExtArgs>
       fields: Prisma.OrderItemFieldRefs
@@ -1924,6 +1999,21 @@ export const ProductRequestScalarFieldEnum = {
 export type ProductRequestScalarFieldEnum = (typeof ProductRequestScalarFieldEnum)[keyof typeof ProductRequestScalarFieldEnum]
 
 
+export const RequestResponseScalarFieldEnum = {
+  id: 'id',
+  requestId: 'requestId',
+  supplierId: 'supplierId',
+  message: 'message',
+  quotedPrice: 'quotedPrice',
+  quotedUnit: 'quotedUnit',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RequestResponseScalarFieldEnum = (typeof RequestResponseScalarFieldEnum)[keyof typeof RequestResponseScalarFieldEnum]
+
+
 export const OrderItemScalarFieldEnum = {
   id: 'id',
   orderId: 'orderId',
@@ -2202,6 +2292,20 @@ export type ListEnumProductRequestStatusFieldRefInput<$PrismaModel> = FieldRefIn
 
 
 /**
+ * Reference to a field of type 'RequestResponseStatus'
+ */
+export type EnumRequestResponseStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RequestResponseStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'RequestResponseStatus[]'
+ */
+export type ListEnumRequestResponseStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RequestResponseStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'PaymentProvider'
  */
 export type EnumPaymentProviderFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentProvider'>
@@ -2419,6 +2523,7 @@ export type GlobalOmitConfig = {
   dispute?: Prisma.DisputeOmit
   sellerApplication?: Prisma.SellerApplicationOmit
   productRequest?: Prisma.ProductRequestOmit
+  requestResponse?: Prisma.RequestResponseOmit
   orderItem?: Prisma.OrderItemOmit
   payment?: Prisma.PaymentOmit
   delivery?: Prisma.DeliveryOmit

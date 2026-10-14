@@ -2542,6 +2542,286 @@ echo
 echo "✓ PRODUCT REQUESTS FLOW ACCEPTANCE PASSED"
 
 echo
+echo "REQUEST RESPONSE FLOW"
+echo "====================="
+
+echo
+echo "[H1/3] Vendor responds; buyer sees it and accepts..."
+
+H_FUTURE_DATE="$(date -v+14d +%Y-%m-%d 2>/dev/null || date -d '+14 days' +%Y-%m-%d)"
+H_TITLE="Smoke Response Demand $(date +%s)"
+
+H_CREATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/h-request.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"title\":\"$H_TITLE\",\"quantity\":800,\"unit\":\"kg\",\"destinationCity\":\"Polokwane\",\"requiredBy\":\"$H_FUTURE_DATE\"}")"
+
+if [[ "$H_CREATE_HTTP" != "201" ]]; then
+  fail "H request creation failed. HTTP $H_CREATE_HTTP"
+fi
+
+H_REQUEST_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/h-request.json")"
+
+if [[ -z "$H_REQUEST_ID" ]]; then
+  fail "H request creation returned no id."
+fi
+
+H_RESPOND_HTTP="$(
+  curl -sS -o "$LOG_DIR/h-respond.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/$H_REQUEST_ID/responses" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"message\":\"We can supply this from our Polokwane depot\",\"quotedPrice\":12.5,\"quotedUnit\":\"per kg\"}")"
+
+if [[ "$H_RESPOND_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/h-respond.json"
+  fail "Vendor response failed. HTTP $H_RESPOND_HTTP"
+fi
+
+H_RESPONSE_ID="$(
+  python3 -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); print(d.get("id","")); assert d.get("status")=="OPEN"' "$LOG_DIR/h-respond.json")"
+
+if [[ -z "$H_RESPONSE_ID" ]]; then
+  fail "Vendor response returned no id."
+fi
+
+H_DUP_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/$H_REQUEST_ID/responses" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"message\":\"Second try\"}")"
+
+if [[ "$H_DUP_HTTP" != "409" ]]; then
+  fail "Duplicate response returned HTTP $H_DUP_HTTP, expected 409"
+fi
+
+curl -sS "$API_URL$API_PREFIX/product-requests/$H_REQUEST_ID/responses" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/h-responses.json"
+
+python3 - "$LOG_DIR/h-responses.json" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if not items or items[0].get("status") != "OPEN":
+    raise SystemExit("ERROR: buyer does not see the OPEN response")
+
+supplier = items[0].get("supplier") or {}
+
+if not supplier.get("businessName") or "id" in supplier:
+    raise SystemExit("ERROR: response payload missing businessName or leaks ids")
+
+print("OK Buyer sees the response with the vendor business name")
+PYJSON
+
+H_ACCEPT_HTTP="$(
+  curl -sS -o "$LOG_DIR/h-accept.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/product-requests/responses/$H_RESPONSE_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"ACCEPTED\"}")"
+
+if [[ "$H_ACCEPT_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/h-accept.json"
+  fail "Response accept failed. HTTP $H_ACCEPT_HTTP"
+fi
+
+curl -sS "$API_URL$API_PREFIX/product-requests/responses/mine" \
+  -H "Authorization: Bearer $DEALER_TOKEN" > "$LOG_DIR/h-mine.json"
+
+python3 - "$LOG_DIR/h-mine.json" "$H_REQUEST_ID" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+match = [i for i in items if i.get("request", {}).get("id") == sys.argv[2]]
+
+if not match or match[0].get("status") != "ACCEPTED":
+    raise SystemExit("ERROR: vendor /responses/mine does not show ACCEPTED")
+
+print("OK Vendor sees ACCEPTED under /responses/mine")
+PYJSON
+
+echo
+echo "[H2/3] Role and ownership guards hold..."
+
+H_ANON_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/$H_REQUEST_ID/responses" \
+    -H "Content-Type: application/json" \
+    -d "{\"message\":\"anon\"}")"
+
+if [[ "$H_ANON_HTTP" != "401" ]]; then
+  fail "Anonymous respond returned HTTP $H_ANON_HTTP, expected 401"
+fi
+
+H_BUYER_RESPOND_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/$H_REQUEST_ID/responses" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"message\":\"buyer responds\"}")"
+
+if [[ "$H_BUYER_RESPOND_HTTP" != "403" ]]; then
+  fail "Buyer respond returned HTTP $H_BUYER_RESPOND_HTTP, expected 403"
+fi
+
+H_VENDOR_READ_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    "$API_URL$API_PREFIX/product-requests/$H_REQUEST_ID/responses" \
+    -H "Authorization: Bearer $DEALER_TOKEN")"
+
+if [[ "$H_VENDOR_READ_HTTP" != "403" ]]; then
+  fail "Vendor reading buyer responses returned HTTP $H_VENDOR_READ_HTTP, expected 403"
+fi
+
+H_UNKNOWN_READ_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    "$API_URL$API_PREFIX/product-requests/00000000-0000-4000-8000-000000000000/responses" \
+    -H "Authorization: Bearer $ACCESS_TOKEN")"
+
+if [[ "$H_UNKNOWN_READ_HTTP" != "404" ]]; then
+  fail "Buyer reading unknown request responses returned HTTP $H_UNKNOWN_READ_HTTP, expected 404"
+fi
+
+H_BUYER_WITHDRAW_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/product-requests/responses/$H_RESPONSE_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"WITHDRAWN\"}")"
+
+if [[ "$H_BUYER_WITHDRAW_HTTP" != "404" ]]; then
+  fail "Buyer withdrawing a vendor response returned HTTP $H_BUYER_WITHDRAW_HTTP, expected 404"
+fi
+
+H_VENDOR_REACT_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/product-requests/responses/$H_RESPONSE_ID" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"WITHDRAWN\"}")"
+
+if [[ "$H_VENDOR_REACT_HTTP" != "409" ]]; then
+  fail "Vendor withdrawing their own ACCEPTED response returned HTTP $H_VENDOR_REACT_HTTP, expected 409"
+fi
+
+H_ACT_TWICE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/product-requests/responses/$H_RESPONSE_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"DECLINED\"}")"
+
+if [[ "$H_ACT_TWICE_HTTP" != "409" ]]; then
+  fail "Acting on a non-OPEN response returned HTTP $H_ACT_TWICE_HTTP, expected 409"
+fi
+
+echo "OK Anon 401, buyer respond 403, vendor read 403, unknown read 404, wrong-actor 404, re-act 409"
+
+echo
+echo "[H3/3] Accepting auto-declines competing responses..."
+
+H2_TITLE="Smoke Response Race $(date +%s)"
+
+H2_CREATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/h2-request.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"title\":\"$H2_TITLE\",\"quantity\":50,\"unit\":\"crates\"}")"
+
+if [[ "$H2_CREATE_HTTP" != "201" ]]; then
+  fail "H2 request creation failed. HTTP $H2_CREATE_HTTP"
+fi
+
+H2_REQUEST_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/h2-request.json")"
+
+for H2_TOKEN_VAR in SUPPLIER_TOKEN DEALER_TOKEN
+do
+  eval "H2_TOKEN=\$$H2_TOKEN_VAR"
+
+  H2_RESPOND_HTTP="$(
+    curl -sS -o "$LOG_DIR/h2-respond-$H2_TOKEN_VAR.json" -w "%{http_code}" \
+      -X POST "$API_URL$API_PREFIX/product-requests/$H2_REQUEST_ID/responses" \
+      -H "Authorization: Bearer $H2_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"message\":\"We can cover this demand\"}")"
+
+  if [[ "$H2_RESPOND_HTTP" != "201" ]]; then
+    fail "H2 respond as $H2_TOKEN_VAR failed. HTTP $H2_RESPOND_HTTP"
+  fi
+done
+
+H2_DEV_RESPONSE_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/h2-respond-SUPPLIER_TOKEN.json")"
+H2_DEALER_RESPONSE_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/h2-respond-DEALER_TOKEN.json")"
+
+H2_ACCEPT_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/product-requests/responses/$H2_DEV_RESPONSE_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"ACCEPTED\"}")"
+
+if [[ "$H2_ACCEPT_HTTP" != "200" ]]; then
+  fail "H2 accept failed. HTTP $H2_ACCEPT_HTTP"
+fi
+
+curl -sS "$API_URL$API_PREFIX/product-requests/$H2_REQUEST_ID/responses" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/h2-responses-after.json"
+
+python3 - "$LOG_DIR/h2-responses-after.json" "$H2_DEV_RESPONSE_ID" "$H2_DEALER_RESPONSE_ID" <<'PYJSON'
+import json
+import sys
+
+items = json.load(open(sys.argv[1], encoding="utf-8"))
+by_id = {i.get("id"): i.get("status") for i in items}
+
+if by_id.get(sys.argv[2]) != "ACCEPTED":
+    raise SystemExit("ERROR: chosen response is not ACCEPTED")
+
+if by_id.get(sys.argv[3]) != "DECLINED":
+    raise SystemExit("ERROR: competing response was not auto-declined")
+
+print("OK Accept auto-declined the competing response")
+PYJSON
+
+H2_WITHDRAW_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/product-requests/$H2_REQUEST_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"WITHDRAWN\"}")"
+
+if [[ "$H2_WITHDRAW_HTTP" != "200" ]]; then
+  fail "H2 request withdraw failed. HTTP $H2_WITHDRAW_HTTP"
+fi
+
+H2_LATE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/$H2_REQUEST_ID/responses" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"message\":\"late\"}")"
+
+if [[ "$H2_LATE_HTTP" != "409" ]]; then
+  fail "Responding to a withdrawn request returned HTTP $H2_LATE_HTTP, expected 409"
+fi
+
+echo "OK Late response on a withdrawn request rejected (409)"
+
+echo
+echo "✓ REQUEST RESPONSE FLOW ACCEPTANCE PASSED"
+
+echo
 echo "ADMIN MANAGEMENT FLOW"
 echo "========================================"
 

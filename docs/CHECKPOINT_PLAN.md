@@ -54,7 +54,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP6 | Glue & self-service | 2026-10-13 | done (02afeeb) |
 | CP7 | Product requests (buyer demand) | 2026-10-13 | done (23417b1) |
 | CP8 | Landing-page wiring (dead CTAs) | 2026-10-14 | done (372a595) |
-| CP9 | Request responses (demand loop) | — | pending |
+| CP9 | Request responses (demand loop) | 2026-10-14 | done (pending hash) |
 | CP10 | Cart & multi-item checkout | — | pending |
 | CP11 | Payments (manual EFT + invoices) | — | pending |
 | CP12 | Delivery tracking | — | pending |
@@ -266,6 +266,42 @@ supplier"** → `/apply` (page widened to accept vendor roles — vendors get a
 build hiccup on the way: the smoke's killed dev server left a corrupt
 `.next/dev/types/validator.ts` that broke `next build`'s typecheck — stale
 artifact, cleared, gitignored, never committed.
+
+### CP9 — Request responses (demand-board loop)
+Extra gates:
+- Unit tests: respond guards (no supplier profile → 403, duplicate → 409,
+  non-OPEN request → 409), buyer-owner-only reads (foreign/unknown → 404),
+  accept transaction (auto-declines competing OPEN responses + notifies the
+  winning vendor), vendor-only withdraw / buyer-only accept-decline (wrong
+  actor → 404), acting on non-OPEN response → 409.
+Role journey (deployed): two vendors respond to one buyer request → buyer sees
+both with business names (no ids) → accepts one → the other is auto-DECLINED
+in the same transaction → the accepted vendor gets a notification → the public
+board shows "2 SUPPLIERS INTERESTED" (count only) → vendor withdraws their own
+OPEN response; late respond on a withdrawn request → 409.
+
+Status **done** (verified live 2026-10-14): 119 API unit tests (+9); new
+**`RequestResponse`** model (unique `[requestId, supplierId]` — one response
+per vendor per request; `quotedPrice?` + `quotedUnit?`; migration
+`20261014062241_add_request_responses`, generated client committed);
+`RequestsModule` extended — vendor `POST /product-requests/:id/responses`
+(SUPPLIER+AGRO_DEALER; request must be OPEN, duplicate → 409),
+buyer-owner `GET .../responses` (foreign → 404), vendor
+`GET /product-requests/responses/mine`, actor-scoped
+`PATCH /product-requests/responses/:id` (vendor WITHDRAWN / buyer
+ACCEPTED|DECLINED; accept runs one transaction that auto-declines competing
+OPEN responses, then best-effort notifies the vendor via a new
+`NotificationsService.onRequestResponseAccepted`); public board payload gained
+a filtered `_count` of live responses (no identity). Web: vendor hub
+"Buyer requests" gained per-request **Respond** (message + optional quote)
+and a **My responses** panel with status chips + withdraw; `/requests` gained
+per-request **View responses (n)** expand with Accept/Decline (accepting
+locally closes the others to mirror the server transaction) and verified-badge
+business names; landing `#requests` cards show the "n SUPPLIERS INTERESTED"
+badge. Smoke **H1–H3** — one smoke bug found and fixed on the way: the
+"buyer cannot withdraw a response" check mistakenly used the dealer token
+(owner), which correctly 409s on a state check; split into buyer-wrong-actor
+404 + vendor-re-act 409 (stronger coverage). Suite now 8 acceptance flows.
 
 ## 4. Checkpoint hygiene rules
 

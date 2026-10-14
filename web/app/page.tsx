@@ -71,6 +71,7 @@ type PublicProductRequest = {
   requiredBy: string | null;
   createdAt: string;
   category: { name: string; slug: string } | null;
+  _count?: { responses: number };
 };
 
 // Category-group segments so tool/equipment listings surface properly (CP4).
@@ -1458,8 +1459,17 @@ export default function Home() {
                           )}
                         </div>
                       </div>
-                      <div className="rounded-full bg-[#e8f1e6] px-3 py-1 text-[9px] font-black text-[#17633a]">
-                        OPEN REQUEST
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <div className="rounded-full bg-[#e8f1e6] px-3 py-1 text-[9px] font-black text-[#17633a]">
+                          OPEN REQUEST
+                        </div>
+                        {(request._count?.responses ?? 0) > 0 ? (
+                          <div className="rounded-full bg-white px-3 py-1 text-[9px] font-black text-[#17633a]">
+                            {request._count?.responses} SUPPLIER
+                            {(request._count?.responses ?? 0) === 1 ? "" : "S"}{" "}
+                            INTERESTED
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 

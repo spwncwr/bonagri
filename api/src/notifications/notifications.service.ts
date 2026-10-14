@@ -145,6 +145,17 @@ export class NotificationsService {
     );
   }
 
+  async onRequestResponseAccepted(
+    vendor: { id: string; email: string; firstName: string },
+    requestTitle: string,
+  ) {
+    await this.deliver(
+      vendor,
+      "A buyer accepted your request response",
+      `The buyer behind "${requestTitle}" accepted your response. Log in to your vendor hub for the request details.`,
+    );
+  }
+
   async getMyNotifications(userId: string) {
     return this.prisma.notification.findMany({
       where: { userId },

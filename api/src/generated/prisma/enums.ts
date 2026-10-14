@@ -118,3 +118,13 @@ export const ProductRequestStatus = {
 } as const
 
 export type ProductRequestStatus = (typeof ProductRequestStatus)[keyof typeof ProductRequestStatus]
+
+
+export const RequestResponseStatus = {
+  OPEN: 'OPEN',
+  ACCEPTED: 'ACCEPTED',
+  DECLINED: 'DECLINED',
+  WITHDRAWN: 'WITHDRAWN'
+} as const
+
+export type RequestResponseStatus = (typeof RequestResponseStatus)[keyof typeof RequestResponseStatus]

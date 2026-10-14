@@ -78,6 +78,11 @@ export type SellerApplication = Prisma.SellerApplicationModel
  */
 export type ProductRequest = Prisma.ProductRequestModel
 /**
+ * Model RequestResponse
+ * 
+ */
+export type RequestResponse = Prisma.RequestResponseModel
+/**
  * Model OrderItem
  * 
  */

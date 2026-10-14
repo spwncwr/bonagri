@@ -56,7 +56,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP8 | Landing-page wiring (dead CTAs) | 2026-10-14 | done (372a595) |
 | CP9 | Request responses (demand loop) | 2026-10-14 | done (ca46630) |
 | CP10 | Cart & multi-item checkout | 2026-10-14 | done (0475e89) |
-| CP11 | Payments (manual EFT + invoices) | — | pending |
+| CP11 | Payments (manual EFT + invoices) | 2026-10-14 | done (4a6067b) |
 | CP12 | Delivery tracking | — | pending |
 | CP13 | Trust & ops hygiene (CI, tokens, reviews) | — | pending |
 
@@ -377,6 +377,82 @@ Live journey **green 2026-10-14** (API run + browser run + self-cleanup):
   the CP10 Live address and cart rows; post-run verify = buyer@ **SUPPLIER**,
   residue **0/0/0/0** — this time no prod leftovers (improvement over CP6/CP9
   residue).
+
+### CP11 — Manual EFT payments + invoices
+
+**Landed** `4a6067b` (code) + docs commit. **No migration** — the `Payment`
+(`orderId @unique`, MANUAL/PENDING/amount/transactionRef/paidAt) and `Invoice`
+(`orderId @unique`, `invoiceNumber @unique`, totals, issuedAt) models shipped
+dormant in CP0; CP11 activates them.
+
+**API** (both routes in `orders/`, DTOs `record-payment.dto.ts` /
+`verify-payment.dto.ts`):
+- `POST /api/orders/:id/payment` — **BUYER**, order owner only (foreign/missing
+  → 404), order must be **PENDING** (else 409). Body `{transactionRef}` (trimmed,
+  ≥3 chars). Creates `Payment` provider `MANUAL`, status `PENDING`,
+  `amount = order.total`. Duplicate while pending → 409; already `PAID` → 409;
+  after `FAILED` the same POST **re-records** (back to `PENDING` with the new
+  ref). Evidence only — the order status never moves here.
+- `PATCH /api/orders/:id/payment` — **SUPPLIER/AGRO_DEALER/ADMIN** (RolesGuard);
+  supplier must own an item of the order (else 404). Body `{status: PAID |
+  FAILED}`. No payment → 409; `PAID` → 409 on repeat; `FAILED` → 409 on repeat.
+  `PAID` stamps `paidAt`, `FAILED` clears it; after the decision the buyer gets
+  an `onPaymentDecision` notification (row + best-effort email — "Payment
+  received…"/"Payment check failed…"). Payment stays evidence, not authority:
+  only the supplier's `PATCH /:id/status` advances the order.
+- **Invoice on first CONFIRMED**: inside the existing `updateOrderStatus`
+  transaction, right after stock consumption — `tx.invoice.upsert({ where:
+  { orderId }, create: { invoiceNumber: "INV-" + order.orderNumber, …totals },
+  update: {} })`. `orderId @unique` + empty update = idempotent.
+
+**Web**:
+- Buyer `#orders` card: payment chip (**Paid via EFT / EFT awaiting check /
+  EFT ref rejected**) next to the status chip; "I've sent the EFT" inline form
+  (ref input → Submit) while PENDING, "Re-record EFT" after a rejection, and an
+  "EFT recorded — awaiting supplier check" hint once submitted.
+- `/orders/[id]`: new **Payment** section — chip, `Manual EFT · R… · reference
+  …`, verified timestamp or "recorded — supplier will match it" note; the buyer
+  record/re-record form pre-confirmation; invoice link once issued.
+- `/supplier` order card: **Manual EFT payment** panel (status chip, amount,
+  ref, verified date) with **Verify payment** / **Reject reference** buttons
+  while pending — plus an invoice link after confirmation.
+- New **`/orders/[id]/invoice`** printable page (AuthGuard all four roles, API
+  still enforces ownership): TAX INVOICE header + `INV-…` number/issue date,
+  from (supplier business) / bill-to (delivery recipient), items table,
+  subtotal/fee/total, payment line (status + ref), footer note;
+  `Print / save PDF` button + `print:` CSS (no PDF library).
+
+**Gates**: api build ✓ / lint ✓ (only pre-existing mail warnings) / test
+**157 passed** (+22: 19 orders + 3 notifications); web build ✓ (`/orders/[id]/invoice`
+listed) / lint ✓; smoke **J1–J3** — suite now **10 acceptance flows, 128 ✓**,
+exit 0.
+
+Live journey **green 2026-10-14** (API run + browser run + self-cleanup):
+- *API run*: deploy preflight `POST /orders/:id/payment` anon → **401** (old
+  build would 404) → buyer@ temp-demoted → fresh listing (dev@ R20 ×6) + address
+  + R40 order → record ref → `MANUAL/PENDING/R40`, order **stays PENDING**,
+  no invoice, duplicate → 409 → guards anon 401/401, vendor 403, buyer verify
+  403, foreign (dealer) 404 → supplier verify → `PAID` + `paidAt`, buyer
+  notification row present → confirm → **`INV-BON-20261014-231184`** with
+  R40/R0/R40, payment still PAID → re-verify 409, re-record 409 → web
+  `/orders/<id>/invoice` 200, `/` 200. Trap restored role + purged: verify =
+  buyer@ **SUPPLIER**, residue **0/0/0/0** (orders/products/address/notifications).
+- *Browser run* (buyer@ demoted again): logged in → order card "I've sent the
+  EFT" → inline ref `EFT-UI-7734291` submitted → chip **EFT AWAITING CHECK** +
+  "EFT recorded — awaiting supplier check" → detail page Payment section
+  (ref + "supplier will match it" note, no invoice link yet) → logged in as
+  dev@ → supplier hub payment panel (Awaiting check, Verify/Reject) → **Verify**
+  → chip **Verified** + "Verified 14 Oct 2026, 15:57" while the order still
+  showed "Next step: Confirmed" (evidence ≠ authority) → **Confirm** →
+  "Invoice INV-BON-20261014-238624 — open printable view" link appeared →
+  invoice page rendered TAX INVOICE (BonAgri Farm → Live Tester, 2 kg × R20,
+  R40/R0/R40, "Paid via EFT (verified…) ref EFT-UI-7734291", Print button) →
+  back to buyer@: card shows **CONFIRMED + PAID VIA EFT**, detail shows the
+  verified line + invoice link. (Screenshots unavailable this run — desktop
+  visibility; DOM probes used as evidence.)
+- *Self-cleaning*: role restored + `CP11 UI live` order, `cp11-ui-%` product,
+  CP11 Live address and journey notifications purged; verify = **SUPPLIER**,
+  residue **0/0/0/0**.
 
 ## 4. Checkpoint hygiene rules
 

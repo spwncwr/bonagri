@@ -921,7 +921,12 @@ export default function SupplierPage() {
                               ? ` · ${order.delivery.trackingNumber}`
                               : ""}
                             {order.delivery.estimatedDate
-                              ? ` · expected ${formatDate(order.delivery.estimatedDate)}`
+                              ? ` · expected ${new Date(
+                                  order.delivery.estimatedDate,
+                                ).toLocaleDateString("en-ZA", {
+                                  day: "2-digit",
+                                  month: "short",
+                                })}`
                               : ""}
                           </span>
                         </p>

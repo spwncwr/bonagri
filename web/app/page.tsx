@@ -260,6 +260,12 @@ export default function Home() {
         transactionRef: string | null;
         paidAt: string | null;
       } | null;
+      delivery: {
+        status: string;
+        driverName: string | null;
+        trackingNumber: string | null;
+        estimatedDate: string | null;
+      } | null;
     }>
   >([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -2256,6 +2262,28 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
+
+                    {order.delivery?.driverName ? (
+                      <div className="mt-4 rounded-xl border border-[#cfe0cf] bg-[#eaf3ec] px-4 py-3 text-xs leading-5 text-[#17633a]">
+                        <span className="font-black uppercase tracking-wide">
+                          {order.delivery.status === "DELIVERED"
+                            ? "Delivered"
+                            : "Out for delivery"}
+                        </span>{" "}
+                        · Driver {order.delivery.driverName}
+                        {order.delivery.trackingNumber
+                          ? ` · Tracking ${order.delivery.trackingNumber}`
+                          : ""}
+                        {order.delivery.estimatedDate
+                          ? ` · Expected ${new Date(
+                              order.delivery.estimatedDate,
+                            ).toLocaleDateString("en-ZA", {
+                              day: "2-digit",
+                              month: "short",
+                            })}`
+                          : ""}
+                      </div>
+                    ) : null}
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#e3e8e0] pt-4">
                       <Link

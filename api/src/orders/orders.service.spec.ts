@@ -14,6 +14,7 @@ type TxMock = {
   orderStatusHistory: { create: jest.Mock };
   supplierProfile: { findUnique: jest.Mock };
   invoice: { upsert: jest.Mock };
+  delivery: { findUnique: jest.Mock };
 };
 
 function makeTx(): TxMock {
@@ -26,6 +27,7 @@ function makeTx(): TxMock {
     orderStatusHistory: { create: jest.fn() },
     supplierProfile: { findUnique: jest.fn() },
     invoice: { upsert: jest.fn() },
+    delivery: { findUnique: jest.fn() },
   };
 }
 
@@ -923,6 +925,305 @@ describe("OrdersService (CP11 manual EFT payments)", () => {
       } as never);
 
       expect(tx.invoice.upsert).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe("OrdersService (CP12 delivery tracking)", () => {
+  function primeTransitionOrder(tx: TxMock, status = "READY_FOR_DELIVERY") {
+    tx.order.findUnique.mockResolvedValue({
+      id: "order-1",
+      orderNumber: "BON-20261018-111111",
+      userId: "buyer-1",
+      status,
+      items: [
+        {
+          productId: "prod-1",
+          quantity: 2,
+          productName: "Fresh Tomatoes",
+          product: {
+            supplierId: "sup-1",
+            inventory: { quantity: 10, reservedQuantity: 2 },
+          },
+        },
+      ],
+    });
+    tx.order.update.mockImplementation(({ data }: { data: unknown }) =>
+      Promise.resolve({ id: "order-1", ...(data as object) }),
+    );
+    tx.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+  }
+
+  describe("updateOrderStatus (delivery details)", () => {
+    it("records driver details on the OUT_FOR_DELIVERY transition", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primeTransitionOrder(tx, "READY_FOR_DELIVERY");
+
+      await service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
+        status: "OUT_FOR_DELIVERY",
+        driverName: "  Thabo Mokoena  ",
+        driverPhone: "072 123 4567",
+        estimatedDate: "2026-10-20",
+        trackingNumber: " TRK-1001 ",
+      } as never);
+
+      expect(tx.delivery.findUnique).toHaveBeenCalledWith({
+        where: { trackingNumber: "TRK-1001" },
+        select: { orderId: true },
+      });
+
+      const updateArg = tx.order.update.mock.calls[0][0] as {
+        data: {
+          status: string;
+          delivery: {
+            upsert: {
+              create: Record<string, unknown>;
+              update: Record<string, unknown>;
+            };
+          };
+        };
+      };
+
+      expect(updateArg.data.status).toBe("OUT_FOR_DELIVERY");
+      expect(updateArg.data.delivery.upsert.create).toEqual(
+        expect.objectContaining({
+          status: "ASSIGNED",
+          driverName: "Thabo Mokoena",
+          driverPhone: "072 123 4567",
+          estimatedDate: expect.any(Date),
+          trackingNumber: "TRK-1001",
+          pickedUpAt: expect.any(Date),
+        }),
+      );
+      expect(updateArg.data.delivery.upsert.update).toEqual(
+        expect.objectContaining({
+          status: "ASSIGNED",
+          driverName: "Thabo Mokoena",
+        }),
+      );
+    });
+
+    it("still assigns the delivery when no details are provided", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primeTransitionOrder(tx, "READY_FOR_DELIVERY");
+
+      await service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
+        status: "OUT_FOR_DELIVERY",
+      } as never);
+
+      const updateArg = tx.order.update.mock.calls[0][0] as {
+        data: { delivery: { upsert: { create: Record<string, unknown> } } };
+      };
+
+      expect(updateArg.data.delivery.upsert.create).toEqual({
+        status: "ASSIGNED",
+        pickedUpAt: expect.any(Date),
+      });
+      expect(tx.delivery.findUnique).not.toHaveBeenCalled();
+    });
+
+    it("treats a blank tracking number as not provided", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primeTransitionOrder(tx, "READY_FOR_DELIVERY");
+
+      await service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
+        status: "OUT_FOR_DELIVERY",
+        trackingNumber: "   ",
+      } as never);
+
+      const updateArg = tx.order.update.mock.calls[0][0] as {
+        data: { delivery: { upsert: { create: Record<string, unknown> } } };
+      };
+
+      expect("trackingNumber" in updateArg.data.delivery.upsert.create).toBe(
+        false,
+      );
+      expect(tx.delivery.findUnique).not.toHaveBeenCalled();
+    });
+
+    it("rejects delivery details on any other transition (400)", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primeTransitionOrder(tx, "PENDING");
+
+      await expect(
+        service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
+          status: "CONFIRMED",
+          driverName: "Thabo Mokoena",
+        } as never),
+      ).rejects.toThrow(
+        "Delivery details can only be set when marking an order out for delivery",
+      );
+      expect(tx.order.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects a tracking number already used by another delivery (409)", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primeTransitionOrder(tx, "READY_FOR_DELIVERY");
+      tx.delivery.findUnique.mockResolvedValue({ orderId: "other-order" });
+
+      await expect(
+        service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
+          status: "OUT_FOR_DELIVERY",
+          trackingNumber: "TRK-1001",
+        } as never),
+      ).rejects.toThrow("Tracking number is already used by another delivery");
+      expect(tx.order.update).not.toHaveBeenCalled();
+    });
+
+    it("closes the delivery out with deliveredAt at DELIVERED", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primeTransitionOrder(tx, "OUT_FOR_DELIVERY");
+
+      await service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
+        status: "DELIVERED",
+      } as never);
+
+      const updateArg = tx.order.update.mock.calls[0][0] as {
+        data: { delivery: { upsert: { create: Record<string, unknown> } } };
+      };
+
+      expect(updateArg.data.delivery.upsert.create).toEqual({
+        status: "DELIVERED",
+        deliveredAt: expect.any(Date),
+      });
+    });
+  });
+
+  describe("getDelivery", () => {
+    const delivery = {
+      id: "delivery-1",
+      orderId: "order-1",
+      status: "ASSIGNED",
+      trackingNumber: "TRK-1001",
+      driverName: "Thabo Mokoena",
+      driverPhone: "072 123 4567",
+      estimatedDate: new Date("2026-10-20"),
+      pickedUpAt: new Date(),
+      deliveredAt: null,
+    };
+
+    function primeDetail(
+      prisma: {
+        order: { findUnique: jest.Mock };
+        supplierProfile: { findUnique: jest.Mock };
+      },
+      overrides: Record<string, unknown> = {},
+    ) {
+      prisma.order.findUnique.mockResolvedValue({
+        id: "order-1",
+        orderNumber: "BON-20261018-111111",
+        userId: "buyer-1",
+        status: "OUT_FOR_DELIVERY",
+        delivery,
+        items: [{ product: { supplierId: "sup-1" } }],
+        ...overrides,
+      });
+      prisma.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+    }
+
+    it("returns tracking to the buyer owner", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDetail(prisma);
+
+      await expect(
+        service.getDelivery("order-1", "buyer-1", "BUYER"),
+      ).resolves.toEqual(delivery);
+    });
+
+    it("returns tracking to a supplier of the order", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDetail(prisma);
+
+      await expect(
+        service.getDelivery("order-1", "supplier-user-1", "SUPPLIER"),
+      ).resolves.toEqual(delivery);
+    });
+
+    it("returns tracking to an admin without an ownership lookup", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDetail(prisma);
+
+      await expect(
+        service.getDelivery("order-1", "admin-1", "ADMIN"),
+      ).resolves.toEqual(delivery);
+      expect(prisma.supplierProfile.findUnique).not.toHaveBeenCalled();
+    });
+
+    it("hides the order from another buyer (404)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDetail(prisma);
+
+      await expect(
+        service.getDelivery("order-1", "other-buyer", "BUYER"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("hides the order from a supplier who does not own it (404)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDetail(prisma);
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-other-vendor",
+      });
+
+      await expect(
+        service.getDelivery("order-1", "supplier-user-1", "SUPPLIER"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("hides the order from a supplier without a profile (404)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDetail(prisma);
+      prisma.supplierProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.getDelivery("order-1", "supplier-user-1", "AGRO_DEALER"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("404s when the order has no delivery row yet", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeDetail(prisma, { delivery: null });
+
+      await expect(
+        service.getDelivery("order-1", "buyer-1", "BUYER"),
+      ).rejects.toThrow("No delivery tracking exists for this order yet");
+    });
+
+    it("hides a missing order (404)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      prisma.order.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.getDelivery("missing", "buyer-1", "BUYER"),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

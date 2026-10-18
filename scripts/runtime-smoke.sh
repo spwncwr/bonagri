@@ -3467,6 +3467,263 @@ echo
 echo "✓ MANUAL EFT PAYMENT + INVOICE FLOW ACCEPTANCE PASSED"
 
 echo
+echo "DELIVERY TRACKING FLOW"
+echo "========================================"
+
+echo
+echo "[K1/2] Full lifecycle with driver details; delivery row stays in sync..."
+
+K_TS="$(date +%s)"
+K_SLUG="cp12-delivery-$K_TS"
+K_SKU="BON-CP12-$K_TS"
+K_DATE="$(python3 -c 'import datetime; print((datetime.date.today() + datetime.timedelta(days=2)).isoformat())')"
+
+K_CREATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/k-product.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/products" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"categoryId\":\"$SMOKE_CATEGORY_ID\",\"name\":\"CP12 Delivery Cabbage\",\"slug\":\"$K_SLUG\",\"sku\":\"$K_SKU\",\"price\":25,\"unit\":\"head\",\"quantity\":5,\"status\":\"ACTIVE\"}")"
+
+if [[ "$K_CREATE_HTTP" != "200" && "$K_CREATE_HTTP" != "201" ]]; then
+  fail "CP12 product creation failed. HTTP $K_CREATE_HTTP"
+fi
+
+K_PRODUCT="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/k-product.json")"
+
+K_ORDER_HTTP="$(
+  curl -sS -o "$LOG_DIR/k-order.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"productId\":\"$K_PRODUCT\",\"quantity\":2,\"notes\":\"CP12 live\"}")"
+
+if [[ "$K_ORDER_HTTP" != "200" && "$K_ORDER_HTTP" != "201" ]]; then
+  fail "CP12 order creation failed. HTTP $K_ORDER_HTTP"
+  cat "$LOG_DIR/k-order.json"
+fi
+
+K_ORDER="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/k-order.json")"
+K_ORDER_NUMBER="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("orderNumber",""))' "$LOG_DIR/k-order.json")"
+
+for K_STEP in CONFIRMED PROCESSING READY_FOR_DELIVERY; do
+  K_ADV_HTTP="$(
+    curl -sS -o /dev/null -w "%{http_code}" \
+      -X PATCH "$API_URL$API_PREFIX/orders/$K_ORDER/status" \
+      -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"status\":\"$K_STEP\"}")"
+
+  if [[ "$K_ADV_HTTP" != "200" ]]; then
+    fail "Advancing order to $K_STEP failed. HTTP $K_ADV_HTTP"
+  fi
+done
+
+K_OFD_HTTP="$(
+  curl -sS -o "$LOG_DIR/k-ofd.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$K_ORDER/status" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"OUT_FOR_DELIVERY\",\"driverName\":\"Kabelo Nkuna\",\"driverPhone\":\"082 555 1234\",\"estimatedDate\":\"$K_DATE\",\"trackingNumber\":\"TRK-K-$K_TS\"}")"
+
+if [[ "$K_OFD_HTTP" != "200" ]]; then
+  fail "Marking out for delivery failed. HTTP $K_OFD_HTTP"
+  cat "$LOG_DIR/k-ofd.json"
+fi
+
+curl -sS "$API_URL$API_PREFIX/orders/$K_ORDER" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/k-order-ofd.json"
+
+python3 - "$LOG_DIR/k-order-ofd.json" "$K_DATE" <<'PYJSON'
+import json
+import sys
+
+order = json.load(open(sys.argv[1], encoding="utf-8"))
+expected_date = sys.argv[2]
+delivery = order.get("delivery") or {}
+
+if order.get("status") != "OUT_FOR_DELIVERY":
+    raise SystemExit("ERROR: order should be OUT_FOR_DELIVERY, got {}".format(order.get("status")))
+
+if delivery.get("status") != "ASSIGNED":
+    raise SystemExit("ERROR: delivery should be ASSIGNED, got {}".format(delivery.get("status")))
+
+if delivery.get("driverName") != "Kabelo Nkuna" or delivery.get("driverPhone") != "082 555 1234":
+    raise SystemExit("ERROR: driver details not stored: {!r}".format(delivery))
+
+if not str(delivery.get("trackingNumber") or "").startswith("TRK-K-"):
+    raise SystemExit("ERROR: tracking number not stored: {!r}".format(delivery.get("trackingNumber")))
+
+if not str(delivery.get("estimatedDate") or "").startswith(expected_date):
+    raise SystemExit("ERROR: estimatedDate should start with {}, got {!r}".format(expected_date, delivery.get("estimatedDate")))
+
+if not delivery.get("pickedUpAt"):
+    raise SystemExit("ERROR: pickedUpAt must be stamped at OUT_FOR_DELIVERY")
+
+if delivery.get("deliveredAt"):
+    raise SystemExit("ERROR: deliveredAt must not exist yet")
+
+print("OK Delivery ASSIGNED with driver, tracking, expected date, pickedUpAt")
+PYJSON
+
+K_VIEW_HTTP="$(
+  curl -sS -o "$LOG_DIR/k-view.json" -w "%{http_code}" \
+    "$API_URL$API_PREFIX/orders/$K_ORDER/delivery" \
+    -H "Authorization: Bearer $ACCESS_TOKEN")"
+
+if [[ "$K_VIEW_HTTP" != "200" ]]; then
+  fail "GET delivery view failed. HTTP $K_VIEW_HTTP"
+fi
+
+python3 - "$LOG_DIR/k-view.json" <<'PYJSON'
+import json
+import sys
+
+view = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if view.get("status") != "ASSIGNED" or view.get("driverName") != "Kabelo Nkuna":
+    raise SystemExit("ERROR: delivery view mismatch: {!r}".format(view))
+
+print("OK GET /orders/:id/delivery returns the tracking view")
+PYJSON
+
+K_DELIVERED_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$K_ORDER/status" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"DELIVERED"}')"
+
+if [[ "$K_DELIVERED_HTTP" != "200" ]]; then
+  fail "Marking delivered failed. HTTP $K_DELIVERED_HTTP"
+fi
+
+curl -sS "$API_URL$API_PREFIX/orders/$K_ORDER" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/k-order-delivered.json"
+
+python3 - "$LOG_DIR/k-order-delivered.json" <<'PYJSON'
+import json
+import sys
+
+order = json.load(open(sys.argv[1], encoding="utf-8"))
+delivery = order.get("delivery") or {}
+
+if order.get("status") != "DELIVERED":
+    raise SystemExit("ERROR: order should be DELIVERED, got {}".format(order.get("status")))
+
+if delivery.get("status") != "DELIVERED":
+    raise SystemExit("ERROR: delivery should be DELIVERED, got {}".format(delivery.get("status")))
+
+if not delivery.get("deliveredAt"):
+    raise SystemExit("ERROR: deliveredAt must be stamped at DELIVERED")
+
+if delivery.get("driverName") != "Kabelo Nkuna" or not str(delivery.get("trackingNumber") or "").startswith("TRK-K-"):
+    raise SystemExit("ERROR: driver fields should survive the DELIVERED sync: {!r}".format(delivery))
+
+print("OK Delivery synced to DELIVERED with deliveredAt; driver fields retained")
+PYJSON
+
+echo "OK Lifecycle walked with driver details; row synced at every step"
+
+echo
+echo "[K2/2] Delivery guards hold..."
+
+K_ORDER2_HTTP="$(
+  curl -sS -o "$LOG_DIR/k-order2.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"productId\":\"$K_PRODUCT\",\"quantity\":1}")"
+
+if [[ "$K_ORDER2_HTTP" != "200" && "$K_ORDER2_HTTP" != "201" ]]; then
+  fail "CP12 second order creation failed. HTTP $K_ORDER2_HTTP"
+fi
+
+K_ORDER2="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/k-order2.json")"
+
+K_NO_ROW_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    "$API_URL$API_PREFIX/orders/$K_ORDER2/delivery" \
+    -H "Authorization: Bearer $ACCESS_TOKEN")"
+
+if [[ "$K_NO_ROW_HTTP" != "404" ]]; then
+  fail "Delivery view on an unshipped order returned HTTP $K_NO_ROW_HTTP, expected 404"
+fi
+
+K_WRONG_STATE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$K_ORDER2/status" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"CONFIRMED","driverName":"Too Early"}')"
+
+if [[ "$K_WRONG_STATE_HTTP" != "400" ]]; then
+  fail "Delivery details on CONFIRMED returned HTTP $K_WRONG_STATE_HTTP, expected 400"
+fi
+
+for K_STEP in CONFIRMED PROCESSING READY_FOR_DELIVERY; do
+  K_ADV2_HTTP="$(
+    curl -sS -o /dev/null -w "%{http_code}" \
+      -X PATCH "$API_URL$API_PREFIX/orders/$K_ORDER2/status" \
+      -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"status\":\"$K_STEP\"}")"
+
+  if [[ "$K_ADV2_HTTP" != "200" ]]; then
+    fail "Advancing order2 to $K_STEP failed. HTTP $K_ADV2_HTTP"
+  fi
+done
+
+K_DUP_TRACK_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$K_ORDER2/status" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"OUT_FOR_DELIVERY\",\"driverName\":\"Kabelo Nkuna\",\"driverPhone\":\"082 555 1234\",\"trackingNumber\":\"TRK-K-$K_TS\"}")"
+
+if [[ "$K_DUP_TRACK_HTTP" != "409" ]]; then
+  fail "Duplicate tracking number returned HTTP $K_DUP_TRACK_HTTP, expected 409"
+fi
+
+K_FOREIGN_VIEW_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    "$API_URL$API_PREFIX/orders/$K_ORDER/delivery" \
+    -H "Authorization: Bearer $DEALER_TOKEN")"
+
+if [[ "$K_FOREIGN_VIEW_HTTP" != "404" ]]; then
+  fail "Foreign delivery view returned HTTP $K_FOREIGN_VIEW_HTTP, expected 404"
+fi
+
+K_ANON_VIEW_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    "$API_URL$API_PREFIX/orders/$K_ORDER/delivery")"
+
+if [[ "$K_ANON_VIEW_HTTP" != "401" ]]; then
+  fail "Anonymous delivery view returned HTTP $K_ANON_VIEW_HTTP, expected 401"
+fi
+
+echo "OK No-row 404, early-details 400, duplicate tracking 409, foreign 404, anon 401"
+
+echo
+echo "Order detail page serves the tracking..."
+
+K_WEB_CODE="$(
+  curl -sS -m 90 -o /dev/null -w "%{http_code}" "$WEB_URL/orders/$K_ORDER")"
+
+if [[ "$K_WEB_CODE" != "200" ]]; then
+  fail "Web route /orders/$K_ORDER returned HTTP $K_WEB_CODE"
+fi
+
+echo "✓ Web route /orders/<id> -> 200"
+
+echo
+echo "✓ DELIVERY TRACKING FLOW ACCEPTANCE PASSED"
+
+echo
 echo "ADMIN MANAGEMENT FLOW"
 echo "========================================"
 

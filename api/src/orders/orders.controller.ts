@@ -68,6 +68,18 @@ export class OrdersController {
     );
   }
 
+  @Get(":id/delivery")
+  getDelivery(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    return this.ordersService.getDelivery(
+      id,
+      request.user.id,
+      request.user.role,
+    );
+  }
+
   @Post()
   @Roles("BUYER")
   @UseGuards(RolesGuard)

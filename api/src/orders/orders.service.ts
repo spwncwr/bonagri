@@ -441,6 +441,39 @@ export class OrdersService {
         );
       }
 
+      // CP12: delivery tracking details ride the OUT_FOR_DELIVERY transition.
+      const driverName = dto.driverName?.trim() || undefined;
+      const driverPhone = dto.driverPhone?.trim() || undefined;
+      const trackingNumber = dto.trackingNumber?.trim() || undefined;
+      const estimatedDate = dto.estimatedDate
+        ? new Date(dto.estimatedDate)
+        : undefined;
+
+      const hasDeliveryDetails =
+        driverName !== undefined ||
+        driverPhone !== undefined ||
+        estimatedDate !== undefined ||
+        trackingNumber !== undefined;
+
+      if (hasDeliveryDetails && next !== "OUT_FOR_DELIVERY") {
+        throw new BadRequestException(
+          "Delivery details can only be set when marking an order out for delivery",
+        );
+      }
+
+      if (trackingNumber) {
+        const existing = await tx.delivery.findUnique({
+          where: { trackingNumber },
+          select: { orderId: true },
+        });
+
+        if (existing && existing.orderId !== orderId) {
+          throw new ConflictException(
+            "Tracking number is already used by another delivery",
+          );
+        }
+      }
+
       if (next === "CANCELLED") {
         for (const item of order.items) {
           if (!item.product.inventory) {
@@ -518,6 +551,18 @@ export class OrdersService {
         });
       }
 
+      // CP12: OUT_FOR_DELIVERY records who is delivering it (ASSIGNED);
+      // DELIVERED closes the row out with deliveredAt. Driver fields are
+      // partial updates so earlier details survive.
+      const outForDeliveryData = {
+        status: "ASSIGNED" as const,
+        pickedUpAt: new Date(),
+        ...(driverName ? { driverName } : {}),
+        ...(driverPhone ? { driverPhone } : {}),
+        ...(estimatedDate ? { estimatedDate } : {}),
+        ...(trackingNumber ? { trackingNumber } : {}),
+      };
+
       const deliveryUpdate =
         next === "READY_FOR_DELIVERY"
           ? {
@@ -533,14 +578,8 @@ export class OrdersService {
           : next === "OUT_FOR_DELIVERY"
             ? {
                 upsert: {
-                  create: {
-                    status: "IN_TRANSIT" as const,
-                    pickedUpAt: new Date(),
-                  },
-                  update: {
-                    status: "IN_TRANSIT" as const,
-                    pickedUpAt: new Date(),
-                  },
+                  create: { ...outForDeliveryData },
+                  update: { ...outForDeliveryData },
                 },
               }
             : next === "DELIVERED"
@@ -731,5 +770,50 @@ export class OrdersService {
     );
 
     return payment;
+  }
+
+  // CP12: tracking view for the order's delivery — buyer owner, a supplier
+  // of one of its items, or an admin; everyone else sees 404.
+  async getDelivery(orderId: string, actorUserId: string, actorRole: UserRole) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        delivery: true,
+        items: { select: { product: { select: { supplierId: true } } } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException("Order not found");
+    }
+
+    if (actorRole === "BUYER") {
+      if (order.userId !== actorUserId) {
+        throw new NotFoundException("Order not found");
+      }
+    } else if (actorRole === "SUPPLIER" || actorRole === "AGRO_DEALER") {
+      const supplier = await this.prisma.supplierProfile.findUnique({
+        where: { userId: actorUserId },
+        select: { id: true },
+      });
+
+      const ownsOrder =
+        !!supplier &&
+        order.items.some((item) => item.product.supplierId === supplier.id);
+
+      if (!ownsOrder) {
+        throw new NotFoundException("Order not found");
+      }
+    } else if (actorRole !== "ADMIN") {
+      throw new BadRequestException("Unsupported user role");
+    }
+
+    if (!order.delivery) {
+      throw new NotFoundException(
+        "No delivery tracking exists for this order yet",
+      );
+    }
+
+    return order.delivery;
   }
 }

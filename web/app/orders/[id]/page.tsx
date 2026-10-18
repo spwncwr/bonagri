@@ -78,6 +78,16 @@ type OrderDetail = {
     total: string;
     issuedAt: string;
   } | null;
+  delivery: {
+    id: string;
+    status: string;
+    driverName: string | null;
+    driverPhone: string | null;
+    estimatedDate: string | null;
+    trackingNumber: string | null;
+    pickedUpAt: string | null;
+    deliveredAt: string | null;
+  } | null;
   history: OrderHistoryEntry[];
   dispute: OrderDispute | null;
 };
@@ -898,6 +908,107 @@ export default function OrderDetailPage() {
                       </Link>
                     </div>
                   ) : null}
+                </section>
+              ) : null}
+
+              {/* Delivery tracking (CP12) */}
+              {order.delivery ? (
+                <section className="rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[#7b867d]">
+                      Delivery tracking
+                    </h2>
+
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+                        order.delivery.status === "DELIVERED"
+                          ? "bg-[#e5f1e4] text-[#17633a]"
+                          : order.delivery.status === "FAILED"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {order.delivery.status === "DELIVERED"
+                        ? "Delivered"
+                        : order.delivery.status === "FAILED"
+                          ? "Delivery failed"
+                          : "On its way"}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-1 text-sm text-[#344238]">
+                    {order.delivery.driverName ? (
+                      <p>
+                        Driver {order.delivery.driverName}
+                        {order.delivery.driverPhone ? (
+                          <span className="text-[#69756c]">
+                            {" "}
+                            · {order.delivery.driverPhone}
+                          </span>
+                        ) : null}
+                      </p>
+                    ) : null}
+
+                    {order.delivery.trackingNumber ? (
+                      <p>
+                        Tracking number{" "}
+                        <span className="font-bold">
+                          {order.delivery.trackingNumber}
+                        </span>
+                      </p>
+                    ) : null}
+
+                    {order.delivery.estimatedDate ? (
+                      <p>
+                        Expected{" "}
+                        {new Date(
+                          order.delivery.estimatedDate,
+                        ).toLocaleDateString("en-ZA", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </p>
+                    ) : null}
+
+                    {order.delivery.pickedUpAt ? (
+                      <p className="text-xs text-[#69756c]">
+                        Picked up{" "}
+                        {new Date(order.delivery.pickedUpAt).toLocaleString(
+                          "en-ZA",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )}
+                      </p>
+                    ) : null}
+
+                    {order.delivery.deliveredAt ? (
+                      <p className="text-xs text-[#69756c]">
+                        Delivered{" "}
+                        {new Date(order.delivery.deliveredAt).toLocaleString(
+                          "en-ZA",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )}
+                      </p>
+                    ) : null}
+
+                    {!order.delivery.driverName && !order.delivery.pickedUpAt ? (
+                      <p className="text-xs text-[#69756c]">
+                        The supplier is preparing this order for dispatch.
+                      </p>
+                    ) : null}
+                  </div>
                 </section>
               ) : null}
 

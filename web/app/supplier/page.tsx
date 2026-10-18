@@ -72,6 +72,15 @@ type SupplierOrder = {
     id: string;
     invoiceNumber: string;
   } | null;
+  delivery: {
+    status: string;
+    driverName: string | null;
+    driverPhone: string | null;
+    estimatedDate: string | null;
+    trackingNumber: string | null;
+    pickedUpAt: string | null;
+    deliveredAt: string | null;
+  } | null;
 };
 
 type BuyerRequest = {
@@ -193,6 +202,15 @@ export default function SupplierPage() {
   const [decidingPaymentId, setDecidingPaymentId] = useState<string | null>(
     null,
   );
+  const [deliveryFormOrderId, setDeliveryFormOrderId] = useState<string | null>(
+    null,
+  );
+  const [deliveryForm, setDeliveryForm] = useState({
+    driverName: "",
+    driverPhone: "",
+    estimatedDate: "",
+    trackingNumber: "",
+  });
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"ALL" | OrderStatus>("ALL");
   const [vendorRole, setVendorRole] = useState<UserRole | null>(null);
@@ -513,6 +531,12 @@ export default function SupplierPage() {
   const updateStatus = async (
     orderId: string,
     status: OrderStatus,
+    deliveryDetails?: {
+      driverName: string;
+      driverPhone: string;
+      estimatedDate: string;
+      trackingNumber?: string;
+    },
   ) => {
     setUpdatingOrderId(orderId);
     setError("");
@@ -526,7 +550,19 @@ export default function SupplierPage() {
             "Content-Type": "application/json",
             ...authHeaders(),
           },
-          body: JSON.stringify({ status }),
+          body: JSON.stringify(
+            deliveryDetails
+              ? {
+                  status,
+                  driverName: deliveryDetails.driverName,
+                  driverPhone: deliveryDetails.driverPhone,
+                  estimatedDate: deliveryDetails.estimatedDate,
+                  ...(deliveryDetails.trackingNumber
+                    ? { trackingNumber: deliveryDetails.trackingNumber }
+                    : {}),
+                }
+              : { status },
+          ),
         },
       );
 
@@ -534,6 +570,10 @@ export default function SupplierPage() {
 
       if (!response.ok) {
         throw new Error(data?.message ?? "Unable to update order");
+      }
+
+      if (deliveryDetails) {
+        setDeliveryFormOrderId(null);
       }
 
       await loadOrders();
@@ -743,6 +783,7 @@ export default function SupplierPage() {
               {filteredOrders.map((order) => {
                 const nextStatus = NEXT_STATUS[order.status];
                 const updating = updatingOrderId === order.id;
+                const collectingDelivery = nextStatus === "OUT_FOR_DELIVERY";
 
                 return (
                   <article
@@ -856,6 +897,42 @@ export default function SupplierPage() {
                       </div>
                     </div>
 
+                    {/* Delivery tracking (CP12) */}
+                    {order.delivery?.driverName ? (
+                      <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                          Delivery tracking
+                        </p>
+                        <p className="mt-1.5 flex flex-wrap items-center gap-2 text-sm">
+                          <span
+                            className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                              order.delivery.status === "DELIVERED"
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border-blue-200 bg-blue-50 text-blue-700"
+                            }`}
+                          >
+                            {order.delivery.status === "DELIVERED"
+                              ? "Delivered"
+                              : "On the way"}
+                          </span>
+                          <span className="text-slate-600">
+                            {order.delivery.driverName}
+                            {order.delivery.trackingNumber
+                              ? ` · ${order.delivery.trackingNumber}`
+                              : ""}
+                            {order.delivery.estimatedDate
+                              ? ` · expected ${formatDate(order.delivery.estimatedDate)}`
+                              : ""}
+                          </span>
+                        </p>
+                        {order.delivery.deliveredAt ? (
+                          <p className="mt-1 text-xs text-slate-500">
+                            Delivered {formatDate(order.delivery.deliveredAt)}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+
                     {/* Manual EFT payment (CP11) */}
                     {order.payment ? (
                       <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -950,7 +1027,7 @@ export default function SupplierPage() {
                         )}
 
                         <div className="flex gap-2">
-                          {nextStatus && (
+                          {nextStatus && !collectingDelivery && (
                             <button
                               type="button"
                               disabled={updating}
@@ -964,9 +1041,142 @@ export default function SupplierPage() {
                                 : STATUS_LABELS[nextStatus]}
                             </button>
                           )}
+
+                          {collectingDelivery ? (
+                            <button
+                              type="button"
+                              disabled={updating}
+                              onClick={() => {
+                                setDeliveryFormOrderId(
+                                  deliveryFormOrderId === order.id
+                                    ? null
+                                    : order.id,
+                                );
+                                setDeliveryForm({
+                                  driverName: "",
+                                  driverPhone: "",
+                                  estimatedDate: "",
+                                  trackingNumber: "",
+                                });
+                                setError("");
+                              }}
+                              className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {deliveryFormOrderId === order.id
+                                ? "Close form"
+                                : "Mark out for delivery"}
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     )}
+
+                    {/* CP12: driver details collected on the OUT_FOR_DELIVERY
+                        step instead of a bare status flip. */}
+                    {collectingDelivery && deliveryFormOrderId === order.id ? (
+                      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                          Delivery details
+                        </p>
+
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <label className="text-sm text-slate-600">
+                            Driver name *
+                            <input
+                              type="text"
+                              value={deliveryForm.driverName}
+                              onChange={(event) =>
+                                setDeliveryForm((form) => ({
+                                  ...form,
+                                  driverName: event.target.value,
+                                }))
+                              }
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                            />
+                          </label>
+
+                          <label className="text-sm text-slate-600">
+                            Driver phone *
+                            <input
+                              type="tel"
+                              value={deliveryForm.driverPhone}
+                              onChange={(event) =>
+                                setDeliveryForm((form) => ({
+                                  ...form,
+                                  driverPhone: event.target.value,
+                                }))
+                              }
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                            />
+                          </label>
+
+                          <label className="text-sm text-slate-600">
+                            Expected delivery date *
+                            <input
+                              type="date"
+                              value={deliveryForm.estimatedDate}
+                              onChange={(event) =>
+                                setDeliveryForm((form) => ({
+                                  ...form,
+                                  estimatedDate: event.target.value,
+                                }))
+                              }
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                            />
+                          </label>
+
+                          <label className="text-sm text-slate-600">
+                            Tracking number (optional)
+                            <input
+                              type="text"
+                              value={deliveryForm.trackingNumber}
+                              onChange={(event) =>
+                                setDeliveryForm((form) => ({
+                                  ...form,
+                                  trackingNumber: event.target.value,
+                                }))
+                              }
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                            />
+                          </label>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                          <button
+                            type="button"
+                            disabled={updating}
+                            onClick={() => {
+                              if (
+                                !deliveryForm.driverName.trim() ||
+                                !deliveryForm.driverPhone.trim() ||
+                                !deliveryForm.estimatedDate
+                              ) {
+                                setError(
+                                  "Driver name, phone and expected date are required to send an order out for delivery",
+                                );
+                                return;
+                              }
+
+                              void updateStatus(order.id, "OUT_FOR_DELIVERY", {
+                                driverName: deliveryForm.driverName.trim(),
+                                driverPhone: deliveryForm.driverPhone.trim(),
+                                estimatedDate: deliveryForm.estimatedDate,
+                                trackingNumber:
+                                  deliveryForm.trackingNumber.trim(),
+                              });
+                            }}
+                            className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {updating ? "Saving..." : "Send out for delivery"}
+                          </button>
+
+                          <span className="text-xs text-slate-500">
+                            The buyer sees the driver and tracking details on
+                            their order.
+                          </span>
+                        </div>
+                      </div>
+                    ) : null}
                   </article>
                 );
               })}

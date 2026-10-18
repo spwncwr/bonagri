@@ -57,7 +57,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP9 | Request responses (demand loop) | 2026-10-14 | done (ca46630) |
 | CP10 | Cart & multi-item checkout | 2026-10-14 | done (0475e89) |
 | CP11 | Payments (manual EFT + invoices) | 2026-10-14 | done (4a6067b) |
-| CP12 | Delivery tracking | — | pending |
+| CP12 | Delivery tracking | 2026-10-18 | done (d8e180c) |
 | CP13 | Trust & ops hygiene (CI, tokens, reviews) | — | pending |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
@@ -453,6 +453,86 @@ Live journey **green 2026-10-14** (API run + browser run + self-cleanup):
 - *Self-cleaning*: role restored + `CP11 UI live` order, `cp11-ui-%` product,
   CP11 Live address and journey notifications purged; verify = **SUPPLIER**,
   residue **0/0/0/0**.
+
+### CP12 — Delivery tracking
+
+**Landed** `d8e180c` (code) + `b9cc976` (live-journey fix) + docs commit. **No
+migration** — the `Delivery` model (`orderId @unique`, `DeliveryStatus` enum,
+`trackingNumber @unique`, driver fields, `estimatedDate`, `pickedUpAt` /
+`deliveredAt`) shipped in CP0 and was already upserted on transitions; CP12
+makes OUT_FOR_DELIVERY a real tracked step instead of a bare enum flip. (The
+plan's "dead since CP0" note was wrong — the row was live; CP12 extends it.)
+
+**API** (`orders/`, extended `UpdateOrderStatusDto`):
+- `UpdateOrderStatusDto` gains optional `driverName` (2–80), `driverPhone`
+  (5–30), `estimatedDate` (ISO date), `trackingNumber` (3–60). Delivery details
+  on **any other transition → 400** ("can only be set when marking an order out
+  for delivery"); blank/whitespace-only values are treated as absent.
+- The **OUT_FOR_DELIVERY** upsert now writes `status ASSIGNED` (was IN_TRANSIT)
+  + the provided fields + `pickedUpAt` (unchanged semantics: goods handed to
+  the driver). A `trackingNumber` already held by another order's delivery →
+  **409** (pre-checked inside the transaction). **DELIVERED** keeps syncing
+  `DELIVERED` + `deliveredAt`; the update branch is partial so driver fields
+  survive. READY_FOR_DELIVERY still creates the row `PENDING`. `PICKED_UP` /
+  `IN_TRANSIT` / `FAILED` stay unused (reserved for a future driver app — no
+  order status exists between OUT_FOR_DELIVERY and DELIVERED).
+- New **`GET /api/orders/:id/delivery`** — any authenticated user; the service
+  re-checks ownership: buyer owner, a supplier of one of the order's items, or
+  ADMIN; anyone else → **404** (no existence leak). Order exists but has no
+  delivery row yet → **404**.
+
+**Web**:
+- `/supplier`: **"Mark out for delivery"** opens an inline **Delivery details**
+  form (driver name\*, phone\*, expected date\*, tracking number optional)
+  instead of a bare status flip; required-field validation surfaces in the page
+  error banner; submit PATCHes status + details; other statuses keep the
+  one-click button. Cards with a driver also render a **Delivery tracking**
+  strip (On the way / Delivered badge, driver · tracking · expected date,
+  delivered timestamp).
+- Buyer `#orders` card: green strip **"Out for delivery · Driver … · Tracking
+  … · Expected …"** once the delivery row carries a driver.
+- `/orders/[id]`: new **Delivery tracking** section — chip (On its way /
+  Delivered / failed), driver + phone, tracking number, expected date,
+  picked-up + delivered timestamps, "preparing for dispatch" note while the row
+  is PENDING. The status-history timeline was already on this page since CP0
+  (the plan's "timeline on the buyer order card" requirement).
+
+**Gates**: api build ✓ / lint ✓ (only pre-existing mail warnings) / test
+**171 passed** (+14: 6 transition-details tests + 8 `getDelivery` guard tests);
+web build ✓ / lint ✓; smoke **K1–K2** — suite now **11 acceptance flows,
+130 ✓**, exit 0.
+
+Live journey **green 2026-10-18** (API run + browser run + cleanup):
+- *API run*: deploy preflight `GET /orders/:id/delivery` anon → **401** (the old
+  build 404'd the unknown route — new build live) → guards anon 401 / foreign
+  (dealer) 404 / no-row 404 / details-on-CONFIRMED **400** (order left PENDING,
+  no delivery row created) → walk to READY_FOR_DELIVERY (`INV-BON-20261018-780104`
+  issued at CONFIRMED; delivery row `PENDING`, no driver) → OUT_FOR_DELIVERY
+  with Lwazi Dlamini / 071 234 5678 / 2026-10-20 / **TRK-LIVE-1792304516** →
+  `ASSIGNED` + `pickedUpAt`, no `deliveredAt`; buyer **and** owning-supplier
+  delivery views → 200 → second order reusing the same tracking → **409** →
+  DELIVERED → `DELIVERED` + `deliveredAt`, driver/tracking/invoice retained →
+  web `/orders/<id>` 200. Self-cleaning trap fired.
+- *Browser run* (staged order `BON-20261018-260420` at READY_FOR_DELIVERY):
+  dev@ → "Mark out for delivery" → empty submit → client validation error,
+  order untouched → filled form (Sipho Mahlangu / 083 765 4321 / 19 Oct /
+  `TRK-UI-1792304600`) → submit → strip **On the way · Sipho Mahlangu ·
+  TRK-UI-1792304600 · expected 19 Oct**, chip OUT FOR DELIVERY, action →
+  Delivered → buyer@: landing strip "Out for delivery · Driver … · Expected
+  19 Oct" + detail section (On its way, driver + phone, tracking, expected,
+  picked up 08:27) → dev@: **Delivered** → chip + strip badge Delivered +
+  "Delivered 18 Oct 2026, 08:30", no buttons left → buyer detail shows the
+  Delivered chip + delivered timestamp.
+- *Live-caught fix*: the supplier strip initially rendered the date-only
+  `estimatedDate` through the timestamp helper ("expected 19 Oct 2026, 02:00"
+  — a UTC-midnight artifact); fixed in `b9cc976` (date-only, like the buyer
+  surfaces), rebuilt + redeployed and re-verified on prod ("expected 19 Oct").
+- *Cleanup*: role restored + CP12 live/UI orders, `cp12-%` products, CP12
+  addresses and journey notifications purged; verify = buyer@ **SUPPLIER**,
+  residue **0|0|0|0** (+ notification residue by all three journey order
+  numbers = **0**, corrected read-only check after the script's own
+  verification SELECT used `USING` — a DELETE-only clause — and errored
+  harmlessly; the deletes themselves had already run).
 
 ## 4. Checkpoint hygiene rules
 

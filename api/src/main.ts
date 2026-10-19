@@ -9,41 +9,21 @@ async function bootstrap() {
 
   app.setGlobalPrefix("api");
 
-  // CP13: Render routes traffic through a proxy chain (edge → router →
-  // instance); trust both hops so the rate-limit key (req.ip) is the real
-  // client instead of a per-request edge IP, which would otherwise put every
-  // visitor in a scattered set of buckets and defeat the limiter. Verified
-  // empirically in production: with trust=1 the counter never decremented
-  // consistently and a 16-attempt login burst never hit 429.
+  // CP13: Render serves traffic through a fixed 3-hop chain
+  //   client → Cloudflare edge → Render router → instance
+  // so each hop appends one X-Forwarded-For entry. Express resolves
+  // req.ip = XFF[len - N] for `trust proxy: N`:
+  //   N=1 → Render's internal 10.x address (varies per request),
+  //   N=2 → the Cloudflare edge IP (varies per request!),
+  //   N=3 → the real client IP (stable).
+  // N must be exactly 3: with N=1/2 every request lands in its own
+  // rate-limit bucket (verified in production — a 16-attempt login burst
+  // never hit 429), and N>3 would let a client prepend fake X-Forwarded-For
+  // entries to rotate buckets and bypass the limiter entirely.
   const expressInstance = app.getHttpAdapter().getInstance() as {
     set: (setting: string, value: number) => void;
-    use: (
-      handler: (
-        req: {
-          ip?: string;
-          headers: Record<string, string | string[] | undefined>;
-        },
-        res: { setHeader: (name: string, value: string) => void },
-        next: () => void,
-      ) => void,
-    ) => void;
   };
-  expressInstance.set("trust proxy", 2);
-
-  // TEMPORARY (CP13 diagnosis): echo how the server sees the client so the
-  // trust-proxy depth can be chosen from evidence, not guesses.
-  expressInstance.use((req, res, next) => {
-    res.setHeader("X-Debug-Client-Ip", req.ip ?? "none");
-    res.setHeader(
-      "X-Debug-Xff",
-      String(req.headers["x-forwarded-for"] ?? "none"),
-    );
-    res.setHeader(
-      "X-Debug-X-Real-Ip",
-      String(req.headers["x-real-ip"] ?? "none"),
-    );
-    next();
-  });
+  expressInstance.set("trust proxy", 3);
 
   const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3001")
     .split(",")

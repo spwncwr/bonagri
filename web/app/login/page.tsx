@@ -16,7 +16,7 @@ type LoginResponse = {
     firstName: string;
     lastName: string;
     phone: string | null;
-    role: "BUYER" | "SUPPLIER" | "AGRO_DEALER" | "ADMIN";
+    role: "BUYER" | "SUPPLIER" | "AGRO_DEALER" | "TRANSPORTER" | "ADMIN";
     status: "ACTIVE" | "SUSPENDED" | "PENDING";
   };
 };
@@ -68,6 +68,11 @@ export default function LoginPage() {
 
       if (data.user.role === "SUPPLIER" || data.user.role === "AGRO_DEALER") {
         router.push("/supplier");
+        return;
+      }
+
+      if (data.user.role === "TRANSPORTER") {
+        router.push("/transport");
         return;
       }
 

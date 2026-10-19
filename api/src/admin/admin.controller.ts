@@ -15,6 +15,7 @@ import { AdminService } from "./admin.service";
 import { ListUsersQueryDto } from "./dto/list-users-query.dto";
 import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
 import { PromoteSupplierDto } from "./dto/promote-supplier.dto";
+import { PromoteTransporterDto } from "./dto/promote-transporter.dto";
 import { UpdateSupplierVerifyDto } from "./dto/update-supplier-verify.dto";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
@@ -49,6 +50,30 @@ export class AdminController {
     @Body() dto: PromoteSupplierDto,
   ) {
     return this.adminService.promoteToSupplier(id, dto);
+  }
+
+  // CP14: transporter management (promote, list, verify toggle).
+  @Post("users/:id/promote-transporter")
+  promoteToTransporter(
+    @Param("id") id: string,
+    @Body() dto: PromoteTransporterDto,
+  ) {
+    return this.adminService.promoteToTransporter(id, dto);
+  }
+
+  @Get("transporters")
+  getTransporters(@Query("verified") verified?: string) {
+    return this.adminService.listTransporters(
+      verified === undefined ? undefined : verified === "true",
+    );
+  }
+
+  @Patch("transporters/:id")
+  setTransporterVerified(
+    @Param("id") id: string,
+    @Body() dto: UpdateSupplierVerifyDto,
+  ) {
+    return this.adminService.setTransporterVerified(id, dto);
   }
 
   @Get("suppliers")

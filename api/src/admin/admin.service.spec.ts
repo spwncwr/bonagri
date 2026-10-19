@@ -8,6 +8,7 @@ import { AdminService } from "./admin.service";
 function makeService() {
   const tx = {
     supplierProfile: { create: jest.fn() },
+    transporterProfile: { create: jest.fn() },
     user: { update: jest.fn() },
   };
 
@@ -27,6 +28,11 @@ function makeService() {
       findMany: jest.fn(),
       update: jest.fn(),
     },
+    transporterProfile: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+    },
     product: { groupBy: jest.fn() },
     order: { groupBy: jest.fn(), aggregate: jest.fn() },
     category: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
@@ -34,6 +40,7 @@ function makeService() {
 
   const notifications = {
     onSupplierVerified: jest.fn(),
+    onTransporterVerified: jest.fn(),
   };
 
   return {
@@ -146,6 +153,186 @@ describe("AdminService (CP3 management)", () => {
       await expect(
         service.promoteToSupplier("ghost", { businessName: "X" }),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("promoteToTransporter (CP14)", () => {
+    it("creates the transporter profile and promotes the role in one transaction", async () => {
+      const { service, prisma, tx } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: "user-1",
+        email: "sipho@example.com",
+        role: "BUYER",
+        transporterProfile: null,
+      });
+      tx.transporterProfile.create.mockResolvedValue({ id: "tp-1" });
+      tx.user.update.mockResolvedValue({
+        id: "user-1",
+        role: "TRANSPORTER",
+      });
+
+      const result = await service.promoteToTransporter("user-1", {
+        businessName: "Sipho Hauliers",
+        vehicleType: "1-tonne truck",
+        city: "Polokwane",
+        serviceProvinces: [" Limpopo ", "Limpopo", "Gauteng"],
+      });
+
+      expect(result.role).toBe("TRANSPORTER");
+      expect(tx.transporterProfile.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: "user-1",
+          businessName: "Sipho Hauliers",
+          email: "sipho@example.com",
+          verified: false,
+          // trimmed + de-duplicated — drives the claim-board filter
+          serviceProvinces: ["Limpopo", "Gauteng"],
+        }),
+      });
+      expect(tx.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "user-1" },
+          data: { role: "TRANSPORTER" },
+        }),
+      );
+    });
+
+    it("never creates a second profile (promote twice -> conflict)", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: "user-1",
+        email: "sipho@example.com",
+        role: "TRANSPORTER",
+        transporterProfile: { id: "tp-1" },
+      });
+
+      await expect(
+        service.promoteToTransporter("user-1", {
+          businessName: "Again",
+          serviceProvinces: ["Limpopo"],
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("refuses to promote an admin account", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: "admin-1",
+        email: "admin@example.com",
+        role: "ADMIN",
+        transporterProfile: null,
+      });
+
+      await expect(
+        service.promoteToTransporter("admin-1", {
+          businessName: "X",
+          serviceProvinces: ["Limpopo"],
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("404s for a missing user", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.promoteToTransporter("ghost", {
+          businessName: "X",
+          serviceProvinces: ["Limpopo"],
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("setTransporterVerified (CP14)", () => {
+    it("toggles verification and tells the transporter", async () => {
+      const { service, prisma, notifications } = makeService();
+
+      prisma.transporterProfile.findUnique.mockResolvedValue({
+        id: "tp-1",
+        user: { id: "user-1", email: "sipho@example.com", firstName: "Sipho" },
+      });
+      prisma.transporterProfile.update.mockResolvedValue({
+        id: "tp-1",
+        businessName: "Sipho Hauliers",
+        verified: true,
+        user: { id: "user-1", email: "sipho@example.com" },
+      });
+
+      const result = await service.setTransporterVerified("tp-1", {
+        verified: true,
+      } as never);
+
+      expect(result.verified).toBe(true);
+      expect(prisma.transporterProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "tp-1" },
+          data: { verified: true },
+        }),
+      );
+      expect(notifications.onTransporterVerified).toHaveBeenCalledWith(
+        { id: "user-1", email: "sipho@example.com", firstName: "Sipho" },
+        "Sipho Hauliers",
+      );
+    });
+
+    it("does not notify on un-verification", async () => {
+      const { service, prisma, notifications } = makeService();
+
+      prisma.transporterProfile.findUnique.mockResolvedValue({
+        id: "tp-1",
+        user: { id: "user-1", email: "sipho@example.com", firstName: "Sipho" },
+      });
+      prisma.transporterProfile.update.mockResolvedValue({
+        id: "tp-1",
+        businessName: "Sipho Hauliers",
+        verified: false,
+        user: { id: "user-1", email: "sipho@example.com" },
+      });
+
+      await service.setTransporterVerified("tp-1", { verified: false } as never);
+
+      expect(notifications.onTransporterVerified).not.toHaveBeenCalled();
+    });
+
+    it("404s for an unknown profile", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.transporterProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.setTransporterVerified("ghost", { verified: true } as never),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("listTransporters (CP14)", () => {
+    it("passes the verified filter through", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.transporterProfile.findMany.mockResolvedValue([]);
+
+      await service.listTransporters(true);
+
+      expect(prisma.transporterProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { verified: true } }),
+      );
+    });
+
+    it("lists every profile when no filter given", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.transporterProfile.findMany.mockResolvedValue([]);
+
+      await service.listTransporters(undefined);
+
+      expect(prisma.transporterProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: {} }),
+      );
     });
   });
 

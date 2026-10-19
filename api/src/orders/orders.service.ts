@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -8,7 +9,9 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UserRole } from "../common/types";
 import { NotificationsService } from "../notifications/notifications.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
+import { FailDeliveryDto } from "./dto/fail-delivery.dto";
 import { RecordPaymentDto } from "./dto/record-payment.dto";
+import { RedispatchDeliveryDto } from "./dto/redispatch-delivery.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
 import { VerifyPaymentDto } from "./dto/verify-payment.dto";
 
@@ -50,7 +53,9 @@ export class OrdersService {
         },
         deliveryAddress: true,
         payment: true,
-        delivery: true,
+        delivery: {
+          include: { transporter: { select: { businessName: true } } },
+        },
         invoice: true,
       },
       orderBy: {
@@ -95,7 +100,9 @@ export class OrdersService {
         },
         deliveryAddress: true,
         payment: true,
-        delivery: true,
+        delivery: {
+          include: { transporter: { select: { businessName: true } } },
+        },
         invoice: true,
       },
       orderBy: {
@@ -155,7 +162,9 @@ export class OrdersService {
         },
         deliveryAddress: true,
         payment: true,
-        delivery: true,
+        delivery: {
+          include: { transporter: { select: { businessName: true } } },
+        },
         invoice: true,
       },
       orderBy: {
@@ -189,7 +198,9 @@ export class OrdersService {
         },
         deliveryAddress: true,
         payment: true,
-        delivery: true,
+        delivery: {
+          include: { transporter: { select: { businessName: true } } },
+        },
         invoice: true,
         dispute: true,
         history: {
@@ -378,6 +389,7 @@ export class OrdersService {
               },
             },
           },
+          delivery: { select: { transporterId: true } },
         },
       });
 
@@ -419,6 +431,18 @@ export class OrdersService {
         if (next === "CANCELLED") {
           throw new BadRequestException(
             "Suppliers cannot cancel buyer orders",
+          );
+        }
+
+        // CP14 ownership handoff: once a delivery job is claimed, the
+        // assigned transporter drives OUT_FOR_DELIVERY and DELIVERED.
+        // ADMIN bypasses this (override path).
+        if (
+          (next === "OUT_FOR_DELIVERY" || next === "DELIVERED") &&
+          order.delivery?.transporterId
+        ) {
+          throw new ForbiddenException(
+            "This delivery is assigned to a transporter",
           );
         }
       } else if (actorRole !== "ADMIN") {
@@ -553,10 +577,12 @@ export class OrdersService {
 
       // CP12: OUT_FOR_DELIVERY records who is delivering it (ASSIGNED);
       // DELIVERED closes the row out with deliveredAt. Driver fields are
-      // partial updates so earlier details survive.
+      // partial updates so earlier details survive. CP14: goods are moving,
+      // so any published-but-unclaimed job leaves the claim board.
       const outForDeliveryData = {
         status: "ASSIGNED" as const,
         pickedUpAt: new Date(),
+        publishedAt: null,
         ...(driverName ? { driverName } : {}),
         ...(driverPhone ? { driverPhone } : {}),
         ...(estimatedDate ? { estimatedDate } : {}),
@@ -592,6 +618,7 @@ export class OrdersService {
                     update: {
                       status: "DELIVERED" as const,
                       deliveredAt: new Date(),
+                      publishedAt: null,
                     },
                   },
                 }
@@ -609,7 +636,9 @@ export class OrdersService {
           items: true,
           deliveryAddress: true,
           payment: true,
-          delivery: true,
+          delivery: {
+            include: { transporter: { select: { businessName: true } } },
+          },
           invoice: true,
         },
       });
@@ -778,7 +807,9 @@ export class OrdersService {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        delivery: true,
+        delivery: {
+          include: { transporter: { select: { businessName: true } } },
+        },
         items: { select: { product: { select: { supplierId: true } } } },
       },
     });
@@ -804,6 +835,17 @@ export class OrdersService {
       if (!ownsOrder) {
         throw new NotFoundException("Order not found");
       }
+    } else if (actorRole === "TRANSPORTER") {
+      // CP14: the assigned transporter sees the delivery view — full
+      // pickup/dropoff details + buyer contact. Everyone else 404s.
+      const profile = await this.prisma.transporterProfile.findUnique({
+        where: { userId: actorUserId },
+        select: { id: true },
+      });
+
+      if (!profile || order.delivery?.transporterId !== profile.id) {
+        throw new NotFoundException("Order not found");
+      }
     } else if (actorRole !== "ADMIN") {
       throw new BadRequestException("Unsupported user role");
     }
@@ -815,5 +857,408 @@ export class OrdersService {
     }
 
     return order.delivery;
+  }
+
+  // CP14: shared access check for the supplier/admin delivery-job actions
+  // (publish / unpublish / re-dispatch). Foreign suppliers see 404.
+  private async loadDeliveryJobOrder(
+    orderId: string,
+    actorUserId: string,
+    actorRole: UserRole,
+  ) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        delivery: {
+          include: { transporter: { select: { businessName: true } } },
+        },
+        items: { select: { product: { select: { supplierId: true } } } },
+        deliveryAddress: { select: { province: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException("Order not found");
+    }
+
+    if (actorRole === "SUPPLIER" || actorRole === "AGRO_DEALER") {
+      const supplier = await this.prisma.supplierProfile.findUnique({
+        where: { userId: actorUserId },
+        select: { id: true },
+      });
+
+      const ownsOrder =
+        !!supplier &&
+        order.items.some((item) => item.product.supplierId === supplier.id);
+
+      if (!ownsOrder) {
+        throw new NotFoundException("Order not found");
+      }
+    } else if (actorRole !== "ADMIN") {
+      throw new BadRequestException("Unsupported user role");
+    }
+
+    return order;
+  }
+
+  // CP14: publish the delivery job to the verified transporters' claim
+  // board. Allowed at READY_FOR_DELIVERY, or as a re-publish after a
+  // FAILED delivery was returned to the board (order already OUT).
+  async publishDelivery(
+    orderId: string,
+    actorUserId: string,
+    actorRole: UserRole,
+  ) {
+    const order = await this.loadDeliveryJobOrder(
+      orderId,
+      actorUserId,
+      actorRole,
+    );
+
+    const isRePublish =
+      order.status === "OUT_FOR_DELIVERY" &&
+      order.delivery?.status === "PENDING" &&
+      !order.delivery?.transporterId;
+
+    if (order.status !== "READY_FOR_DELIVERY" && !isRePublish) {
+      throw new BadRequestException(
+        "Delivery jobs can only be published when the order is ready for delivery",
+      );
+    }
+
+    if (
+      order.delivery &&
+      (order.delivery.status !== "PENDING" || order.delivery.transporterId)
+    ) {
+      throw new ConflictException(
+        "This delivery is already claimed or in progress",
+      );
+    }
+
+    if (order.delivery?.publishedAt) {
+      throw new ConflictException(
+        "This delivery job is already on the claim board",
+      );
+    }
+
+    const publishedAt = new Date();
+
+    const delivery = await this.prisma.delivery.upsert({
+      where: { orderId },
+      create: { orderId, status: "PENDING", publishedAt },
+      update: { status: "PENDING", publishedAt },
+    });
+
+    // Fan-out rows go to verified transporters covering the delivery
+    // province (all verified transporters when the province is unknown —
+    // those jobs are board-visible to everyone).
+    const province = order.deliveryAddress.province;
+    const transporters = await this.prisma.transporterProfile.findMany({
+      where: {
+        verified: true,
+        ...(province ? { serviceProvinces: { has: province } } : {}),
+      },
+      select: {
+        user: { select: { id: true, email: true, firstName: true } },
+      },
+    });
+
+    try {
+      await this.notificationsService.onDeliveryJobPublished(
+        order.orderNumber,
+        province,
+        transporters.map((transporter) => transporter.user),
+      );
+    } catch (error) {
+      console.error("BonAgri publish notification failed:", error);
+    }
+
+    return delivery;
+  }
+
+  async unpublishDelivery(
+    orderId: string,
+    actorUserId: string,
+    actorRole: UserRole,
+  ) {
+    const order = await this.loadDeliveryJobOrder(
+      orderId,
+      actorUserId,
+      actorRole,
+    );
+
+    if (!order.delivery || !order.delivery.publishedAt) {
+      throw new ConflictException(
+        "This delivery job is not on the claim board",
+      );
+    }
+
+    if (order.delivery.status !== "PENDING" || order.delivery.transporterId) {
+      throw new ConflictException(
+        "A transporter already claimed this delivery job",
+      );
+    }
+
+    return this.prisma.delivery.update({
+      where: { orderId },
+      data: { publishedAt: null },
+    });
+  }
+
+  // CP14: move a FAILED delivery back into circulation — either straight to
+  // a specific (verified) transporter or back to the unclaimed board state
+  // (supplier re-publishes or delivers it himself). The order status never
+  // moves backwards anywhere in this flow.
+  async redispatchDelivery(
+    orderId: string,
+    actorUserId: string,
+    actorRole: UserRole,
+    dto: RedispatchDeliveryDto,
+  ) {
+    const order = await this.loadDeliveryJobOrder(
+      orderId,
+      actorUserId,
+      actorRole,
+    );
+
+    if (!order.delivery || order.delivery.status !== "FAILED") {
+      throw new ConflictException(
+        "Only a failed delivery can be re-dispatched",
+      );
+    }
+
+    if (dto.transporterId) {
+      const target = await this.prisma.transporterProfile.findUnique({
+        where: { id: dto.transporterId },
+        select: {
+          id: true,
+          verified: true,
+          user: { select: { id: true, email: true, firstName: true } },
+        },
+      });
+
+      if (!target) {
+        throw new NotFoundException("Transporter not found");
+      }
+
+      if (!target.verified) {
+        throw new BadRequestException(
+          "Only verified transporters can carry deliveries",
+        );
+      }
+
+      const updated = await this.prisma.delivery.update({
+        where: { orderId },
+        data: { status: "ASSIGNED", transporterId: target.id },
+        include: {
+          order: { select: { orderNumber: true, status: true } },
+        },
+      });
+
+      try {
+        await this.notificationsService.onDeliveryReassignedToTransporter(
+          target.user,
+          order.orderNumber,
+        );
+      } catch (error) {
+        console.error("BonAgri re-dispatch notification failed:", error);
+      }
+
+      return updated;
+    }
+
+    return this.prisma.delivery.update({
+      where: { orderId },
+      data: { status: "PENDING", transporterId: null, publishedAt: null },
+    });
+  }
+
+  // CP14: the assigned transporter drives the delivery state machine.
+  // Each action re-checks ownership and the delivery's current state;
+  // order transitions (pickup/complete) ride the same transaction as the
+  // delivery write and record OrderStatusHistory like every other flip.
+  async deliveryAction(
+    orderId: string,
+    actorUserId: string,
+    action: "pickup" | "transit" | "complete" | "fail",
+    dto?: FailDeliveryDto,
+  ) {
+    const profile = await this.prisma.transporterProfile.findUnique({
+      where: { userId: actorUserId },
+      select: { id: true },
+    });
+
+    if (!profile) {
+      throw new NotFoundException("Transporter profile not found");
+    }
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { delivery: true },
+    });
+
+    if (
+      !order ||
+      !order.delivery ||
+      order.delivery.transporterId !== profile.id
+    ) {
+      throw new NotFoundException("Delivery job not found");
+    }
+
+    const delivery = order.delivery;
+
+    const allowedByAction: Record<string, string[]> = {
+      pickup: ["ASSIGNED"],
+      transit: ["PICKED_UP"],
+      complete: ["PICKED_UP", "IN_TRANSIT"],
+      fail: ["ASSIGNED", "PICKED_UP", "IN_TRANSIT"],
+    };
+
+    if (!allowedByAction[action].includes(delivery.status)) {
+      throw new ConflictException(
+        `A delivery in state ${delivery.status} cannot do this action`,
+      );
+    }
+
+    const now = new Date();
+
+    if (action === "pickup") {
+      // Re-dispatch after a delivery failure: the order already left the
+      // supplier, so only the delivery state moves.
+      const orderAlreadyOut = order.status === "OUT_FOR_DELIVERY";
+
+      if (!orderAlreadyOut && order.status !== "READY_FOR_DELIVERY") {
+        throw new ConflictException(
+          `Order cannot move from ${order.status} to OUT_FOR_DELIVERY`,
+        );
+      }
+
+      const pickedUp = await this.prisma.$transaction(async (tx) => {
+        const updatedDelivery = await tx.delivery.update({
+          where: { orderId },
+          data: {
+            status: "PICKED_UP",
+            // Stamp once — a re-dispatched retry keeps the original time.
+            pickedUpAt: delivery.pickedUpAt ?? now,
+          },
+        });
+
+        if (!orderAlreadyOut) {
+          await tx.order.update({
+            where: { id: orderId },
+            data: { status: "OUT_FOR_DELIVERY" },
+          });
+
+          await tx.orderStatusHistory.create({
+            data: {
+              orderId,
+              fromStatus: "READY_FOR_DELIVERY",
+              toStatus: "OUT_FOR_DELIVERY",
+              actorUserId,
+              actorRole: "TRANSPORTER",
+              note: null,
+            },
+          });
+        }
+
+        return updatedDelivery;
+      });
+
+      if (!orderAlreadyOut) {
+        try {
+          await this.notificationsService.onDeliveryPickedUp({
+            orderNumber: order.orderNumber,
+            userId: order.userId,
+          });
+        } catch (error) {
+          console.error("BonAgri pickup notification failed:", error);
+        }
+      }
+
+      return pickedUp;
+    }
+
+    if (action === "transit") {
+      return this.prisma.delivery.update({
+        where: { orderId },
+        data: { status: "IN_TRANSIT" },
+      });
+    }
+
+    if (action === "complete") {
+      if (order.status !== "OUT_FOR_DELIVERY") {
+        throw new ConflictException(
+          `Order cannot move from ${order.status} to DELIVERED`,
+        );
+      }
+
+      const completed = await this.prisma.$transaction(async (tx) => {
+        const updatedDelivery = await tx.delivery.update({
+          where: { orderId },
+          data: {
+            status: "DELIVERED",
+            deliveredAt: now,
+            publishedAt: null,
+          },
+        });
+
+        await tx.order.update({
+          where: { id: orderId },
+          data: { status: "DELIVERED" },
+        });
+
+        await tx.orderStatusHistory.create({
+          data: {
+            orderId,
+            fromStatus: "OUT_FOR_DELIVERY",
+            toStatus: "DELIVERED",
+            actorUserId,
+            actorRole: "TRANSPORTER",
+            note: null,
+          },
+        });
+
+        return updatedDelivery;
+      });
+
+      // Existing CP6 hook: DELIVERED → buyer notification row + email.
+      try {
+        await this.notificationsService.onOrderStatusChanged({
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: "DELIVERED",
+          userId: order.userId,
+        });
+      } catch (error) {
+        console.error("BonAgri delivered notification failed:", error);
+      }
+
+      return completed;
+    }
+
+    // fail — the order never moves; the reason is the audit trail.
+    const failed = await this.prisma.delivery.update({
+      where: { orderId },
+      data: {
+        status: "FAILED",
+        failedReason: dto?.reason?.trim() || "No reason given",
+        failedAt: now,
+      },
+    });
+
+    try {
+      await this.notificationsService.onDeliveryFailed(
+        {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          userId: order.userId,
+        },
+        failed.failedReason ?? "",
+      );
+    } catch (error) {
+      console.error("BonAgri delivery-failed notification failed:", error);
+    }
+
+    return failed;
   }
 }

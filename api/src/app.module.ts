@@ -12,6 +12,7 @@ import { AddressesModule } from "./addresses/addresses.module";
 import { RequestsModule } from "./requests/requests.module";
 import { SellerApplicationsModule } from "./seller-applications/seller-applications.module";
 import { CartModule } from "./cart/cart.module";
+import { TransportModule } from "./transport/transport.module";
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { CartModule } from "./cart/cart.module";
     RequestsModule,
     SellerApplicationsModule,
     CartModule,
+    TransportModule,
   ],
 })
 export class AppModule {}

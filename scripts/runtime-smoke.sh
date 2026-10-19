@@ -3724,6 +3724,777 @@ echo
 echo "✓ DELIVERY TRACKING FLOW ACCEPTANCE PASSED"
 
 echo
+echo "========================================"
+echo "TRANSPORTER DELIVERY FLOW (CP14)"
+echo "========================================"
+
+# CP14: section M runs BEFORE the admin section on purpose — the admin
+# section's A2 journey re-roles the main smoke buyer to SUPPLIER, and M
+# needs a BUYER to place its orders. It also runs before section L (L's
+# login burst exhausts the per-IP login bucket). The letters are labels,
+# not execution order.
+
+echo
+echo "[M1/10] Registering a fresh transporter account..."
+
+rm -f "$CAPTURE_FILE"
+M_EMAIL="cp14_transport_$(date +%s)@bonagri.local"
+
+M_REGISTER_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-register.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/register" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$M_EMAIL\",\"password\":\"$TEST_PASSWORD\",\"firstName\":\"Mosa\",\"lastName\":\"Haulier\"}"
+)"
+
+if [[ "$M_REGISTER_HTTP" != "201" && "$M_REGISTER_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-register.json"
+  fail "Transporter registration failed. HTTP $M_REGISTER_HTTP"
+fi
+
+for _ in $(seq 1 30); do
+  if [[ -s "$CAPTURE_FILE" ]]; then
+    break
+  fi
+  sleep 0.5
+done
+
+if [[ ! -s "$CAPTURE_FILE" ]]; then
+  fail "Verification URL was not captured for the transporter account."
+fi
+
+M_VERIFICATION_URL="$(cat "$CAPTURE_FILE")"
+M_VERIFICATION_TOKEN="${M_VERIFICATION_URL##*token=}"
+
+if [[ -z "$M_VERIFICATION_TOKEN" ]]; then
+  fail "Transporter verification token could not be extracted."
+fi
+
+M_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-verify.json" -w "%{http_code}" \
+    --get \
+    --data-urlencode "token=$M_VERIFICATION_TOKEN" \
+    "$API_URL$API_PREFIX/auth/verify-email"
+)"
+
+if [[ "$M_VERIFY_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-verify.json"
+  fail "Transporter email verification failed. HTTP $M_VERIFY_HTTP"
+fi
+
+echo "✓ Transporter account registered and email-verified"
+
+echo
+echo "[M2/10] Admin promotes the account (the only onboarding path)..."
+
+M_USER_ID="$(
+  psql "${E2E_PSQL_TARGET:-bonagri}" -v ON_ERROR_STOP=1 -At \
+    -v email="$M_EMAIL" <<'SQL'
+SELECT id FROM "User" WHERE email = :'email';
+SQL
+)"
+
+M_USER_ID="${M_USER_ID//$'\n'/}"
+
+if [[ -z "$M_USER_ID" ]]; then
+  fail "Transporter user id not found in the database."
+fi
+
+M_PROMOTE_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-promote.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/users/$M_USER_ID/promote-transporter" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"businessName":"Mosa Hauliers","vehicleType":"1-tonne truck","city":"Polokwane","province":"Limpopo","serviceProvinces":["Limpopo"]}'
+)"
+
+if [[ "$M_PROMOTE_HTTP" != "201" && "$M_PROMOTE_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-promote.json"
+  fail "Promote to transporter failed. HTTP $M_PROMOTE_HTTP"
+fi
+
+if ! grep -q '"role"[[:space:]]*:[[:space:]]*"TRANSPORTER"' "$LOG_DIR/m-promote.json"; then
+  cat "$LOG_DIR/m-promote.json"
+  fail "Promotion did not set role TRANSPORTER."
+fi
+
+M_PROMOTE_AGAIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-promote-again.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/users/$M_USER_ID/promote-transporter" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"businessName":"Mosa Hauliers","serviceProvinces":["Limpopo"]}'
+)"
+
+if [[ "$M_PROMOTE_AGAIN_HTTP" != "409" ]]; then
+  cat "$LOG_DIR/m-promote-again.json"
+  fail "Re-promoting must 409 (profile created exactly once). HTTP $M_PROMOTE_AGAIN_HTTP"
+fi
+
+echo "✓ Admin promoted user to TRANSPORTER (repeat promote → 409)"
+
+echo
+echo "[M3/10] Transporter logs in; unverified profile sees no board..."
+
+M_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$M_EMAIL\",\"password\":\"$TEST_PASSWORD\"}"
+)"
+
+if [[ "$M_LOGIN_HTTP" != "201" && "$M_LOGIN_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-login.json"
+  fail "Transporter login failed. HTTP $M_LOGIN_HTTP"
+fi
+
+M_TOKEN="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("accessToken",""))' "$LOG_DIR/m-login.json"
+)"
+
+if [[ -z "$M_TOKEN" ]]; then
+  cat "$LOG_DIR/m-login.json"
+  fail "Transporter access token missing."
+fi
+
+if ! grep -q '"role"[[:space:]]*:[[:space:]]*"TRANSPORTER"' "$LOG_DIR/m-login.json"; then
+  cat "$LOG_DIR/m-login.json"
+  fail "Login did not return role TRANSPORTER."
+fi
+
+M_UNVERIFIED_BOARD_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-board-unverified.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    "$API_URL$API_PREFIX/transport/jobs"
+)"
+
+if [[ "$M_UNVERIFIED_BOARD_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/m-board-unverified.json"
+  fail "Unverified transporter must get 403. HTTP $M_UNVERIFIED_BOARD_HTTP"
+fi
+
+echo "✓ Transporter logged in; unverified profile blocked from board (403)"
+
+echo
+echo "[M4/10] Admin verifies the transporter..."
+
+M_TRANSPORTERS_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-transporters.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    "$API_URL$API_PREFIX/admin/transporters"
+)"
+
+if [[ "$M_TRANSPORTERS_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-transporters.json"
+  fail "Admin transporter list failed. HTTP $M_TRANSPORTERS_HTTP"
+fi
+
+M_PROFILE_ID="$(
+  python3 - "$LOG_DIR/m-transporters.json" "$M_EMAIL" <<'PYJSON'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+
+if not isinstance(data, list):
+    raise SystemExit("Admin transporter list is not an array.")
+
+found = None
+for profile in data:
+    if (profile.get("user") or {}).get("email") == sys.argv[2]:
+        found = profile["id"]
+        break
+
+if not found:
+    raise SystemExit("Promoted transporter profile not found in admin list.")
+
+print(found)
+PYJSON
+)"
+
+M_VERIFY_PROFILE_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-verify-profile.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/admin/transporters/$M_PROFILE_ID" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"verified":true}'
+)"
+
+if [[ "$M_VERIFY_PROFILE_HTTP" != "200" && "$M_VERIFY_PROFILE_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/m-verify-profile.json"
+  fail "Transporter verification failed. HTTP $M_VERIFY_PROFILE_HTTP"
+fi
+
+if ! grep -q '"verified"[[:space:]]*:[[:space:]]*true' "$LOG_DIR/m-verify-profile.json"; then
+  cat "$LOG_DIR/m-verify-profile.json"
+  fail "Verification response did not confirm verified state."
+fi
+
+echo "✓ Transporter profile verified by admin"
+
+echo
+echo "[M5/10] Fresh buyer order advances to READY_FOR_DELIVERY..."
+
+M_ORDER1_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-order1-create.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"productId\":\"$PRODUCT_ID\",\"quantity\":1,\"notes\":\"CP14 transport smoke order\"}"
+)"
+
+if [[ "$M_ORDER1_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/m-order1-create.json"
+  fail "CP14 buyer order creation failed. HTTP $M_ORDER1_HTTP"
+fi
+
+M_ORDER1_ID="$(
+  python3 - "$LOG_DIR/m-order1-create.json" <<'PYJSON'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+
+order = data.get("order") if isinstance(data.get("order"), dict) else data
+
+if not order.get("id"):
+    raise SystemExit("CP14 order id missing from creation response.")
+
+print(order["id"])
+PYJSON
+)"
+
+for M_STEP in CONFIRMED PROCESSING READY_FOR_DELIVERY; do
+  M_STEP_HTTP="$(
+    curl -sS -o "$LOG_DIR/m-order1-$M_STEP.json" -w "%{http_code}" \
+      -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER1_ID/status" \
+      -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"status\":\"$M_STEP\"}"
+  )"
+
+  if [[ "$M_STEP_HTTP" != "200" ]]; then
+    cat "$LOG_DIR/m-order1-$M_STEP.json"
+    fail "CP14 supplier transition to $M_STEP failed. HTTP $M_STEP_HTTP"
+  fi
+done
+
+echo "✓ Order ready for delivery (Limpopo address)"
+
+echo
+echo "[M6/10] Publish the job + endpoint guards..."
+
+M_PUBLISH_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-publish.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$M_ORDER1_ID/delivery/publish" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_PUBLISH_HTTP" != "201" && "$M_PUBLISH_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-publish.json"
+  fail "Publish delivery job failed. HTTP $M_PUBLISH_HTTP"
+fi
+
+if ! grep -q '"publishedAt"[[:space:]]*:[[:space:]]*"' "$LOG_DIR/m-publish.json"; then
+  cat "$LOG_DIR/m-publish.json"
+  fail "Publish response has no publishedAt timestamp."
+fi
+
+M_PUBLISH_AGAIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-publish-again.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$M_ORDER1_ID/delivery/publish" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_PUBLISH_AGAIN_HTTP" != "409" ]]; then
+  cat "$LOG_DIR/m-publish-again.json"
+  fail "Re-publish of a live job must 409. HTTP $M_PUBLISH_AGAIN_HTTP"
+fi
+
+M_ANON_BOARD_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-board-anon.json" -w "%{http_code}" \
+    "$API_URL$API_PREFIX/transport/jobs"
+)"
+
+if [[ "$M_ANON_BOARD_HTTP" != "401" ]]; then
+  fail "Anonymous claim board must 401. HTTP $M_ANON_BOARD_HTTP"
+fi
+
+M_BUYER_PUBLISH_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-buyer-publish.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$M_ORDER1_ID/delivery/publish" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_BUYER_PUBLISH_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/m-buyer-publish.json"
+  fail "Buyer publish attempt must 403. HTTP $M_BUYER_PUBLISH_HTTP"
+fi
+
+M_FOREIGN_PUBLISH_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-foreign-publish.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$M_ORDER1_ID/delivery/publish" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_FOREIGN_PUBLISH_HTTP" != "404" ]]; then
+  cat "$LOG_DIR/m-foreign-publish.json"
+  fail "Foreign supplier publish attempt must 404. HTTP $M_FOREIGN_PUBLISH_HTTP"
+fi
+
+echo "✓ Job published once (re-publish 409); anon 401, buyer 403, foreign 404"
+
+echo
+echo "[M7/10] Claim board respects the transporter's service provinces..."
+
+psql "${E2E_PSQL_TARGET:-bonagri}" -v ON_ERROR_STOP=1 -q \
+  -v email="$M_EMAIL" <<'SQL'
+UPDATE "TransporterProfile" tp
+SET "serviceProvinces" = '{Western Cape}'
+FROM "User" u
+WHERE tp."userId" = u.id AND u.email = :'email';
+SQL
+
+M_JOBS_OFF="$(
+  curl -sS -H "Authorization: Bearer $M_TOKEN" \
+    "$API_URL$API_PREFIX/transport/jobs"
+)"
+
+if echo "$M_JOBS_OFF" | grep -q "$M_ORDER1_ID"; then
+  echo "$M_JOBS_OFF"
+  fail "Job outside the service provinces must not appear on the board."
+fi
+
+psql "${E2E_PSQL_TARGET:-bonagri}" -v ON_ERROR_STOP=1 -q \
+  -v email="$M_EMAIL" <<'SQL'
+UPDATE "TransporterProfile" tp
+SET "serviceProvinces" = '{Limpopo}'
+FROM "User" u
+WHERE tp."userId" = u.id AND u.email = :'email';
+SQL
+
+M_JOBS_ON="$(
+  curl -sS -H "Authorization: Bearer $M_TOKEN" \
+    "$API_URL$API_PREFIX/transport/jobs"
+)"
+
+if ! echo "$M_JOBS_ON" | grep -q "$M_ORDER1_ID"; then
+  echo "$M_JOBS_ON"
+  fail "Published Limpopo job missing from the Limpopo transporter's board."
+fi
+
+# City-level projection only — the full address must never leave the board.
+if echo "$M_JOBS_ON" | grep -q "addressLine1" || echo "$M_JOBS_ON" | grep -q "E2E Buyer"; then
+  echo "$M_JOBS_ON"
+  fail "Claim board leaked full address or buyer contact details."
+fi
+
+echo "✓ Board is province-filtered and city-level only (no address leak)"
+
+echo
+echo "[M8/10] Atomic claim + ownership handoff guards..."
+
+M_CLAIM_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-claim.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/transport/jobs/$M_ORDER1_ID/claim" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_CLAIM_HTTP" != "201" && "$M_CLAIM_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-claim.json"
+  fail "Claim failed. HTTP $M_CLAIM_HTTP"
+fi
+
+if ! grep -q '"status"[[:space:]]*:[[:space:]]*"ASSIGNED"' "$LOG_DIR/m-claim.json"; then
+  cat "$LOG_DIR/m-claim.json"
+  fail "Claim did not assign the delivery."
+fi
+
+M_CLAIM_AGAIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-claim-again.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/transport/jobs/$M_ORDER1_ID/claim" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_CLAIM_AGAIN_HTTP" != "409" ]]; then
+  cat "$LOG_DIR/m-claim-again.json"
+  fail "Second claim must 409. HTTP $M_CLAIM_AGAIN_HTTP"
+fi
+
+M_SUP_OUT_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-sup-out.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER1_ID/status" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"OUT_FOR_DELIVERY"}'
+)"
+
+if [[ "$M_SUP_OUT_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/m-sup-out.json"
+  fail "Supplier must be locked out of OUT_FOR_DELIVERY after claim. HTTP $M_SUP_OUT_HTTP"
+fi
+
+M_SUP_DEL_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-sup-del.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER1_ID/status" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"DELIVERED"}'
+)"
+
+if [[ "$M_SUP_DEL_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/m-sup-del.json"
+  fail "Supplier must be locked out of DELIVERED after claim. HTTP $M_SUP_DEL_HTTP"
+fi
+
+echo "✓ Claim atomic (repeat 409); supplier locked out (403) once claimed"
+
+echo
+echo "[M9/10] Transporter drives pickup → transit → complete..."
+
+M_PICKUP_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-pickup.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER1_ID/delivery/pickup" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_PICKUP_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-pickup.json"
+  fail "Pickup failed. HTTP $M_PICKUP_HTTP"
+fi
+
+if ! grep -q '"status"[[:space:]]*:[[:space:]]*"PICKED_UP"' "$LOG_DIR/m-pickup.json"; then
+  cat "$LOG_DIR/m-pickup.json"
+  fail "Pickup did not move the delivery to PICKED_UP."
+fi
+
+M_ORDER1_STATE="$(
+  curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$M_ORDER1_ID"
+)"
+
+if ! echo "$M_ORDER1_STATE" | grep -q '"status"[[:space:]]*:[[:space:]]*"OUT_FOR_DELIVERY"'; then
+  echo "$M_ORDER1_STATE"
+  fail "Pickup did not flip the order to OUT_FOR_DELIVERY."
+fi
+
+M_HISTORY_COUNT="$(
+  psql "${E2E_PSQL_TARGET:-bonagri}" -v ON_ERROR_STOP=1 -At \
+    -v order_id="$M_ORDER1_ID" <<'SQL'
+SELECT COUNT(*)
+FROM "OrderStatusHistory"
+WHERE "orderId" = :'order_id'
+  AND "actorRole" = 'TRANSPORTER'
+  AND "toStatus" = 'OUT_FOR_DELIVERY';
+SQL
+)"
+
+M_HISTORY_COUNT="${M_HISTORY_COUNT//$'\n'/}"
+
+if [[ -z "$M_HISTORY_COUNT" || "$M_HISTORY_COUNT" -lt 1 ]]; then
+  fail "No TRANSPORTER OutForDelivery history row was recorded."
+fi
+
+M_TRANSIT_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-transit.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER1_ID/delivery/transit" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_TRANSIT_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-transit.json"
+  fail "Transit transition failed. HTTP $M_TRANSIT_HTTP"
+fi
+
+M_COMPLETE_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-complete.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER1_ID/delivery/complete" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_COMPLETE_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-complete.json"
+  fail "Complete failed. HTTP $M_COMPLETE_HTTP"
+fi
+
+M_ORDER1_FINAL="$(
+  curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$M_ORDER1_ID"
+)"
+
+if ! echo "$M_ORDER1_FINAL" | grep -q '"status"[[:space:]]*:[[:space:]]*"DELIVERED"'; then
+  echo "$M_ORDER1_FINAL"
+  fail "Complete did not flip the order to DELIVERED."
+fi
+
+echo "✓ Pickup flips order + history; transit; complete → DELIVERED"
+
+echo
+echo "[M10/10] Failure loop: fail → re-dispatch → retry → deliver..."
+
+M_ORDER2_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-order2-create.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"productId\":\"$PRODUCT_ID\",\"quantity\":1,\"notes\":\"CP14 transport failure smoke order\"}"
+)"
+
+if [[ "$M_ORDER2_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/m-order2-create.json"
+  fail "Second CP14 order creation failed. HTTP $M_ORDER2_HTTP"
+fi
+
+M_ORDER2_ID="$(
+  python3 - "$LOG_DIR/m-order2-create.json" <<'PYJSON'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+
+order = data.get("order") if isinstance(data.get("order"), dict) else data
+
+if not order.get("id"):
+    raise SystemExit("Second CP14 order id missing.")
+
+print(order["id"])
+PYJSON
+)"
+
+for M_STEP in CONFIRMED PROCESSING READY_FOR_DELIVERY; do
+  M_STEP_HTTP="$(
+    curl -sS -o "$LOG_DIR/m-order2-$M_STEP.json" -w "%{http_code}" \
+      -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER2_ID/status" \
+      -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"status\":\"$M_STEP\"}"
+  )"
+
+  if [[ "$M_STEP_HTTP" != "200" ]]; then
+    cat "$LOG_DIR/m-order2-$M_STEP.json"
+    fail "CP14 supplier transition to $M_STEP (order 2) failed. HTTP $M_STEP_HTTP"
+  fi
+done
+
+M_PUBLISH2_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-publish2.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$M_ORDER2_ID/delivery/publish" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_PUBLISH2_HTTP" != "201" && "$M_PUBLISH2_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-publish2.json"
+  fail "Second publish failed. HTTP $M_PUBLISH2_HTTP"
+fi
+
+M_CLAIM2_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-claim2.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/transport/jobs/$M_ORDER2_ID/claim" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_CLAIM2_HTTP" != "201" && "$M_CLAIM2_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-claim2.json"
+  fail "Second claim failed. HTTP $M_CLAIM2_HTTP"
+fi
+
+M_PICKUP2_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-pickup2-first.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER2_ID/delivery/pickup" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_PICKUP2_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-pickup2-first.json"
+  fail "Second pickup failed. HTTP $M_PICKUP2_HTTP"
+fi
+
+M_TRANSIT2_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-transit2.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER2_ID/delivery/transit" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_TRANSIT2_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-transit2.json"
+  fail "Second transit failed. HTTP $M_TRANSIT2_HTTP"
+fi
+
+M_FAIL_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-fail.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER2_ID/delivery/fail" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"reason":"CP14 smoke: truck broke down on the N1"}'
+)"
+
+if [[ "$M_FAIL_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-fail.json"
+  fail "Delivery failure reporting failed. HTTP $M_FAIL_HTTP"
+fi
+
+if ! grep -q '"status"[[:space:]]*:[[:space:]]*"FAILED"' "$LOG_DIR/m-fail.json" \
+  || ! grep -q "truck broke down" "$LOG_DIR/m-fail.json"; then
+  cat "$LOG_DIR/m-fail.json"
+  fail "Failure report did not record status FAILED with the reason."
+fi
+
+M_ORDER2_STATE="$(
+  curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$M_ORDER2_ID"
+)"
+
+if ! echo "$M_ORDER2_STATE" | grep -q '"status"[[:space:]]*:[[:space:]]*"OUT_FOR_DELIVERY"'; then
+  echo "$M_ORDER2_STATE"
+  fail "Failed delivery must leave the order at OUT_FOR_DELIVERY (no backward move)."
+fi
+
+if ! echo "$M_ORDER2_STATE" | grep -q "truck broke down"; then
+  echo "$M_ORDER2_STATE"
+  fail "Buyer order view is missing the delivery failure reason."
+fi
+
+echo "✓ Failure recorded with reason; order never moves backwards"
+
+M_REDISPATCH_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-redispatch.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$M_ORDER2_ID/delivery/re-dispatch" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_REDISPATCH_HTTP" != "201" && "$M_REDISPATCH_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-redispatch.json"
+  fail "Re-dispatch back to board failed. HTTP $M_REDISPATCH_HTTP"
+fi
+
+if ! grep -q '"status"[[:space:]]*:[[:space:]]*"PENDING"' "$LOG_DIR/m-redispatch.json" \
+  || ! grep -q '"transporterId"[[:space:]]*:[[:space:]]*null' "$LOG_DIR/m-redispatch.json"; then
+  cat "$LOG_DIR/m-redispatch.json"
+  fail "Re-dispatch did not return the job to the unclaimed board state."
+fi
+
+M_REPUBLISH_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-republish.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$M_ORDER2_ID/delivery/publish" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_REPUBLISH_HTTP" != "201" && "$M_REPUBLISH_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-republish.json"
+  fail "Re-publish after failure failed. HTTP $M_REPUBLISH_HTTP"
+fi
+
+M_RECLAIM_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-reclaim.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/transport/jobs/$M_ORDER2_ID/claim" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_RECLAIM_HTTP" != "201" && "$M_RECLAIM_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-reclaim.json"
+  fail "Re-claim after failure failed. HTTP $M_RECLAIM_HTTP"
+fi
+
+M_PICKUP2_RETRY_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-pickup2-retry.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER2_ID/delivery/pickup" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_PICKUP2_RETRY_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-pickup2-retry.json"
+  fail "Retry pickup after failure failed. HTTP $M_PICKUP2_RETRY_HTTP"
+fi
+
+python3 - "$LOG_DIR/m-pickup2-first.json" "$LOG_DIR/m-pickup2-retry.json" <<'PYJSON'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    first = json.load(f)
+with open(sys.argv[2], encoding="utf-8") as f:
+    retry = json.load(f)
+
+if first.get("pickedUpAt") != retry.get("pickedUpAt"):
+    raise SystemExit(
+        "pickedUpAt was overwritten on retry pickup: "
+        "{} != {}".format(first.get("pickedUpAt"), retry.get("pickedUpAt"))
+    )
+
+print("✓ Retry pickup kept the original pickup time")
+PYJSON
+
+M_COMPLETE2_HTTP="$(
+  curl -sS -o "$LOG_DIR/m-complete2.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$M_ORDER2_ID/delivery/complete" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$M_COMPLETE2_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/m-complete2.json"
+  fail "Retry completion failed. HTTP $M_COMPLETE2_HTTP"
+fi
+
+M_ORDER2_FINAL="$(
+  curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$M_ORDER2_ID"
+)"
+
+if ! echo "$M_ORDER2_FINAL" | grep -q '"status"[[:space:]]*:[[:space:]]*"DELIVERED"'; then
+  echo "$M_ORDER2_FINAL"
+  fail "Order 2 did not reach DELIVERED after the retry loop."
+fi
+
+if ! echo "$M_ORDER2_FINAL" | grep -q "truck broke down"; then
+  echo "$M_ORDER2_FINAL"
+  fail "The recorded failure reason disappeared after completion (audit trail)."
+fi
+
+echo "✓ Failed job re-dispatched, re-claimed, retried and delivered"
+
+echo
+echo "✓ TRANSPORTER DELIVERY FLOW ACCEPTANCE PASSED"
+
+echo
 echo "ADMIN MANAGEMENT FLOW"
 echo "========================================"
 

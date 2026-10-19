@@ -9,6 +9,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { ListUsersQueryDto } from "./dto/list-users-query.dto";
 import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
 import { PromoteSupplierDto } from "./dto/promote-supplier.dto";
+import { PromoteTransporterDto } from "./dto/promote-transporter.dto";
 import { UpdateSupplierVerifyDto } from "./dto/update-supplier-verify.dto";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
@@ -88,6 +89,13 @@ export class AdminService {
         emailVerifiedAt: true,
         createdAt: true,
         supplierProfile: {
+          select: {
+            id: true,
+            businessName: true,
+            verified: true,
+          },
+        },
+        transporterProfile: {
           select: {
             id: true,
             businessName: true,
@@ -416,6 +424,134 @@ export class AdminService {
           verified: true,
         },
       },
+      transporterProfile: {
+        select: {
+          id: true,
+          businessName: true,
+          verified: true,
+        },
+      },
     } as const;
+  }
+
+  // CP14: admin promotes a user to TRANSPORTER, creating the profile
+  // exactly once (mirrors promoteToSupplier). No self-serve path.
+  async promoteToTransporter(userId: string, dto: PromoteTransporterDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        transporterProfile: { select: { id: true } },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    if (user.role === "ADMIN") {
+      throw new BadRequestException(
+        "Admin accounts cannot become transporters",
+      );
+    }
+
+    if (user.transporterProfile) {
+      throw new ConflictException(
+        "User already has a transporter profile",
+      );
+    }
+
+    const serviceProvinces = Array.from(
+      new Set(dto.serviceProvinces.map((province) => province.trim())),
+    ).filter(Boolean);
+
+    return this.prisma.$transaction(async (tx) => {
+      try {
+        await tx.transporterProfile.create({
+          data: {
+            userId,
+            businessName: dto.businessName.trim(),
+            vehicleType: dto.vehicleType?.trim(),
+            phone: dto.phone?.trim(),
+            email: user.email,
+            city: dto.city?.trim(),
+            province: dto.province?.trim(),
+            serviceProvinces,
+            verified: false,
+          },
+        });
+      } catch (error) {
+        if (isUniqueViolation(error)) {
+          throw new ConflictException(
+            "User already has a transporter profile",
+          );
+        }
+
+        throw error;
+      }
+
+      return tx.user.update({
+        where: { id: userId },
+        data: { role: "TRANSPORTER" },
+        select: this.userSummarySelect(),
+      });
+    });
+  }
+
+  async listTransporters(verified?: boolean) {
+    return this.prisma.transporterProfile.findMany({
+      where: verified === undefined ? {} : { verified },
+      include: {
+        user: {
+          select: { id: true, email: true, firstName: true, status: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  }
+
+  async setTransporterVerified(
+    transporterId: string,
+    dto: UpdateSupplierVerifyDto,
+  ) {
+    const profile = await this.prisma.transporterProfile.findUnique({
+      where: { id: transporterId },
+      select: {
+        id: true,
+        user: { select: { id: true, email: true, firstName: true } },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException("Transporter profile not found");
+    }
+
+    const updated = await this.prisma.transporterProfile.update({
+      where: { id: transporterId },
+      data: { verified: dto.verified },
+      select: {
+        id: true,
+        businessName: true,
+        verified: true,
+        user: { select: { id: true, email: true } },
+      },
+    });
+
+    // Verified transporters can see and claim jobs — tell them.
+    if (dto.verified) {
+      try {
+        await this.notificationsService.onTransporterVerified(
+          profile.user,
+          updated.businessName,
+        );
+      } catch (error) {
+        console.error("BonAgri verification notification failed:", error);
+      }
+    }
+
+    return updated;
   }
 }

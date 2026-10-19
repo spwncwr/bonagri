@@ -145,6 +145,18 @@ export class NotificationsService {
     );
   }
 
+  // CP14: verified transporters can see and claim delivery jobs.
+  async onTransporterVerified(
+    transporter: { id: string; email: string; firstName: string },
+    businessName: string,
+  ) {
+    await this.deliver(
+      transporter,
+      "Your BonAgri transporter profile is verified",
+      `${businessName} can now see and claim published delivery jobs. Log in to your transport hub to get started.`,
+    );
+  }
+
   async onRequestResponseAccepted(
     vendor: { id: string; email: string; firstName: string },
     requestTitle: string,
@@ -153,6 +165,99 @@ export class NotificationsService {
       vendor,
       "A buyer accepted your request response",
       `The buyer behind "${requestTitle}" accepted your response. Log in to your vendor hub for the request details.`,
+    );
+  }
+
+  // CP14: transport hooks. Rows only for the publish fan-out (a board
+  // refresh, not a point event); row + email for everything addressed
+  // to a specific person.
+
+  async onDeliveryJobPublished(
+    orderNumber: string,
+    deliveryProvince: string | null,
+    transporters: Recipient[],
+  ) {
+    for (const transporter of transporters) {
+      await this.deliver(
+        transporter,
+        `New delivery job near you (${orderNumber})`,
+        deliveryProvince
+          ? `A supplier published a delivery job in ${deliveryProvince}. Log in to your transport hub to see the details and claim it.`
+          : "A supplier published a new delivery job. Log in to your transport hub to see the details and claim it.",
+      );
+    }
+  }
+
+  async onDeliveryClaimed(
+    order: { id: string; orderNumber: string },
+    transporterBusinessName: string,
+  ) {
+    const supplier = await this.resolveVendorRecipient(order.id);
+
+    if (!supplier) {
+      return;
+    }
+
+    await this.deliver(
+      supplier,
+      `Delivery job claimed for order ${order.orderNumber}`,
+      `${transporterBusinessName} claimed your published delivery job. You will see the driver details on the order page once they pick the goods up.`,
+    );
+  }
+
+  async onDeliveryPickedUp(order: { orderNumber: string; userId: string }) {
+    const buyer = await this.prisma.user.findUnique({
+      where: { id: order.userId },
+      select: { id: true, email: true, firstName: true },
+    });
+
+    if (!buyer) {
+      return;
+    }
+
+    await this.deliver(
+      buyer,
+      `Order ${order.orderNumber} is on the way`,
+      "The transporter picked up your order. Follow the delivery tracking on the order page.",
+    );
+  }
+
+  async onDeliveryFailed(
+    order: { id: string; orderNumber: string; userId: string },
+    reason: string,
+  ) {
+    const buyer = await this.prisma.user.findUnique({
+      where: { id: order.userId },
+      select: { id: true, email: true, firstName: true },
+    });
+
+    if (buyer) {
+      await this.deliver(
+        buyer,
+        `Delivery attempt failed for order ${order.orderNumber}`,
+        `The transporter reported: ${reason}. The supplier can re-dispatch the delivery; if it cannot be resolved you can open a dispute from the order page.`,
+      );
+    }
+
+    const supplier = await this.resolveVendorRecipient(order.id);
+
+    if (supplier) {
+      await this.deliver(
+        supplier,
+        `Delivery attempt failed for order ${order.orderNumber}`,
+        `The transporter reported: ${reason}. Re-dispatch the delivery or deliver it yourself from your vendor hub.`,
+      );
+    }
+  }
+
+  async onDeliveryReassignedToTransporter(
+    transporter: Recipient,
+    orderNumber: string,
+  ) {
+    await this.deliver(
+      transporter,
+      `Delivery job assigned to you (${orderNumber})`,
+      "A supplier assigned you a delivery job. Log in to your transport hub to see the pickup details.",
     );
   }
 
@@ -257,5 +362,20 @@ export class NotificationsService {
     });
 
     return items[0]?.product?.supplier?.userId ?? null;
+  }
+
+  private async resolveVendorRecipient(
+    orderId: string,
+  ): Promise<Recipient | null> {
+    const vendorUserId = await this.resolveVendorUserId(orderId);
+
+    if (!vendorUserId) {
+      return null;
+    }
+
+    return this.prisma.user.findUnique({
+      where: { id: vendorUserId },
+      select: { id: true, email: true, firstName: true },
+    });
   }
 }

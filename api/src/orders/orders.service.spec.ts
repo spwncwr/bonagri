@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from "@nestjs/common";
 import { OrdersService } from "./orders.service";
@@ -14,7 +15,7 @@ type TxMock = {
   orderStatusHistory: { create: jest.Mock };
   supplierProfile: { findUnique: jest.Mock };
   invoice: { upsert: jest.Mock };
-  delivery: { findUnique: jest.Mock };
+  delivery: { findUnique: jest.Mock; update: jest.Mock };
 };
 
 function makeTx(): TxMock {
@@ -27,7 +28,7 @@ function makeTx(): TxMock {
     orderStatusHistory: { create: jest.fn() },
     supplierProfile: { findUnique: jest.fn() },
     invoice: { upsert: jest.fn() },
-    delivery: { findUnique: jest.fn() },
+    delivery: { findUnique: jest.fn(), update: jest.fn() },
   };
 }
 
@@ -41,11 +42,24 @@ function makeService(tx: TxMock) {
     supplierProfile: { findUnique: jest.fn() },
     orderStatusHistory: { create: jest.fn() },
     payment: { create: jest.fn(), update: jest.fn() },
+    delivery: {
+      findUnique: jest.fn(),
+      updateMany: jest.fn(),
+      update: jest.fn(),
+      findMany: jest.fn(),
+      upsert: jest.fn(),
+    },
+    transporterProfile: { findUnique: jest.fn(), findMany: jest.fn() },
   };
 
   const notifications = {
     onOrderStatusChanged: jest.fn(),
     onPaymentDecision: jest.fn(),
+    onDeliveryJobPublished: jest.fn(),
+    onDeliveryClaimed: jest.fn(),
+    onDeliveryPickedUp: jest.fn(),
+    onDeliveryFailed: jest.fn(),
+    onDeliveryReassignedToTransporter: jest.fn(),
   };
 
   return {
@@ -1022,6 +1036,8 @@ describe("OrdersService (CP12 delivery tracking)", () => {
       expect(updateArg.data.delivery.upsert.create).toEqual({
         status: "ASSIGNED",
         pickedUpAt: expect.any(Date),
+        // CP14: self-delivery takes any published job off the claim board.
+        publishedAt: null,
       });
       expect(tx.delivery.findUnique).not.toHaveBeenCalled();
     });
@@ -1223,6 +1239,672 @@ describe("OrdersService (CP12 delivery tracking)", () => {
 
       await expect(
         service.getDelivery("missing", "buyer-1", "BUYER"),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+});
+
+describe("OrdersService (CP14 transport)", () => {
+  // loadDeliveryJobOrder and the delivery-job actions query prisma
+  // outside any transaction, so these helpers prime the prisma mock —
+  // while the lockout tests (updateOrderStatus) also need tx primed.
+  function primeJobOrder(
+    tx: TxMock,
+    overrides: {
+      status?: string;
+      delivery?: Record<string, unknown> | null;
+      province?: string | null;
+    } = {},
+  ) {
+    const order = {
+      id: "order-1",
+      orderNumber: "BON-20261019-111111",
+      userId: "buyer-1",
+      status: overrides.status ?? "READY_FOR_DELIVERY",
+      delivery:
+        overrides.delivery === null
+          ? null
+          : ({
+              orderId: "order-1",
+              status: "PENDING",
+              transporterId: null,
+              publishedAt: null,
+              ...overrides.delivery,
+            } as never),
+      items: [
+        {
+          product: { supplierId: "sup-1" },
+        },
+      ],
+      deliveryAddress: {
+        province: "province" in overrides ? overrides.province : "Limpopo",
+      },
+    };
+
+    tx.order.findUnique.mockResolvedValue(order);
+
+    return order;
+  }
+
+  function primeJobOrderPrisma(
+    prisma: {
+      order: { findUnique: jest.Mock };
+      supplierProfile: { findUnique: jest.Mock };
+    },
+    overrides: {
+      status?: string;
+      delivery?: Record<string, unknown> | null;
+      province?: string | null;
+    } = {},
+  ) {
+    const order = {
+      id: "order-1",
+      orderNumber: "BON-20261019-111111",
+      userId: "buyer-1",
+      status: overrides.status ?? "READY_FOR_DELIVERY",
+      delivery:
+        overrides.delivery === null
+          ? null
+          : ({
+              orderId: "order-1",
+              status: "PENDING",
+              transporterId: null,
+              publishedAt: null,
+              ...overrides.delivery,
+            } as never),
+      items: [
+        {
+          product: { supplierId: "sup-1" },
+        },
+      ],
+      deliveryAddress: {
+        province: "province" in overrides ? overrides.province : "Limpopo",
+      },
+    };
+
+    prisma.order.findUnique.mockResolvedValue(order);
+    prisma.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+
+    return order;
+  }
+
+  describe("updateOrderStatus (transporter lockout)", () => {
+    function primeClaimedOrder(tx: TxMock, status: string) {
+      primeJobOrder(tx, {
+        status,
+        delivery: { transporterId: "tp-1" },
+      });
+      tx.order.update.mockImplementation(({ data }: { data: unknown }) =>
+        Promise.resolve({ id: "order-1", ...(data as object) }),
+      );
+      tx.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+      tx.delivery.update.mockResolvedValue({});
+    }
+
+    it("locks the supplier out of OUT_FOR_DELIVERY once a transporter claimed", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primeClaimedOrder(tx, "READY_FOR_DELIVERY");
+
+      await expect(
+        service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
+          status: "OUT_FOR_DELIVERY",
+        } as never),
+      ).rejects.toThrow(ForbiddenException);
+      expect(tx.order.update).not.toHaveBeenCalled();
+    });
+
+    it("locks the supplier out of DELIVERED too", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primeClaimedOrder(tx, "OUT_FOR_DELIVERY");
+
+      await expect(
+        service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
+          status: "DELIVERED",
+        } as never),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it("lets an admin override the lockout", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primeClaimedOrder(tx, "OUT_FOR_DELIVERY");
+      tx.inventory.updateMany.mockResolvedValue({ count: 0 });
+
+      await service.updateOrderStatus("order-1", "admin-1", "ADMIN", {
+        status: "DELIVERED",
+      } as never);
+
+      expect(tx.order.update).toHaveBeenCalled();
+    });
+  });
+
+  describe("publishDelivery", () => {
+    it("publishes at READY_FOR_DELIVERY and fans out to covering transporters", async () => {
+      const tx = makeTx();
+      const { service, prisma, notifications } = makeService(tx);
+
+      primeJobOrderPrisma(prisma);
+      prisma.delivery.upsert.mockResolvedValue({ orderId: "order-1" });
+      prisma.transporterProfile.findMany.mockResolvedValue([
+        { user: { id: "tp-user-1", email: "a@x.co", firstName: "A" } },
+      ]);
+
+      await service.publishDelivery("order-1", "supplier-user-1", "SUPPLIER");
+
+      expect(prisma.transporterProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            verified: true,
+            serviceProvinces: { has: "Limpopo" },
+          }),
+        }),
+      );
+      expect(prisma.delivery.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { orderId: "order-1" },
+          update: expect.objectContaining({ status: "PENDING" }),
+        }),
+      );
+      expect(notifications.onDeliveryJobPublished).toHaveBeenCalledWith(
+        "BON-20261019-111111",
+        "Limpopo",
+        [{ id: "tp-user-1", email: "a@x.co", firstName: "A" }],
+      );
+    });
+
+    it("fans out to every verified transporter when the province is unknown", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeJobOrderPrisma(prisma, { province: null });
+      prisma.delivery.upsert.mockResolvedValue({ orderId: "order-1" });
+      prisma.transporterProfile.findMany.mockResolvedValue([]);
+
+      await service.publishDelivery("order-1", "supplier-user-1", "SUPPLIER");
+
+      const arg = prisma.transporterProfile.findMany.mock.calls[0][0] as {
+        where: Record<string, unknown>;
+      };
+      expect(arg.where).not.toHaveProperty("serviceProvinces");
+    });
+
+    it("rejects publish when the order is not ready (400)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeJobOrderPrisma(prisma, { status: "PROCESSING" });
+
+      await expect(
+        service.publishDelivery("order-1", "supplier-user-1", "SUPPLIER"),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("rejects publish of an already-claimed job (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeJobOrderPrisma(prisma, {
+        delivery: { status: "ASSIGNED", transporterId: "tp-1" },
+      });
+
+      await expect(
+        service.publishDelivery("order-1", "supplier-user-1", "SUPPLIER"),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("rejects publish when the job is already on the board (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeJobOrderPrisma(prisma, {
+        delivery: { publishedAt: new Date() },
+      });
+
+      await expect(
+        service.publishDelivery("order-1", "supplier-user-1", "SUPPLIER"),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("hides the order from a foreign supplier (404)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeJobOrderPrisma(prisma);
+      prisma.supplierProfile.findUnique.mockResolvedValue({ id: "other-sup" });
+
+      await expect(
+        service.publishDelivery("order-1", "foreign-1", "SUPPLIER"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("allows re-publish of a returned-to-board job while OUT_FOR_DELIVERY", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeJobOrderPrisma(prisma, { status: "OUT_FOR_DELIVERY" });
+      prisma.delivery.upsert.mockResolvedValue({ orderId: "order-1" });
+      prisma.transporterProfile.findMany.mockResolvedValue([]);
+
+      await service.publishDelivery("order-1", "supplier-user-1", "SUPPLIER");
+
+      expect(prisma.delivery.upsert).toHaveBeenCalled();
+    });
+  });
+
+  describe("unpublishDelivery", () => {
+    it("clears publishedAt on an unclaimed job", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeJobOrderPrisma(prisma, {
+        delivery: { publishedAt: new Date() },
+      });
+      prisma.delivery.update.mockResolvedValue({ publishedAt: null });
+
+      await service.unpublishDelivery("order-1", "supplier-user-1", "SUPPLIER");
+
+      expect(prisma.delivery.update).toHaveBeenCalledWith({
+        where: { orderId: "order-1" },
+        data: { publishedAt: null },
+      });
+    });
+
+    it("rejects unpublish once claimed (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeJobOrderPrisma(prisma, {
+        delivery: {
+          status: "ASSIGNED",
+          transporterId: "tp-1",
+          publishedAt: new Date(),
+        },
+      });
+
+      await expect(
+        service.unpublishDelivery("order-1", "supplier-user-1", "SUPPLIER"),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("rejects unpublish when the job is not on the board (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeJobOrderPrisma(prisma);
+
+      await expect(
+        service.unpublishDelivery("order-1", "supplier-user-1", "SUPPLIER"),
+      ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe("redispatchDelivery", () => {
+    function primeFailedDelivery(prisma: {
+      order: { findUnique: jest.Mock };
+      supplierProfile: { findUnique: jest.Mock };
+      delivery: { update: jest.Mock };
+    }) {
+      primeJobOrderPrisma(prisma, {
+        delivery: {
+          status: "FAILED",
+          transporterId: "tp-old",
+          failedReason: "Recipient unreachable",
+        },
+      });
+      prisma.delivery.update.mockImplementation(
+        ({ data }: { data: unknown }) =>
+          Promise.resolve({ orderId: "order-1", ...(data as object) }),
+      );
+    }
+
+    it("assigns a FAILED delivery to a specific verified transporter", async () => {
+      const tx = makeTx();
+      const { service, prisma, notifications } = makeService(tx);
+
+      primeFailedDelivery(prisma);
+      prisma.transporterProfile.findUnique.mockResolvedValue({
+        id: "tp-new",
+        verified: true,
+        user: { id: "tp-user-2", email: "b@x.co", firstName: "B" },
+      });
+
+      await service.redispatchDelivery(
+        "order-1",
+        "supplier-user-1",
+        "SUPPLIER",
+        { transporterId: "tp-new" } as never,
+      );
+
+      expect(prisma.delivery.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { status: "ASSIGNED", transporterId: "tp-new" },
+        }),
+      );
+      expect(
+        notifications.onDeliveryReassignedToTransporter,
+      ).toHaveBeenCalledWith(
+        { id: "tp-user-2", email: "b@x.co", firstName: "B" },
+        "BON-20261019-111111",
+      );
+    });
+
+    it("returns the delivery to the unclaimed board when no transporter given", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeFailedDelivery(prisma);
+
+      await service.redispatchDelivery(
+        "order-1",
+        "supplier-user-1",
+        "SUPPLIER",
+        {} as never,
+      );
+
+      expect(prisma.delivery.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            status: "PENDING",
+            transporterId: null,
+            publishedAt: null,
+          },
+        }),
+      );
+    });
+
+    it("rejects re-dispatch when the delivery is not FAILED (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeJobOrderPrisma(prisma, {
+        delivery: { status: "PICKED_UP", transporterId: "tp-1" },
+      });
+
+      await expect(
+        service.redispatchDelivery(
+          "order-1",
+          "supplier-user-1",
+          "SUPPLIER",
+          {} as never,
+        ),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("rejects re-dispatch to an unverified transporter (400)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeFailedDelivery(prisma);
+      prisma.transporterProfile.findUnique.mockResolvedValue({
+        id: "tp-new",
+        verified: false,
+        user: { id: "tp-user-2", email: "b@x.co", firstName: "B" },
+      });
+
+      await expect(
+        service.redispatchDelivery("order-1", "supplier-user-1", "SUPPLIER", {
+          transporterId: "tp-new",
+        } as never),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("deliveryAction", () => {
+    function primeTransporterJob(
+      tx: TxMock,
+      prisma: Record<string, { findUnique: jest.Mock; update: jest.Mock }>,
+      overrides: {
+        orderStatus?: string;
+        delivery?: Record<string, unknown>;
+      } = {},
+    ) {
+      prisma.transporterProfile.findUnique.mockResolvedValue({ id: "tp-1" });
+      prisma.order.findUnique.mockResolvedValue({
+        id: "order-1",
+        orderNumber: "BON-20261019-111111",
+        userId: "buyer-1",
+        status: overrides.orderStatus ?? "READY_FOR_DELIVERY",
+        delivery: {
+          orderId: "order-1",
+          status: "ASSIGNED",
+          transporterId: "tp-1",
+          pickedUpAt: null,
+          ...overrides.delivery,
+        },
+      });
+      tx.delivery.update.mockImplementation(({ data }: { data: unknown }) =>
+        Promise.resolve({ orderId: "order-1", ...(data as object) }),
+      );
+      tx.order.update.mockImplementation(({ data }: { data: unknown }) =>
+        Promise.resolve({ id: "order-1", ...(data as object) }),
+      );
+    }
+
+    it("pickup flips the order to OUT_FOR_DELIVERY with a history row", async () => {
+      const tx = makeTx();
+      const { service, prisma, notifications } = makeService(tx);
+
+      primeTransporterJob(tx, prisma);
+
+      await service.deliveryAction("order-1", "tp-user-1", "pickup");
+
+      expect(tx.order.update).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        data: { status: "OUT_FOR_DELIVERY" },
+      });
+      expect(tx.orderStatusHistory.create).toHaveBeenCalledWith({
+        data: {
+          orderId: "order-1",
+          fromStatus: "READY_FOR_DELIVERY",
+          toStatus: "OUT_FOR_DELIVERY",
+          actorUserId: "tp-user-1",
+          actorRole: "TRANSPORTER",
+          note: null,
+        },
+      });
+      expect(tx.delivery.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: "PICKED_UP" }),
+        }),
+      );
+      expect(notifications.onDeliveryPickedUp).toHaveBeenCalled();
+    });
+
+    it("pickup on a re-dispatched retry skips the order flip and keeps the original pickup time", async () => {
+      const tx = makeTx();
+      const { service, prisma, notifications } = makeService(tx);
+
+      const originalPickup = new Date("2026-10-19T08:00:00Z");
+      primeTransporterJob(tx, prisma, {
+        orderStatus: "OUT_FOR_DELIVERY",
+        delivery: { status: "ASSIGNED", pickedUpAt: originalPickup },
+      });
+
+      await service.deliveryAction("order-1", "tp-user-1", "pickup");
+
+      expect(tx.order.update).not.toHaveBeenCalled();
+      expect(tx.orderStatusHistory.create).not.toHaveBeenCalled();
+      expect(notifications.onDeliveryPickedUp).not.toHaveBeenCalled();
+      expect(tx.delivery.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { status: "PICKED_UP", pickedUpAt: originalPickup },
+        }),
+      );
+    });
+
+    it("transit moves PICKED_UP to IN_TRANSIT", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeTransporterJob(tx, prisma, {
+        orderStatus: "OUT_FOR_DELIVERY",
+        delivery: { status: "PICKED_UP" },
+      });
+
+      await service.deliveryAction("order-1", "tp-user-1", "transit");
+
+      expect(prisma.delivery.update).toHaveBeenCalledWith({
+        where: { orderId: "order-1" },
+        data: { status: "IN_TRANSIT" },
+      });
+    });
+
+    it("complete flips the order to DELIVERED and fires the buyer hook", async () => {
+      const tx = makeTx();
+      const { service, prisma, notifications } = makeService(tx);
+
+      primeTransporterJob(tx, prisma, {
+        orderStatus: "OUT_FOR_DELIVERY",
+        delivery: { status: "IN_TRANSIT" },
+      });
+
+      await service.deliveryAction("order-1", "tp-user-1", "complete");
+
+      expect(tx.order.update).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        data: { status: "DELIVERED" },
+      });
+      expect(tx.orderStatusHistory.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          toStatus: "DELIVERED",
+          actorRole: "TRANSPORTER",
+        }),
+      });
+      expect(tx.delivery.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: "DELIVERED",
+            deliveredAt: expect.any(Date),
+          }),
+        }),
+      );
+      expect(notifications.onOrderStatusChanged).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "DELIVERED" }),
+      );
+    });
+
+    it("fail records the reason and leaves the order status untouched", async () => {
+      const tx = makeTx();
+      const { service, prisma, notifications } = makeService(tx);
+
+      primeTransporterJob(tx, prisma, {
+        orderStatus: "OUT_FOR_DELIVERY",
+        delivery: { status: "PICKED_UP" },
+      });
+      prisma.delivery.update.mockImplementation(
+        ({ data }: { data: unknown }) =>
+          Promise.resolve({ orderId: "order-1", ...(data as object) }),
+      );
+
+      await service.deliveryAction("order-1", "tp-user-1", "fail", {
+        reason: "Truck broke down",
+      } as never);
+
+      expect(tx.order.update).not.toHaveBeenCalled();
+      expect(prisma.delivery.update).toHaveBeenCalledWith({
+        where: { orderId: "order-1" },
+        data: {
+          status: "FAILED",
+          failedReason: "Truck broke down",
+          failedAt: expect.any(Date),
+        },
+      });
+      expect(notifications.onDeliveryFailed).toHaveBeenCalledWith(
+        expect.objectContaining({ orderNumber: "BON-20261019-111111" }),
+        "Truck broke down",
+      );
+    });
+
+    it("rejects actions from a transporter who does not own the job (404)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      prisma.transporterProfile.findUnique.mockResolvedValue({
+        id: "tp-other",
+      });
+      prisma.order.findUnique.mockResolvedValue({
+        id: "order-1",
+        status: "READY_FOR_DELIVERY",
+        delivery: {
+          orderId: "order-1",
+          status: "ASSIGNED",
+          transporterId: "tp-1",
+        },
+      });
+
+      await expect(
+        service.deliveryAction("order-1", "tp-user-1", "pickup"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("rejects an action out of sequence (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeTransporterJob(tx, prisma, {
+        orderStatus: "OUT_FOR_DELIVERY",
+        delivery: { status: "PICKED_UP" },
+      });
+
+      await expect(
+        service.deliveryAction("order-1", "tp-user-1", "pickup"),
+      ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe("getDelivery (transporter widening)", () => {
+    it("lets the assigned transporter view the delivery", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      prisma.order.findUnique.mockResolvedValue({
+        id: "order-1",
+        userId: "buyer-1",
+        status: "OUT_FOR_DELIVERY",
+        items: [],
+        delivery: {
+          orderId: "order-1",
+          status: "PICKED_UP",
+          transporterId: "tp-1",
+        },
+      });
+      prisma.transporterProfile.findUnique.mockResolvedValue({ id: "tp-1" });
+
+      const delivery = await service.getDelivery(
+        "order-1",
+        "tp-user-1",
+        "TRANSPORTER",
+      );
+
+      expect(delivery).toMatchObject({ status: "PICKED_UP" });
+    });
+
+    it("hides the delivery from a foreign transporter (404)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      prisma.order.findUnique.mockResolvedValue({
+        id: "order-1",
+        userId: "buyer-1",
+        status: "OUT_FOR_DELIVERY",
+        items: [],
+        delivery: {
+          orderId: "order-1",
+          status: "PICKED_UP",
+          transporterId: "tp-1",
+        },
+      });
+      prisma.transporterProfile.findUnique.mockResolvedValue({
+        id: "tp-other",
+      });
+
+      await expect(
+        service.getDelivery("order-1", "tp-user-1", "TRANSPORTER"),
       ).rejects.toThrow(NotFoundException);
     });
   });

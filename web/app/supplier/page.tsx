@@ -80,6 +80,13 @@ type SupplierOrder = {
     trackingNumber: string | null;
     pickedUpAt: string | null;
     deliveredAt: string | null;
+    // CP14
+    publishedAt: string | null;
+    transporterId: string | null;
+    failedReason: string | null;
+    failedAt: string | null;
+    updatedAt: string;
+    transporter: { businessName: string } | null;
   } | null;
 };
 
@@ -194,6 +201,18 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+// CP14: verified transporters offered in the post-failure re-dispatch
+// dropdown (mirrors GET /api/transport/transporters).
+type VerifiedTransporter = {
+  id: string;
+  businessName: string;
+  vehicleType: string | null;
+  city: string | null;
+  province: string | null;
+  serviceProvinces: string[];
+  verified: boolean;
+};
+
 export default function SupplierPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
@@ -225,6 +244,25 @@ export default function SupplierPage() {
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [respondError, setRespondError] = useState("");
   const [respondNotice, setRespondNotice] = useState("");
+  // CP14: delivery-job publish/unpublish/re-dispatch
+  const [transporters, setTransporters] = useState<VerifiedTransporter[]>([]);
+  const [jobActionId, setJobActionId] = useState<string | null>(null);
+  const [redispatchChoice, setRedispatchChoice] = useState<
+    Record<string, string>
+  >({});
+  const [jobNotice, setJobNotice] = useState("");
+
+  useEffect(() => {
+    void fetch(`${API_BASE_URL}/api/transport/transporters`, {
+      cache: "no-store",
+      headers: authHeaders(),
+    })
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => {
+        setTransporters(Array.isArray(data) ? (data as VerifiedTransporter[]) : []);
+      })
+      .catch(() => setTransporters([]));
+  }, []);
 
   useEffect(() => {
     void fetchCurrentUser().then((user) => {
@@ -588,6 +626,66 @@ export default function SupplierPage() {
     }
   };
 
+  // CP14: delivery-job lifecycle — publish/unpublish on the transporter
+  // claim board, and re-dispatch a FAILED delivery (to a specific verified
+  // transporter or back to the open board / self-delivery).
+  const deliveryJobAction = async (
+    orderId: string,
+    action: "publish" | "unpublish" | "redispatch",
+    transporterId?: string,
+  ) => {
+    setJobActionId(orderId);
+    setError("");
+    setJobNotice("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/orders/${orderId}/delivery/${
+          action === "redispatch" ? "re-dispatch" : "publish"
+        }`,
+        {
+          method: action === "unpublish" ? "DELETE" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+          },
+          ...(action === "redispatch"
+            ? { body: JSON.stringify(transporterId ? { transporterId } : {}) }
+            : {}),
+        },
+      );
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          (data as { message?: string } | null)?.message ??
+            "Delivery job action failed",
+        );
+      }
+
+      setJobNotice(
+        action === "publish"
+          ? "Delivery job published — verified transporters covering the province have been notified."
+          : action === "unpublish"
+            ? "Delivery job removed from the claim board."
+            : transporterId
+              ? "Delivery re-dispatched to the chosen transporter."
+              : "Delivery returned to the open board — re-publish it or deliver it yourself.",
+      );
+      setRedispatchChoice((choices) => {
+        const next = { ...choices };
+        delete next[orderId];
+        return next;
+      });
+      await loadOrders();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delivery job action failed");
+    } finally {
+      setJobActionId(null);
+    }
+  };
+
   // CP11: verify or reject the buyer's recorded manual EFT evidence. This
   // updates the payment only — the order advances through updateStatus.
   const decidePayment = async (
@@ -765,6 +863,12 @@ export default function SupplierPage() {
             </div>
           )}
 
+          {jobNotice && (
+            <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              {jobNotice}
+            </div>
+          )}
+
           {loading ? (
             <div className="py-16 text-center text-sm text-slate-500">
               Loading supplier orders...
@@ -784,6 +888,11 @@ export default function SupplierPage() {
                 const nextStatus = NEXT_STATUS[order.status];
                 const updating = updatingOrderId === order.id;
                 const collectingDelivery = nextStatus === "OUT_FOR_DELIVERY";
+                // CP14: a claimed delivery hands pickup/DELIVERED to the
+                // transporter — the supplier's own status buttons step aside.
+                const lockedToTransporter = Boolean(
+                  order.delivery?.transporterId,
+                );
 
                 return (
                   <article
@@ -938,6 +1047,173 @@ export default function SupplierPage() {
                       </div>
                     ) : null}
 
+                    {/* Delivery job board (CP14) */}
+                    {order.delivery &&
+                    order.status !== "DELIVERED" &&
+                    order.status !== "CANCELLED" ? (
+                      <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                          Transporter job
+                        </p>
+
+                        {lockedToTransporter ? (
+                          <>
+                            <p className="mt-1.5 flex flex-wrap items-center gap-2 text-sm">
+                              <span
+                                className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                  order.delivery.status === "FAILED"
+                                    ? "border-red-200 bg-red-50 text-red-700"
+                                    : order.delivery.status === "DELIVERED"
+                                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                      : "border-indigo-200 bg-indigo-50 text-indigo-700"
+                                }`}
+                              >
+                                {order.delivery.status === "ASSIGNED"
+                                  ? "Assigned"
+                                  : order.delivery.status === "PICKED_UP"
+                                    ? "Picked up"
+                                    : order.delivery.status === "IN_TRANSIT"
+                                      ? "In transit"
+                                      : order.delivery.status === "FAILED"
+                                        ? "Failed"
+                                        : order.delivery.status}
+                              </span>
+                              <span className="text-slate-600">
+                                With{" "}
+                                <span className="font-semibold">
+                                  {order.delivery.transporter
+                                    ?.businessName ?? "the assigned transporter"}
+                                </span>{" "}
+                                since {formatDate(order.delivery.updatedAt)}
+                              </span>
+                            </p>
+                            <p className="mt-1.5 text-xs text-slate-500">
+                              The transporter confirms pickup, transit and
+                              delivery from their own hub — you will see each
+                              step here.
+                            </p>
+
+                            {order.delivery.status === "FAILED" &&
+                            order.delivery.failedReason ? (
+                              <p className="mt-2 text-xs font-semibold text-red-700">
+                                Failure reason: {order.delivery.failedReason}
+                              </p>
+                            ) : null}
+
+                            {/* Re-dispatch loop (FAILED only) */}
+                            {order.delivery.status === "FAILED" ? (
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <select
+                                  value={redispatchChoice[order.id] ?? ""}
+                                  onChange={(event) =>
+                                    setRedispatchChoice((choices) => ({
+                                      ...choices,
+                                      [order.id]: event.target.value,
+                                    }))
+                                  }
+                                  className="rounded-xl border-slate-200 bg-white px-3 py-2 text-sm"
+                                >
+                                  <option value="">
+                                    Re-dispatch to...
+                                  </option>
+                                  {transporters.map((transporter) => (
+                                    <option
+                                      key={transporter.id}
+                                      value={transporter.id}
+                                    >
+                                      {transporter.businessName}
+                                      {transporter.province
+                                        ? ` (${transporter.province})`
+                                        : ""}
+                                    </option>
+                                  ))}
+                                  <option value="board">
+                                    Back to open board (self-delivery later)
+                                  </option>
+                                </select>
+                                <button
+                                  type="button"
+                                  disabled={
+                                    jobActionId === order.id ||
+                                    !redispatchChoice[order.id]
+                                  }
+                                  onClick={() =>
+                                    void deliveryJobAction(
+                                      order.id,
+                                      "redispatch",
+                                      redispatchChoice[order.id] === "board"
+                                        ? undefined
+                                        : redispatchChoice[order.id],
+                                    )
+                                  }
+                                  className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {jobActionId === order.id
+                                    ? "Saving..."
+                                    : "Re-dispatch"}
+                                </button>
+                                {transporters.length === 0 ? (
+                                  <span className="text-xs text-slate-500">
+                                    No verified transporters yet — send it back
+                                    to the board or deliver it yourself.
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </>
+                        ) : order.status === "READY_FOR_DELIVERY" &&
+                          order.delivery.status === "PENDING" ? (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-sm">
+                            {order.delivery.publishedAt ? (
+                              <>
+                                <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">
+                                  On the claim board
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                  Published {formatDate(order.delivery.publishedAt)} —
+                                  transporters covering{" "}
+                                  {order.deliveryAddress.province ??
+                                    "your province"}{" "}
+                                  can claim it.
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={jobActionId === order.id}
+                                  onClick={() =>
+                                    void deliveryJobAction(order.id, "unpublish")
+                                  }
+                                  className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
+                                >
+                                  {jobActionId === order.id
+                                    ? "Working..."
+                                    : "Unpublish"}
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-xs text-slate-500">
+                                  Self-deliver with the form below, or publish
+                                  the job to verified transporters.
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={jobActionId === order.id}
+                                  onClick={() =>
+                                    void deliveryJobAction(order.id, "publish")
+                                  }
+                                  className="rounded-xl bg-[#17633a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f4d2b] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {jobActionId === order.id
+                                    ? "Publishing..."
+                                    : "Publish to transporters"}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
                     {/* Manual EFT payment (CP11) */}
                     {order.payment ? (
                       <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -1020,7 +1296,18 @@ export default function SupplierPage() {
 
                     {(nextStatus || order.status === "PENDING") && (
                       <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                        {nextStatus ? (
+                        {lockedToTransporter && nextStatus ? (
+                          <p className="text-xs text-slate-500">
+                            With{" "}
+                            <span className="font-semibold text-slate-700">
+                              {order.delivery?.transporter?.businessName ??
+                                "the assigned transporter"}
+                            </span>{" "}
+                            since{" "}
+                            {formatDate(order.delivery?.updatedAt ?? order.createdAt)}{" "}
+                            — they drive the rest of this order from their hub.
+                          </p>
+                        ) : nextStatus ? (
                           <p className="text-xs text-slate-500">
                             Next step:{" "}
                             <span className="font-semibold text-slate-700">
@@ -1032,7 +1319,7 @@ export default function SupplierPage() {
                         )}
 
                         <div className="flex gap-2">
-                          {nextStatus && !collectingDelivery && (
+                          {nextStatus && !collectingDelivery && !lockedToTransporter && (
                             <button
                               type="button"
                               disabled={updating}
@@ -1047,7 +1334,7 @@ export default function SupplierPage() {
                             </button>
                           )}
 
-                          {collectingDelivery ? (
+                          {collectingDelivery && !lockedToTransporter ? (
                             <button
                               type="button"
                               disabled={updating}

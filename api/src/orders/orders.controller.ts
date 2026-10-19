@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -14,7 +15,9 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { UserRole } from "../common/types";
 import { CreateOrderDto } from "./dto/create-order.dto";
+import { FailDeliveryDto } from "./dto/fail-delivery.dto";
 import { RecordPaymentDto } from "./dto/record-payment.dto";
+import { RedispatchDeliveryDto } from "./dto/redispatch-delivery.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
 import { VerifyPaymentDto } from "./dto/verify-payment.dto";
 import { OrdersService } from "./orders.service";
@@ -100,6 +103,111 @@ export class OrdersController {
       id,
       request.user.id,
       request.user.role,
+      dto,
+    );
+  }
+
+  // CP14: delivery-job lifecycle. Publish/unpublish/re-dispatch belong to
+  // the owning supplier (or admin); the pickup/transit/complete/fail
+  // actions belong to the transporter who claimed the job.
+  @Post(":id/delivery/publish")
+  @Roles("SUPPLIER", "AGRO_DEALER", "ADMIN")
+  @UseGuards(RolesGuard)
+  publishDelivery(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    return this.ordersService.publishDelivery(
+      id,
+      request.user.id,
+      request.user.role,
+    );
+  }
+
+  @Delete(":id/delivery/publish")
+  @Roles("SUPPLIER", "AGRO_DEALER", "ADMIN")
+  @UseGuards(RolesGuard)
+  unpublishDelivery(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    return this.ordersService.unpublishDelivery(
+      id,
+      request.user.id,
+      request.user.role,
+    );
+  }
+
+  @Post(":id/delivery/re-dispatch")
+  @Roles("SUPPLIER", "AGRO_DEALER", "ADMIN")
+  @UseGuards(RolesGuard)
+  redispatchDelivery(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() dto: RedispatchDeliveryDto,
+  ) {
+    return this.ordersService.redispatchDelivery(
+      id,
+      request.user.id,
+      request.user.role,
+      dto,
+    );
+  }
+
+  @Patch(":id/delivery/pickup")
+  @Roles("TRANSPORTER")
+  @UseGuards(RolesGuard)
+  pickupDelivery(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    return this.ordersService.deliveryAction(
+      id,
+      request.user.id,
+      "pickup",
+    );
+  }
+
+  @Patch(":id/delivery/transit")
+  @Roles("TRANSPORTER")
+  @UseGuards(RolesGuard)
+  transitDelivery(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    return this.ordersService.deliveryAction(
+      id,
+      request.user.id,
+      "transit",
+    );
+  }
+
+  @Patch(":id/delivery/complete")
+  @Roles("TRANSPORTER")
+  @UseGuards(RolesGuard)
+  completeDelivery(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    return this.ordersService.deliveryAction(
+      id,
+      request.user.id,
+      "complete",
+    );
+  }
+
+  @Patch(":id/delivery/fail")
+  @Roles("TRANSPORTER")
+  @UseGuards(RolesGuard)
+  failDelivery(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() dto: FailDeliveryDto,
+  ) {
+    return this.ordersService.deliveryAction(
+      id,
+      request.user.id,
+      "fail",
       dto,
     );
   }

@@ -4,7 +4,12 @@ const REMEMBER_ME_KEY = "bonagri_remember_me";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
 
-export type UserRole = "BUYER" | "SUPPLIER" | "AGRO_DEALER" | "ADMIN";
+export type UserRole =
+  | "BUYER"
+  | "SUPPLIER"
+  | "AGRO_DEALER"
+  | "TRANSPORTER"
+  | "ADMIN";
 
 export type AuthUser = {
   id: string;

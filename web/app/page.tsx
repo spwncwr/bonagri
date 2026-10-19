@@ -265,6 +265,9 @@ export default function Home() {
         driverName: string | null;
         trackingNumber: string | null;
         estimatedDate: string | null;
+        // CP14
+        failedReason: string | null;
+        transporter: { businessName: string } | null;
       } | null;
     }>
   >([]);
@@ -938,6 +941,14 @@ export default function Home() {
                     className="hidden rounded-lg border border-[#ccd5ca] px-4 py-2.5 text-sm font-bold sm:block"
                   >
                     Sell on BonAgri
+                  </Link>
+                ) : null}
+                {currentUser?.role === "TRANSPORTER" ? (
+                  <Link
+                    href="/transport"
+                    className="hidden rounded-lg border border-[#ccd5ca] px-4 py-2.5 text-sm font-bold sm:block"
+                  >
+                    Transport Hub
                   </Link>
                 ) : null}
                 <button
@@ -2202,6 +2213,28 @@ export default function Home() {
                                   : "EFT awaiting check"}
                             </span>
                           ) : null}
+
+                          {/* CP14: transport progress chips */}
+                          {order.delivery &&
+                          ["PICKED_UP", "IN_TRANSIT", "FAILED"].includes(
+                            order.delivery.status,
+                          ) ? (
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                                order.delivery.status === "FAILED"
+                                  ? "bg-red-100 text-red-700"
+                                  : order.delivery.status === "PICKED_UP"
+                                    ? "bg-sky-100 text-sky-700"
+                                    : "bg-indigo-100 text-indigo-700"
+                              }`}
+                            >
+                              {order.delivery.status === "PICKED_UP"
+                                ? "Picked up"
+                                : order.delivery.status === "IN_TRANSIT"
+                                  ? "In transit"
+                                  : "Delivery failed"}
+                            </span>
+                          ) : null}
                         </div>
 
                         <div className="mt-2 text-xs text-[#7b867d]">
@@ -2282,6 +2315,21 @@ export default function Home() {
                               month: "short",
                             })}`
                           : ""}
+                      </div>
+                    ) : null}
+
+                    {/* CP14: failed delivery → reason + dispute safety net */}
+                    {order.delivery?.status === "FAILED" ? (
+                      <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs leading-5 text-red-700">
+                        <span className="font-black uppercase tracking-wide">
+                          Delivery failed
+                        </span>
+                        {order.delivery.failedReason
+                          ? ` · ${order.delivery.failedReason}`
+                          : ""}
+                        {" · "}
+                        The supplier has been asked to re-dispatch. If it is
+                        not resolved, open a dispute from the order timeline.
                       </div>
                     ) : null}
 

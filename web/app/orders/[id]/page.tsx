@@ -87,6 +87,10 @@ type OrderDetail = {
     trackingNumber: string | null;
     pickedUpAt: string | null;
     deliveredAt: string | null;
+    // CP14
+    failedReason: string | null;
+    failedAt: string | null;
+    transporter: { businessName: string } | null;
   } | null;
   history: OrderHistoryEntry[];
   dispute: OrderDispute | null;
@@ -139,6 +143,7 @@ const ACTOR_LABELS: Record<string, string> = {
   BUYER: "You",
   SUPPLIER: "Supplier",
   AGRO_DEALER: "Dealer",
+  TRANSPORTER: "Transporter",
   ADMIN: "BonAgri team",
 };
 
@@ -925,18 +930,35 @@ export default function OrderDetailPage() {
                           ? "bg-[#e5f1e4] text-[#17633a]"
                           : order.delivery.status === "FAILED"
                             ? "bg-red-100 text-red-700"
-                            : "bg-blue-100 text-blue-700"
+                            : order.delivery.status === "IN_TRANSIT"
+                              ? "bg-indigo-100 text-indigo-700"
+                              : order.delivery.status === "PICKED_UP"
+                                ? "bg-sky-100 text-sky-700"
+                                : "bg-blue-100 text-blue-700"
                       }`}
                     >
                       {order.delivery.status === "DELIVERED"
                         ? "Delivered"
                         : order.delivery.status === "FAILED"
                           ? "Delivery failed"
-                          : "On its way"}
+                          : order.delivery.status === "PICKED_UP"
+                            ? "Picked up"
+                            : order.delivery.status === "IN_TRANSIT"
+                              ? "In transit"
+                              : "On its way"}
                     </span>
                   </div>
 
                   <div className="mt-4 space-y-1 text-sm text-[#344238]">
+                    {order.delivery.transporter ? (
+                      <p>
+                        Transporter{" "}
+                        <span className="font-bold">
+                          {order.delivery.transporter.businessName}
+                        </span>
+                      </p>
+                    ) : null}
+
                     {order.delivery.driverName ? (
                       <p>
                         Driver {order.delivery.driverName}
@@ -1001,6 +1023,18 @@ export default function OrderDetailPage() {
                           },
                         )}
                       </p>
+                    ) : null}
+
+                    {order.delivery.status === "FAILED" ? (
+                      <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {order.delivery.failedReason
+                          ? `Reported: ${order.delivery.failedReason}`
+                          : "The transporter reported a problem with this delivery."}
+                        <span className="mt-1 block text-xs">
+                          The supplier has been asked to re-dispatch. If it
+                          stays unresolved, open a dispute from this page.
+                        </span>
+                      </div>
                     ) : null}
 
                     {!order.delivery.driverName && !order.delivery.pickedUpAt ? (

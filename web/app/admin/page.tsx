@@ -42,12 +42,18 @@ const SECTIONS = [
   {
     href: "/admin/users",
     title: "Users",
-    description: "Suspend, reactivate and promote buyers to suppliers.",
+    description:
+      "Suspend, reactivate and promote buyers to suppliers or transporters.",
   },
   {
     href: "/admin/suppliers",
     title: "Suppliers",
     description: "Review and verify supplier and dealer profiles.",
+  },
+  {
+    href: "/admin/transporters",
+    title: "Transporters",
+    description: "Verify transporters who claim and carry delivery jobs.",
   },
   {
     href: "/admin/categories",

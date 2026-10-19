@@ -4117,6 +4117,84 @@ echo
 echo "✓ ADMIN MANAGEMENT FLOW ACCEPTANCE PASSED"
 
 echo
+echo "RATE LIMITING FLOW"
+echo "========================================"
+
+# CP13: auth/* and public reads are rate limited by ThrottlerGuard. Section L
+# runs last on purpose — hammering login exhausts the shared per-IP login
+# bucket, so nothing after it may rely on logging in until the window resets.
+
+echo
+echo "[L1/3] A login burst gets blocked with 429..."
+
+L_TS="$(date +%s)"
+L_EMAIL="cp13_limit_$L_TS@bonagri.local"
+L_THROTTLED=""
+
+for L_I in $(seq 1 16); do
+  L_HTTP="$(
+    curl -sS -o "$LOG_DIR/l-login-$L_I.json" -w "%{http_code}" \
+      -X POST "$API_URL$API_PREFIX/auth/login" \
+      -H "Content-Type: application/json" \
+      -d "{\"email\":\"$L_EMAIL\",\"password\":\"wrong-password-1\"}"
+  )"
+
+  if [[ "$L_HTTP" == "429" ]]; then
+    L_THROTTLED="yes"
+    break
+  fi
+done
+
+if [[ -z "$L_THROTTLED" ]]; then
+  fail "Login was never rate limited — 16 attempts from one IP, no 429"
+fi
+
+echo "✓ Login throttled with 429 on attempt $L_I/16"
+
+echo
+echo "[L2/3] Throttling is scoped — other routes keep serving..."
+
+L_HEALTH_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" "$API_URL$API_PREFIX/health"
+)"
+
+if [[ "$L_HEALTH_HTTP" != "200" ]]; then
+  fail "Health route broke during throttle. HTTP $L_HEALTH_HTTP"
+fi
+
+L_CATALOG_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" "$API_URL$API_PREFIX/products"
+)"
+
+if [[ "$L_CATALOG_HTTP" != "200" ]]; then
+  fail "Public catalog broke during throttle. HTTP $L_CATALOG_HTTP"
+fi
+
+echo "✓ Health and public catalog still return 200 while login is throttled"
+
+echo
+echo "[L3/3] The throttle window expires — a real login recovers..."
+
+sleep 65
+
+L_RECOVER_HTTP="$(
+  curl -sS -o "$LOG_DIR/l-recover.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$SUPPLIER_EMAIL\",\"password\":\"$SUPPLIER_PASSWORD\"}"
+)"
+
+if [[ "$L_RECOVER_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/l-recover.json"
+  fail "Login did not recover after the 60s throttle window. HTTP $L_RECOVER_HTTP"
+fi
+
+echo "✓ Legitimate login works again once the window resets (no restart needed)"
+
+echo
+echo "✓ RATE LIMITING FLOW ACCEPTANCE PASSED"
+
+echo
 echo "RUNTIME SMOKE TEST CLEANUP"
 echo "========================================"
 

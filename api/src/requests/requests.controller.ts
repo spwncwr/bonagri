@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import type { Request } from "express";
+import { ThrottlerGuard } from "@nestjs/throttler";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
@@ -24,7 +25,10 @@ type AuthenticatedRequest = Request & {
   };
 };
 
+// CP13: rate limit the whole requests surface at the module default
+// (120/min per client) — includes the public demand board GET.
 @Controller("product-requests")
+@UseGuards(ThrottlerGuard)
 export class RequestsController {
   constructor(private readonly requestsService: RequestsService) {}
 

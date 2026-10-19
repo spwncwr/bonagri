@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { AuthModule } from "./auth/auth.module";
 import { AdminModule } from "./admin/admin.module";
 import { CatalogModule } from "./catalog/catalog.module";
@@ -14,6 +15,14 @@ import { CartModule } from "./cart/cart.module";
 
 @Module({
   imports: [
+    // CP13: base rate-limit budget (120/min per client IP) for the routes
+    // that opt in with ThrottlerGuard (auth/*, public catalog + request
+    // board reads). Health is intentionally unthrottled for monitors.
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 120 }],
+      errorMessage: "Too many requests — please slow down and try again shortly",
+      setHeaders: true,
+    }),
     PrismaModule,
     AuthModule,
     HealthModule,

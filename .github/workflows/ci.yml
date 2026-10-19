@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    name: api — install, build, lint, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - name: Install dependencies
+        working-directory: api
+        run: npm ci
+      - name: Build
+        working-directory: api
+        run: npm run build
+      - name: Lint
+        working-directory: api
+        run: npm run lint
+      - name: Unit tests
+        working-directory: api
+        run: npm test
+
+  web:
+    name: web — install, build, lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+      - name: Build
+        working-directory: web
+        run: npm run build
+        env:
+          # The build inlines this; nothing talks to a live API in CI.
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+      - name: Lint
+        working-directory: web
+        run: npm run lint
+
+  smoke-syntax:
+    name: runtime smoke — syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The full smoke mutates a database and stays manual; CI only proves
+      # the script parses so a broken edit can't reach main unnoticed.
+      - run: bash -n scripts/runtime-smoke.sh

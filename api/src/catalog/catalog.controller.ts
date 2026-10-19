@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import type { Request } from "express";
+import { ThrottlerGuard } from "@nestjs/throttler";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
@@ -31,7 +32,11 @@ type AuthenticatedRequest = Request & {
   };
 };
 
+// CP13: rate limit the whole catalog surface at the module default
+// (120/min per client) — the public reads here (categories, products)
+// are the anonymous-visitor hot paths.
 @Controller()
+@UseGuards(ThrottlerGuard)
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 

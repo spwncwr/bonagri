@@ -9,6 +9,14 @@ async function bootstrap() {
 
   app.setGlobalPrefix("api");
 
+  // CP13: Render routes traffic through a proxy — trust that one hop so the
+  // rate-limit key (req.ip) is the real client instead of the proxy address,
+  // which would otherwise put every visitor in a single shared bucket.
+  const expressInstance = app.getHttpAdapter().getInstance() as {
+    set: (setting: string, value: number) => void;
+  };
+  expressInstance.set("trust proxy", 1);
+
   const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3001")
     .split(",")
     .map((origin) => origin.trim())

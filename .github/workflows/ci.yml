@@ -10,8 +10,8 @@ jobs:
     name: api — install, build, lint, unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -33,8 +33,8 @@ jobs:
     name: web — install, build, lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -56,7 +56,7 @@ jobs:
     name: runtime smoke — syntax check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # The full smoke mutates a database and stays manual; CI only proves
       # the script parses so a broken edit can't reach main unnoticed.
       - run: bash -n scripts/runtime-smoke.sh

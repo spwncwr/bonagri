@@ -17,8 +17,33 @@ async function bootstrap() {
   // consistently and a 16-attempt login burst never hit 429.
   const expressInstance = app.getHttpAdapter().getInstance() as {
     set: (setting: string, value: number) => void;
+    use: (
+      handler: (
+        req: {
+          ip?: string;
+          headers: Record<string, string | string[] | undefined>;
+        },
+        res: { setHeader: (name: string, value: string) => void },
+        next: () => void,
+      ) => void,
+    ) => void;
   };
   expressInstance.set("trust proxy", 2);
+
+  // TEMPORARY (CP13 diagnosis): echo how the server sees the client so the
+  // trust-proxy depth can be chosen from evidence, not guesses.
+  expressInstance.use((req, res, next) => {
+    res.setHeader("X-Debug-Client-Ip", req.ip ?? "none");
+    res.setHeader(
+      "X-Debug-Xff",
+      String(req.headers["x-forwarded-for"] ?? "none"),
+    );
+    res.setHeader(
+      "X-Debug-X-Real-Ip",
+      String(req.headers["x-real-ip"] ?? "none"),
+    );
+    next();
+  });
 
   const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3001")
     .split(",")

@@ -39,7 +39,8 @@ curl -s https://bonagri-api.onrender.com/api/health          # database: connect
 ```
 
 Pre-existing known failures that do **not** block a checkpoint (note them if hit):
-`npm run test:e2e` in `api/` is broken (generated-client resolution, audit §10).
+~~`npm run test:e2e` in `api/` is broken~~ — **fixed in CP13** (Jest
+`moduleNameMapper` + rewritten spec; now 2 passed).
 
 ## 2. Checkpoint register
 
@@ -58,7 +59,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP10 | Cart & multi-item checkout | 2026-10-14 | done (0475e89) |
 | CP11 | Payments (manual EFT + invoices) | 2026-10-14 | done (4a6067b) |
 | CP12 | Delivery tracking | 2026-10-18 | done (d8e180c) |
-| CP13 | Trust & ops hygiene (CI, tokens, reviews) | — | pending |
+| CP13 | Trust & ops hygiene (CI, e2e fix, rate limiting) | 2026-10-19 | done (385034a–a0c19be) |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
 
@@ -533,6 +534,75 @@ Live journey **green 2026-10-18** (API run + browser run + cleanup):
   numbers = **0**, corrected read-only check after the script's own
   verification SELECT used `USING` — a DELETE-only clause — and errored
   harmlessly; the deletes themselves had already run).
+
+### CP13 — Trust & ops hygiene (CI, rate limiting, e2e fix)
+
+**Landed** `385034a` (feat) + `c25f1eb` (actions v5) + `7890119`/`bc48443`/`a0c19be`
+(rate-limit trust-proxy diagnosis + fix) + docs commit. **No migration.** Scope
+confirmed for this CP: the ops bundle — CI pipeline, the long-broken e2e suite,
+and rate limiting. Reviews UI and refresh tokens are **deferred** to later
+checkpoints.
+
+**CI** (`.github/workflows/ci.yml`, Node 24, actions v5; on push to `main` +
+PRs):
+- `api` job: `npm ci` → build → lint → test.
+- `web` job: `npm ci` → build (with `NEXT_PUBLIC_API_BASE_URL` placeholder) →
+  lint.
+- `smoke-syntax` job: `bash -n scripts/runtime-smoke.sh`.
+- Verified green on GitHub (5 consecutive runs; latest api 31s / web 36s /
+  syntax 6s; only pre-existing `mail.service` lint annotations).
+
+**E2E fix** (`api/test/`): two independent faults — `test/jest-e2e.json` had no
+`moduleNameMapper` for the generated Prisma client's `.js`-relative imports
+(root cause of `Cannot find module './internal/class.js'`), and the starter
+spec still asserted `GET /` → "Hello World!" which no longer exists. Added
+`moduleNameMapper` (`^(\.{1,2}/.*)\.js$` → `$1`) and rewrote the spec to assert
+`GET /` → 404 (global prefix) and `GET /api/health` → 200
+`{status:'ok',service:'bonagri-api',database:'connected'}`. `npm run test:e2e`
+→ **2 passed** (was exit 1).
+
+**Rate limiting** (`@nestjs/throttler` v6.7.1):
+- `ThrottlerModule.forRoot` in `app.module.ts`: default **120 req/min** per
+  client, `errorMessage: "Too many requests — please slow down and try again
+  shortly"`, `setHeaders: true` (exposes `X-RateLimit-*`).
+- Controller-level `ThrottlerGuard` on `auth`, `catalog`, `requests`; per-route
+  `@Throttle` budgets on auth: **login 15/min**, register 10/min, verify-email
+  15/min, resend-verification 5/min; `/auth/me` keeps the 120 default; health
+  intentionally unthrottled (UptimeRobot probes).
+- `main.ts` sets **`trust proxy: 3`** — the value that makes the limiter key on
+  the real client IP behind Render's proxy chain (see live journey). The
+  reasoning is pinned in a code comment: 1–2 trusts Render/Cloudflare hops and
+  keys on per-request edge IPs (scattered buckets → limiter never fires, the
+  exact production symptom observed at trust 1 and 2); 3+ becomes spoofable
+  (client-prepended `X-Forwarded-For` entries would rotate buckets). Exactly 3
+  is both stable and spoof-safe.
+- New unit spec `auth.rate-limit.spec.ts` (+2): 15 logins then 429; per-route
+  bucket isolation (login ≠ register).
+
+**Gates**: api build ✓ / lint ✓ (only pre-existing mail warnings) / test
+**173 passed** (+2) / e2e **2 passed** (fixed); web build ✓ / lint ✓; smoke
+**L1–L3** — suite now **12 acceptance flows, 134 ✓**, exit 0.
+
+Live journey **green 2026-10-19** (API run + browser run; login-only flows, no
+DB writes anywhere — nothing to trap/restore/purge):
+- *API run*: deploy preflight showed `X-RateLimit-Limit: 15` on login (throttler
+  live but mis-keyed) → 16-attempt wrong-password hammer returned 401s with a
+  **non-monotonic** `X-RateLimit-Remaining` (requests split across buckets —
+  `req.ip` was a per-request Cloudflare edge IP at trust 2) → diagnosis
+  middleware (`bc48443`) captured the ground truth: `X-Forwarded-For:
+  <client>, <cloudflare-edge>, <render-internal>` (3 hops, Cloudflare in the
+  path; client prepends land *left* of the real client) → trust **3**
+  (`a0c19be`) → re-hammer: monotonic 14→0, **429 at attempt 16** with the
+  friendly message; scope check during throttle: health 200 / products 200 /
+  anon `/auth/me` 401 (unaffected routes); **spoof resistance**: rotated
+  `X-Forwarded-For` values during the window still → 429 (bucket = real
+  client); **recovery**: window reset → login → 201 with a valid token.
+- *Browser run* (`bonagri-web`): dev@ wrong password → "Invalid email or
+  password" banner (normal error path intact) → API hammer exhausts the shared
+  bucket → dev@ **correct** password in the UI → banner **"Too many requests —
+  please slow down and try again shortly"** (throttler message surfaces through
+  the existing error banner) → wait out the window → correct password →
+  redirected to `/supplier` (Supplier Operations hub renders, 7 total orders).
 
 ## 4. Checkpoint hygiene rules
 

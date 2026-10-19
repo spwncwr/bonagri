@@ -316,7 +316,7 @@ DTOs: `CreateOrderDto` (deliveryAddressId, productId, quantity ≥1, notes?) —
 | Refresh tokens | **NOT FOUND** | — |
 | Rate limiting / security hardening | **PARTIAL — rate limiting VERIFIED DONE** (CP13 `385034a`–`a0c19be`) | `@nestjs/throttler` v6.7.1: default 120 req/min per client (catalog, requests, `/auth/me`), login 15/min, register 10/min, verify-email 15/min, resend-verification 5/min; friendly 429 message + `X-RateLimit-*` headers; health unthrottled (UptimeRobot); keyed on the real client via `trust proxy: 3` behind Render (verified live: monotonic countdown, 429 at attempt 16, XFF-spoof attempts still 429, window recovery 201, browser shows the throttle banner); unit-pinned in `auth.rate-limit.spec.ts`; smoke L1–L3. **Still absent**: helmet/CORS hardening, account lockout (consecutive-failure lockout), refresh tokens |
 | Mobile app | **NOT FOUND** | PWA is partial: manifest + icons + `sw.js` exist but the register component is never mounted |
-| CI/CD | **NOT FOUND** | no `.github/`, no CI config, no deploy scripts that run |
+| CI/CD | **VERIFIED DONE** (CP13 `385034a`) | `.github/workflows/ci.yml` (Node 24, actions v5, push-to-main + PRs): api install/build/lint/unit tests + web install/build/lint + `bash -n` smoke syntax — green on GitHub (6 runs); deploys ride Render auto-deploy on main push; full smoke stays manual (mutates a DB) |
 | Health checks | **VERIFIED DONE** | `GET /api/health` (`health.controller.ts`) — exists despite being on the NOT-DONE list |
 | Production configuration | **NOT FOUND** | CORS origin hard-coded (`main.ts:11`), secrets unchecked at boot, no env-driven config module |
 

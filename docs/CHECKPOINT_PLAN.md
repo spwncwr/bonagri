@@ -60,6 +60,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP11 | Payments (manual EFT + invoices) | 2026-10-14 | done (4a6067b) |
 | CP12 | Delivery tracking | 2026-10-18 | done (d8e180c) |
 | CP13 | Trust & ops hygiene (CI, e2e fix, rate limiting) | 2026-10-19 | done (385034a–a0c19be) |
+| CP14 | Transporter role (delivery jobs) | — | pending |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
 
@@ -603,6 +604,151 @@ DB writes anywhere — nothing to trap/restore/purge):
   please slow down and try again shortly"** (throttler message surfaces through
   the existing error banner) → wait out the window → correct password →
   redirected to `/supplier` (Supplier Operations hub renders, 7 total orders).
+
+### CP14 — Transporter role (delivery jobs)
+
+**Status**: pending — design approved 2026-10-19 (spec for implementation).
+
+**Why it fits**: today the supplier is simultaneously seller and courier — it
+drives `READY_FOR_DELIVERY → OUT_FOR_DELIVERY → DELIVERED` and types driver
+details by hand (CP12's free-text fields). The transporter takes over exactly
+the **courier half** of that job. The `Delivery` status enum already contains
+`PICKED_UP` / `IN_TRANSIT` / `FAILED`, explicitly reserved by CP12 "for a
+future driver app" — this checkpoint activates them. **No `OrderStatus` change.**
+
+**Decisions (confirmed with product owner)**:
+- **Assignment = publish + claim**, not dispatch: at `READY_FOR_DELIVERY` the
+  supplier *publishes* the job; verified transporters whose service area covers
+  the delivery province see it on a claim board and claim it (atomic).
+  Supplier-picks-a-transporter (direct dispatch) is **out** — double-booking
+  two suppliers onto one transporter is unsolvable without capacity
+  calendars; under claim, transporters self-select against their own queue.
+  Mirrors the platform's existing interaction: buyers post requests,
+  suppliers respond (CP7/CP9); now suppliers post delivery jobs,
+  transporters respond.
+- **Onboarding = admin promote only** (no application model): admin promotes a
+  buyer → `TRANSPORTER` creating a `TransporterProfile` (mirrors
+  `promoteToSupplier`), and manages the `verified` flag. Only verified
+  transporters see/claim jobs. Self-serve application deferred until there is
+  real transporter demand.
+- **Full state machine**: assign/publish → pickup → in-transit → complete /
+  fail (+ re-dispatch) with notifications. No deferrals — FAILED→re-dispatch
+  is what makes the flow logically closed (a failed delivery must not strand
+  the order).
+
+**Out of scope (explicit)**: transport fees/money (agreed off-platform; no
+`Payment`/`Invoice`/`deliveryFee` changes), route optimization, transporter
+payouts, self-serve transporter application, distance-based fees, capacity
+limits per transporter, direct dispatch.
+
+**Schema (one migration)**:
+- `UserRole` += `TRANSPORTER`.
+- New `TransporterProfile` (mirrors `SupplierProfile`): `userId @unique`,
+  `businessName`, `vehicleType?` (e.g. bakkie/van/truck), `phone?`, `email?`,
+  `city?`, `province?`,
+  `serviceProvinces String[]` (job board filter), `verified @default(false)`,
+  `user` relation (Cascade), timestamps + indexes on `verified`/`province`.
+- `Delivery` += `transporterId String?` (relation → `TransporterProfile`,
+  indexed; **null = self-delivery = today's behaviour, untouched**),
+  `publishedAt DateTime?`, `failedReason String?`, `failedAt DateTime?`.
+- No `TransportApplication` (admin-promote decision above).
+
+**State machine** (all actions one transaction, ownership re-checked in the
+service; delivery-side states in **bold**, order transitions on arrows):
+
+| Action | Actor | Delivery | Order |
+|---|---|---|---|
+| Publish job | owning supplier / admin (order at READY_FOR_DELIVERY, delivery PENDING, unclaimed) | stamp `publishedAt` | unchanged |
+| Unpublish (before any claim) | owning supplier / admin | clear `publishedAt` | unchanged |
+| Claim | verified TRANSPORTER (board = published ∧ unclaimed ∧ province ∈ `serviceProvinces`) | atomic `PENDING → ASSIGNED` + `transporterId` (conditional update; loser → **409**) | unchanged |
+| Pick up | assigned transporter | → **PICKED_UP**, stamp `pickedUpAt` once (never overwritten) | READY_FOR_DELIVERY → **OUT_FOR_DELIVERY** (skipped if already OUT — re-dispatch retry case) |
+| In transit | assigned transporter | → **IN_TRANSIT** | unchanged |
+| Complete | assigned transporter | → DELIVERED, `deliveredAt` | → **DELIVERED** (invoice already issued at CONFIRMED) |
+| Fail (+reason) | assigned transporter | → **FAILED** + `failedReason`/`failedAt` | unchanged |
+| Re-dispatch | owning supplier / admin (only from FAILED) | with `transporterId?` → FAILED → **ASSIGNED** (same or different transporter, notified); omitted → back to unclaimed **PENDING** (re-publish or self-deliver); failed fields kept as audit | unchanged |
+| Self-delivery (delivery has no `transporterId`) | owning supplier | exactly CP12's current behaviour | current behaviour |
+
+**Ownership handoff rule** (the core invariant): while
+`delivery.transporterId` is set, the supplier is **locked out** of the
+`OUT_FOR_DELIVERY` and `DELIVERED` order transitions (→ 403) — the assigned
+transporter drives those two steps; ADMIN always overrides. Before
+assignment, nothing changes. Two actors never drive the same delivery.
+
+**Failure closure**: *pickup failure* → order still READY_FOR_DELIVERY →
+from FAILED, re-dispatch **with** a transporter keeps the supplier locked out
+(self-delivery only via the admin path until then); re-dispatch **without**
+one clears `transporterId` → back to unclaimed PENDING → supplier may
+re-publish or self-deliver (CP12 path). *Delivery failure* → order stays
+OUT_FOR_DELIVERY (no backward transitions anywhere) → re-dispatch (transporter
+or clear + supplier completes it himself) or buyer opens the existing CP5
+dispute (eligible from OUT_FOR_DELIVERY). Goods-return-to-supplier is
+recorded by FAILED + reason, not by an order status.
+
+**API — new `transport/` module** + two actions on `orders/`:
+- `GET /transport/jobs` — open board (TRANSPORTER, verified): city-level only
+  (pickup city, dropoff city, item count, published age) — **full delivery
+  address + buyer phone unlock only in the claimed job**, via
+  `GET /transport/deliveries` (mine: active + history).
+- `POST /transport/jobs/:orderId/claim` — atomic claim (409 on race).
+- `POST /orders/:id/delivery/publish` · `DELETE .../publish` — supplier/admin;
+  409 if already claimed, 400 unless order READY_FOR_DELIVERY.
+- `PATCH /orders/:id/delivery/pickup | transit | complete | fail {reason?}` —
+  assigned transporter only (unassigned/foreign → 404, no existence leak);
+  each drives the order transition per the table inside one transaction.
+- `POST /orders/:id/delivery/re-dispatch {transporterId?}` — supplier/admin,
+  FAILED only → 409 otherwise; omitted `transporterId` returns to unclaimed
+  PENDING (re-publishable or self-deliverable).
+- `GET /transporters` — verified list (businessName, city, vehicleType,
+  serviceProvinces, verified badge) for the supplier's re-dispatch dropdown.
+- Existing `GET /orders/:id/delivery` widens to the assigned transporter.
+- Guard additions: `@Roles("TRANSPORTER")` on transport routes; the supplier
+  lockout inside `orders.service.updateOrderStatus`.
+
+**Notifications** (reuse `NotificationsService` best-effort email + row
+pattern): job **published** → row to each verified transporter whose
+`serviceProvinces` cover the delivery province; **claimed** → row + email to
+the supplier; **picked up** → row to the buyer ("your order is on the way" —
+currently missing); **failed** → row + email to buyer **and** supplier;
+**re-dispatched to a specific transporter** → row + email to that transporter
+("job assigned to you"; re-dispatch back to the open board re-publishes, so
+the publish fan-out applies again). DELIVERED already notifies the buyer.
+
+**Web**:
+- New **`/transport`** hub (AuthGuard accepts TRANSPORTER): claim board
+  (city-level cards, Claim button → 409 handling "just claimed by someone
+  else"), My deliveries (Pick up / In transit / Delivered / Failed actions,
+  full address + buyer contact only here), history. Header link for
+  TRANSPORTER role only; `/supplier/**` stays closed to transporters.
+- **Supplier hub**: at READY_FOR_DELIVERY — "Publish to transporters" /
+  "Unpublish" beside the existing self-delivery form; once claimed, status
+  buttons for that order render read-only "With ⟨transporter businessName⟩
+  since …" (lockout made visible); after FAILED — "Re-dispatch" (transporter
+  dropdown incl. "back to open board") or self-deliver.
+- **Buyer**: tracking strip + `/orders/[id]` gain PICKED_UP / IN_TRANSIT /
+  FAILED chips; FAILED shows the reason + "raise a dispute" nudge (existing
+  CP5 form).
+- **Admin**: `/admin/transporters` list + verify toggle (mirrors supplier
+  verify) + "Promote to transporter" on the users screen (mirrors
+  `promoteToSupplier`, creates profile exactly once).
+
+**Gates** (standing): migration + committed regenerated client; unit tests
+(claim atomicity/409, lockout 403, pickup skips order flip on retry, publish
+scope, fail/re-dispatch transitions, guards); smoke **section M** (publish →
+board visibility filtered by service province → claim → pickup → in-transit →
+complete + FAILED → re-dispatch path + guards: anonymous 401, unverified
+transporter 403, foreign supplier 404, buyer 403); web build/lint; deployed
+API + browser journey; docs commit. Prod bootstrap for the journey: promote a
+dedicated user to TRANSPORTER via admin (role is single-valued — never
+re-role dev@/buyer@/dealer@).
+
+**Live-journey sketch** (to finalize during implementation): admin promotes a
+journey-dedicated account (register+verify fresh user on prod, or reuse a
+non-demo account) → verified → supplier walks an order to READY_FOR_DELIVERY
+and publishes the job → transporter claims (anonymous/other-transporter sees
+nothing → 409 race proof) → pickup flips order OUT_FOR_DELIVERY + buyer strip
+→ in-transit → complete → DELIVERED + invoice intact → FAILED path on a
+second job → re-dispatch → browser legs: supplier publish/lockout UI,
+transporter hub actions, buyer chips.
 
 ## 4. Checkpoint hygiene rules
 

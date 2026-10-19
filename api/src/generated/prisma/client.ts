@@ -125,6 +125,11 @@ export type Payment = Prisma.PaymentModel
  */
 export type Delivery = Prisma.DeliveryModel
 /**
+ * Model TransporterProfile
+ * 
+ */
+export type TransporterProfile = Prisma.TransporterProfileModel
+/**
  * Model Notification
  * 
  */

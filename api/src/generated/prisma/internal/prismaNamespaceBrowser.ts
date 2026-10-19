@@ -68,6 +68,7 @@ export const ModelName = {
   OrderItem: 'OrderItem',
   Payment: 'Payment',
   Delivery: 'Delivery',
+  TransporterProfile: 'TransporterProfile',
   Notification: 'Notification',
   Invoice: 'Invoice'
 } as const
@@ -342,6 +343,10 @@ export const DeliveryScalarFieldEnum = {
   id: 'id',
   orderId: 'orderId',
   status: 'status',
+  transporterId: 'transporterId',
+  publishedAt: 'publishedAt',
+  failedReason: 'failedReason',
+  failedAt: 'failedAt',
   trackingNumber: 'trackingNumber',
   driverName: 'driverName',
   driverPhone: 'driverPhone',
@@ -354,6 +359,24 @@ export const DeliveryScalarFieldEnum = {
 } as const
 
 export type DeliveryScalarFieldEnum = (typeof DeliveryScalarFieldEnum)[keyof typeof DeliveryScalarFieldEnum]
+
+
+export const TransporterProfileScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  businessName: 'businessName',
+  vehicleType: 'vehicleType',
+  phone: 'phone',
+  email: 'email',
+  city: 'city',
+  province: 'province',
+  serviceProvinces: 'serviceProvinces',
+  verified: 'verified',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TransporterProfileScalarFieldEnum = (typeof TransporterProfileScalarFieldEnum)[keyof typeof TransporterProfileScalarFieldEnum]
 
 
 export const NotificationScalarFieldEnum = {

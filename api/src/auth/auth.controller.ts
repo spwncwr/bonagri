@@ -22,7 +22,7 @@ type AuthenticatedRequest = Request & {
     firstName: string;
     lastName: string;
     phone: string | null;
-    role: "BUYER" | "SUPPLIER" | "ADMIN";
+    role: "BUYER" | "SUPPLIER" | "AGRO_DEALER" | "TRANSPORTER" | "ADMIN";
     status: "ACTIVE" | "SUSPENDED" | "PENDING";
   };
 };

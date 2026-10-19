@@ -14,6 +14,7 @@ enum UserRole {
   BUYER
   SUPPLIER
   AGRO_DEALER
+  TRANSPORTER
   ADMIN
 }
 
@@ -115,6 +116,7 @@ model User {
   resolvedDisputes Dispute[] @relation("DisputeResolver")
   sellerApplication SellerApplication?
   reviewedApplications SellerApplication[] @relation("ApplicationReviewer")
+  transporterProfile TransporterProfile?
   productRequests   ProductRequest[]
   cartItems         CartItem[]
   createdAt       DateTime         @default(now())
@@ -405,6 +407,13 @@ model Delivery {
   id             String         @id @default(uuid())
   orderId        String         @unique
   status         DeliveryStatus @default(PENDING)
+  // CP14: null transporterId = self-delivery (CP12 behaviour, unchanged).
+  transporterId  String?
+  // CP14: stamped when the supplier publishes the job to the claim board.
+  publishedAt    DateTime?
+  // CP14: audit of the latest failed attempt (kept across re-dispatch).
+  failedReason   String?
+  failedAt       DateTime?
   trackingNumber String?        @unique
   driverName     String?
   driverPhone    String?
@@ -413,10 +422,34 @@ model Delivery {
   deliveredAt    DateTime?
   notes          String?
   order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  transporter    TransporterProfile? @relation(fields: [transporterId], references: [id], onDelete: SetNull)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
   @@index([status])
+  @@index([transporterId])
+}
+
+model TransporterProfile {
+  id               String    @id @default(uuid())
+  userId           String    @unique
+  businessName     String
+  vehicleType      String?
+  phone            String?
+  email            String?
+  city             String?
+  province         String?
+  // CP14: provinces whose published jobs this transporter can see.
+  serviceProvinces String[]  @default([])
+  verified         Boolean   @default(false)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries       Delivery[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([businessName])
+  @@index([province])
+  @@index([verified])
 }
 
 model Notification {

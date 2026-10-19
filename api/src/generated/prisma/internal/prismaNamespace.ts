@@ -414,6 +414,7 @@ export const ModelName = {
   OrderItem: 'OrderItem',
   Payment: 'Payment',
   Delivery: 'Delivery',
+  TransporterProfile: 'TransporterProfile',
   Notification: 'Notification',
   Invoice: 'Invoice'
 } as const
@@ -431,7 +432,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "sellerApplication" | "productRequest" | "requestResponse" | "cartItem" | "orderItem" | "payment" | "delivery" | "notification" | "invoice"
+    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "sellerApplication" | "productRequest" | "requestResponse" | "cartItem" | "orderItem" | "payment" | "delivery" | "transporterProfile" | "notification" | "invoice"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1693,6 +1694,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    TransporterProfile: {
+      payload: Prisma.$TransporterProfilePayload<ExtArgs>
+      fields: Prisma.TransporterProfileFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TransporterProfileFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransporterProfilePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TransporterProfileFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransporterProfilePayload>
+        }
+        findFirst: {
+          args: Prisma.TransporterProfileFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransporterProfilePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TransporterProfileFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransporterProfilePayload>
+        }
+        findMany: {
+          args: Prisma.TransporterProfileFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransporterProfilePayload>[]
+        }
+        create: {
+          args: Prisma.TransporterProfileCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransporterProfilePayload>
+        }
+        createMany: {
+          args: Prisma.TransporterProfileCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TransporterProfileCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransporterProfilePayload>[]
+        }
+        delete: {
+          args: Prisma.TransporterProfileDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransporterProfilePayload>
+        }
+        update: {
+          args: Prisma.TransporterProfileUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransporterProfilePayload>
+        }
+        deleteMany: {
+          args: Prisma.TransporterProfileDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TransporterProfileUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TransporterProfileUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransporterProfilePayload>[]
+        }
+        upsert: {
+          args: Prisma.TransporterProfileUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransporterProfilePayload>
+        }
+        aggregate: {
+          args: Prisma.TransporterProfileAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTransporterProfile>
+        }
+        groupBy: {
+          args: Prisma.TransporterProfileGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TransporterProfileGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TransporterProfileCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TransporterProfileCountAggregateOutputType> | number
+        }
+      }
+    }
     Notification: {
       payload: Prisma.$NotificationPayload<ExtArgs>
       fields: Prisma.NotificationFieldRefs
@@ -2134,6 +2209,10 @@ export const DeliveryScalarFieldEnum = {
   id: 'id',
   orderId: 'orderId',
   status: 'status',
+  transporterId: 'transporterId',
+  publishedAt: 'publishedAt',
+  failedReason: 'failedReason',
+  failedAt: 'failedAt',
   trackingNumber: 'trackingNumber',
   driverName: 'driverName',
   driverPhone: 'driverPhone',
@@ -2146,6 +2225,24 @@ export const DeliveryScalarFieldEnum = {
 } as const
 
 export type DeliveryScalarFieldEnum = (typeof DeliveryScalarFieldEnum)[keyof typeof DeliveryScalarFieldEnum]
+
+
+export const TransporterProfileScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  businessName: 'businessName',
+  vehicleType: 'vehicleType',
+  phone: 'phone',
+  email: 'email',
+  city: 'city',
+  province: 'province',
+  serviceProvinces: 'serviceProvinces',
+  verified: 'verified',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TransporterProfileScalarFieldEnum = (typeof TransporterProfileScalarFieldEnum)[keyof typeof TransporterProfileScalarFieldEnum]
 
 
 export const NotificationScalarFieldEnum = {
@@ -2616,6 +2713,7 @@ export type GlobalOmitConfig = {
   orderItem?: Prisma.OrderItemOmit
   payment?: Prisma.PaymentOmit
   delivery?: Prisma.DeliveryOmit
+  transporterProfile?: Prisma.TransporterProfileOmit
   notification?: Prisma.NotificationOmit
   invoice?: Prisma.InvoiceOmit
 }

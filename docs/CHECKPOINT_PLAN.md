@@ -61,7 +61,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP12 | Delivery tracking | 2026-10-18 | done (d8e180c) |
 | CP13 | Trust & ops hygiene (CI, e2e fix, rate limiting) | 2026-10-19 | done (385034a–a0c19be) |
 | CP14 | Transporter role (delivery jobs) | 2026-10-20 | done (073d779–7de6646) |
-| CP15 | Trust bridge (checkpoint evidence) | — | pending (design draft 2026-10-20) |
+| CP15 | Trust bridge (checkpoint evidence) | 2026-10-20 | CP15a done (`3377cc0`–`0d48cf2`); CP15b–d pending |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
 
@@ -784,8 +784,8 @@ re-role dev@/buyer@/dealer@).
 
 ### CP15 — Trust bridge (checkpoint evidence & counterparty confirmation)
 
-**Status**: design draft committed 2026-10-20 — spec only; implementation not
-started (CP14's live journey + docs close first).
+**Status**: design committed 2026-10-20; **CP15a (ledger + geo flags) landed
+2026-10-20** (`3377cc0` schema → `0d48cf2` feature); CP15b–d pending.
 
 **Why it fits**: CP14's `pickup / transit / complete` are **single-party taps** —
 the transporter self-reports, `Delivery.pickedUpAt/deliveredAt` get stamped,
@@ -889,9 +889,10 @@ PATCH supplier profile pin + address pin  SUPPLIER/BUYER: farm/delivery lat+lng
 | Buyer+transporter collusion | Full append-only audit trail | **Accepted**: no real money moves yet; payouts out of scope |
 
 **Phasing** — each sub-phase runs the full gate suite:
-- **CP15a — Ledger + geo flags**: schema + migration + committed client,
+- **CP15a — Ledger + geo flags** ✅ **done 2026-10-20** (`3377cc0`–`0d48cf2`):
+  schema + migration `20261020091344_add_checkpoint_ledger` + committed client,
   checkpoint write/read endpoints, flag engine, pin fields, unit tests,
-  smoke section (extend M or new N).
+  **new smoke section N** (N1–N8).
 - **CP15b — Photos**: client resize + upload, bytea store, sha256 dedupe,
   scoped serving, transport-hub + order-page UI.
 - **CP15c — Counterparty confirmation**: handover/receipt fields, buyer
@@ -899,6 +900,29 @@ PATCH supplier profile pin + address pin  SUPPLIER/BUYER: farm/delivery lat+lng
   transport pages.
 - **CP15d — Trust governance**: aggregates, admin Trust column + flag queue,
   90d-failure review rule, transport-hub stats.
+
+**CP15a landed log (2026-10-20)**: one migration brings both enums
+(`CheckpointType`, `ReceiptStatus`), `DeliveryCheckpoint` (create-only, FK
+cascade, `[deliveryId, recordedAt]` index, plain-string actor ids so audit
+rows outlive accounts), `DeliveryPhoto` (sha256-unique bytea — schema now,
+payloads CP15b), `Delivery` receipt/handover columns, and `lat/lng` pins on
+`SupplierProfile` + `Address`. `POST/GET /api/deliveries/:id/checkpoints`
+behind JWT + roles (TRANSPORTER assigned-only / SUPPLIER self-delivery only,
+foreign → **404 no-leak**; buyer/supplier/transporter/admin read audience;
+actorUserId never leaves the server; **no PATCH/DELETE route exists**). Flag
+engine computes all seven flags at insert (pure function, unit-tested as a
+table). Pins: `PATCH /api/supplier/pin` (farm, SUPPLIER/AGRO_DEALER) +
+`PATCH /api/addresses/:id` (delivery, BUYER, lat/lng added to the partial
+update DTO). Gates: **254** API unit tests, api/web build+lint, smoke
+**14 flows / 162 ✓** exit 0. **Prod live journey green 2026-10-20** — 24/24:
+deploy fingerprint (anon 401), farm pin set on dev@, six checkpoints on
+delivery `507f5a24…` (order `BON-20261020-125561`) exercising every flag
+(`NO_PHOTO` clean case, `GEO_FAR_PICKUP`, `IMPOSSIBLE_SPEED`, `CLOCK_SKEW`,
+`LOW_ACCURACY`, `NO_REFERENCE_PIN`), audience reads 200/200/200/200,
+foreign 404, ghost 404, PATCH/DELETE 404, non-counterparty write 403,
+order status `DELIVERED → DELIVERED` untouched. Prod residue: dev@ farm
+pin + 6 append-only checkpoint rows (the product working as designed).
+No browser legs in CP15a (zero web changes — UI starts CP15b).
 
 **Out of scope (explicit)**: live GPS tracking/telemetry, native app/device
 attestation, perceptual photo hashing, auto-suspension without admin review,

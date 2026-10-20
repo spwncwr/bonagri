@@ -61,6 +61,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP12 | Delivery tracking | 2026-10-18 | done (d8e180c) |
 | CP13 | Trust & ops hygiene (CI, e2e fix, rate limiting) | 2026-10-19 | done (385034a–a0c19be) |
 | CP14 | Transporter role (delivery jobs) | — | pending |
+| CP15 | Trust bridge (checkpoint evidence) | — | pending (design draft 2026-10-20) |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
 
@@ -749,6 +750,135 @@ nothing → 409 race proof) → pickup flips order OUT_FOR_DELIVERY + buyer stri
 → in-transit → complete → DELIVERED + invoice intact → FAILED path on a
 second job → re-dispatch → browser legs: supplier publish/lockout UI,
 transporter hub actions, buyer chips.
+
+### CP15 — Trust bridge (checkpoint evidence & counterparty confirmation)
+
+**Status**: design draft committed 2026-10-20 — spec only; implementation not
+started (CP14's live journey + docs close first).
+
+**Why it fits**: CP14's `pickup / transit / complete` are **single-party taps** —
+the transporter self-reports, `Delivery.pickedUpAt/deliveredAt` get stamped,
+nobody corroborates. A dishonest transporter could tap "complete" from their
+couch. CP15 sits *beside* the CP14 state machine (never driving it) and turns
+self-reported taps into multi-party, timestamped, geo-plausible, photo-backed
+records with reputation consequences.
+
+**Honest framing**: browser GPS and phone photos are **evidence, not proof** —
+a rooted Android with a mock-location app can fake coordinates and any photo
+can be staged. The goal is to raise the cost of fraud from "tap a button" to
+"be physically there with the goods, twice, and convince your counterparty",
+then attach governance. True device-level proof (OS location attestation,
+signed camera capture) needs a native app — future item, out of scope here.
+
+**Five pillars**:
+1. **Append-only checkpoint ledger** — new `DeliveryCheckpoint`, create-only
+   (no update/delete anywhere in the service). Client `clientAt` + server
+   `recordedAt` (authoritative), optional GPS (`lat/lng/accuracyM`), photo
+   link, computed `flags[]`. CP14's state machine stays the source of truth.
+2. **Photo evidence (proof of custody)** — required at pickup and delivery
+   only; `IN_TRANSIT` is the least provable moment → timestamps only (an
+   optional mid-route ping can be added later without schema change).
+   Client-side canvas resize (≤1024px, JPEG ~0.7) → **≤300KB blob stored as
+   Postgres `bytea`** — no object store exists in this stack, volumes are
+   tiny, photos back up with the rows they prove; migration path to object
+   storage later is a one-service change behind an `EvidenceStore` interface.
+   `sha256 @unique` → one photo can never back two checkpoints (409);
+   capture-to-record skew ≤10min. Photos served **only** to buyer/supplier/
+   transporter/admin of that order — never public URLs (unlike product
+   `imageUrl`).
+3. **Geo-plausibility (flag, never block)** — reference pins added as
+   optional `lat/lng` on `SupplierProfile` (farm pin) and `Address`
+   (delivery pin); distance flags fire only when the pin exists. All flags
+   are recorded on the checkpoint and feed governance (pillar 5); **no flag
+   ever rejects a transition**.
+4. **Counterparty confirmation (strongest pillar)** — symmetric handshake:
+   after pickup the delivery shows `PENDING_SUPPLIER` until the supplier
+   confirms handover ("goods handed over at HH:MM"); after completion the
+   order shows `PENDING_BUYER` until the buyer confirms receipt or reports a
+   problem (reject → pre-opens an existing CP5 `Dispute` **with both parties'
+   evidence attached**). 72h of no action → **lazy auto-confirm on read**
+   (`CONFIRMED_LAZY`, visible in stats) — matches this codebase's no-cron
+   style, no `@nestjs/schedule` dependency.
+5. **Track record & consequences** — computed aggregates (Prisma `aggregate`
+   on read; materialize only if slow): `completed`, `failed`,
+   `lazyConfirmRate`, `disputeLosses` (90d), `flagsCount`. Surfaced on the
+   admin transporters page (Trust column + flag drill-down), transport hub
+   (own stats), supplier re-dispatch dropdown. Escalation is **flag-based,
+   admin decides**: 3 failures in 90d → "under review" banner + admin queue
+   entry — never auto-ban (CP14's unverify remains the kill switch).
+
+**Geo flag rules** (computed server-side at checkpoint insert):
+
+| Flag | Rule |
+|---|---|
+| `GEO_FAR_PICKUP` | >50km from supplier pin |
+| `GEO_FAR_DROP` | >25km from address pin |
+| `LOW_ACCURACY` | `accuracyM` > 100, or GPS denied/null coords |
+| `IMPOSSIBLE_SPEED` | >140km/h implied between consecutive checkpoints |
+| `CLOCK_SKEW` | \|clientAt − recordedAt\| > 10min |
+| `NO_PHOTO` | required checkpoint without photo |
+| `NO_REFERENCE_PIN` | distance checks skipped (coverage gap, visible to admin) |
+
+**Schema (one migration)**:
+- New enum `CheckpointType { PICKED_UP IN_TRANSIT DELIVERED FAILED }`, enum
+  `ReceiptStatus { PENDING CONFIRMED CONFIRMED_LAZY DISPUTED }`.
+- New `DeliveryCheckpoint`: `deliveryId` (Cascade, indexed
+  `[deliveryId, recordedAt]`), `type`, `actorUserId`, `actorRole`, `lat?`,
+  `lng?`, `accuracyM?`, `clientAt`, `recordedAt @default(now())`,
+  `photoId?`, `flags String[]`, `note?`. Create-only.
+- New `DeliveryPhoto`: `sha256 @unique`, `mime`, `bytes` (≤300_000 cap
+  enforced in service), `data Bytes`, `createdAt`.
+- `Delivery` += `receiptStatus ReceiptStatus @default(PENDING)`,
+  `receiptAt DateTime?`, `receiptNote String?`, `handoverAt DateTime?`.
+- `SupplierProfile` += `lat Float?`, `lng Float?`; `Address` += `lat Float?`,
+  `lng Float?` (both nullable — no migration friction).
+- No `OrderStatus`/`DeliveryStatus` enum change (CP14 decision holds).
+
+**API surface** (all behind existing guards, ownership re-checked in service):
+```
+POST /api/deliveries/:id/checkpoints      TRANSPORTER (assigned) | SUPPLIER self-delivery — writes ledger + flags
+GET  /api/deliveries/:id/checkpoints      buyer/supplier/transporter/admin of that order
+GET  /api/deliveries/:id/photos/:photoId  same audience, byte stream
+POST /api/deliveries/:id/receipt          BUYER owner: CONFIRM | REJECT (→ CP5 dispute)
+POST /api/deliveries/:id/handover         SUPPLIER owner: CONFIRM
+GET  /api/transport/me/trust              TRANSPORTER: own aggregates
+GET  /api/admin/transporters/:id/trust    ADMIN: aggregates + recent flagged checkpoints
+PATCH supplier profile pin + address pin  SUPPLIER/BUYER: farm/delivery lat+lng
+```
+
+**Fraud matrix (residual-risk view)**:
+
+| Attack | Defense | Residual risk |
+|---|---|---|
+| Tap pickup without goods | Supplier handover confirm + pickup photo + geo flag | Supplier collusion — trusted, onboarding-KYC'd party |
+| Mock GPS anywhere | Accuracy plausibility, speed check, counterparty confirm | **Accepted**: mock locations undetectable from web |
+| Reuse one photo many times | `sha256 @unique` → hard 409 | Edited photo changes hash (perceptual hashing = stretch) |
+| Complete at wrong address | Buyer confirm/reject + geo flag vs pin | Buyer absent → 72h lazy confirm (visible in stats) |
+| Buyer falsely rejects | Transporter's pickup+delivery photos in dispute | Admin judgment (same as CP13 disputes) |
+| Buyer+transporter collusion | Full append-only audit trail | **Accepted**: no real money moves yet; payouts out of scope |
+
+**Phasing** — each sub-phase runs the full gate suite:
+- **CP15a — Ledger + geo flags**: schema + migration + committed client,
+  checkpoint write/read endpoints, flag engine, pin fields, unit tests,
+  smoke section (extend M or new N).
+- **CP15b — Photos**: client resize + upload, bytea store, sha256 dedupe,
+  scoped serving, transport-hub + order-page UI.
+- **CP15c — Counterparty confirmation**: handover/receipt fields, buyer
+  confirm/reject → dispute wiring, 72h lazy confirm, UI on supplier/buyer/
+  transport pages.
+- **CP15d — Trust governance**: aggregates, admin Trust column + flag queue,
+  90d-failure review rule, transport-hub stats.
+
+**Out of scope (explicit)**: live GPS tracking/telemetry, native app/device
+attestation, perceptual photo hashing, auto-suspension without admin review,
+any change to money/payouts, self-drive photo capture for self-deliveries
+beyond the buyer receipt confirmation (which applies to *all* DELIVERED
+orders).
+
+**Gates (standing)**: migration + committed regenerated client; unit tests
+(ledger create-only enforcement, flag rules incl. speed/skew/photo-dedupe 409,
+receipt/handover transitions + 72h lazy confirm + dispute wiring, guards);
+smoke; web build/lint; deployed API + browser journey; docs commit.
 
 ## 4. Checkpoint hygiene rules
 

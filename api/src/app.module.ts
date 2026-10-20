@@ -14,6 +14,7 @@ import { SellerApplicationsModule } from "./seller-applications/seller-applicati
 import { CartModule } from "./cart/cart.module";
 import { TransportModule } from "./transport/transport.module";
 import { CheckpointsModule } from "./checkpoints/checkpoints.module";
+import { MediaModule } from "./media/media.module";
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { CheckpointsModule } from "./checkpoints/checkpoints.module";
     CartModule,
     TransportModule,
     CheckpointsModule,
+    MediaModule,
   ],
 })
 export class AppModule {}

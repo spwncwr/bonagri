@@ -20,6 +20,7 @@ import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { UpdateInventoryDto } from "./dto/update-inventory.dto";
 import { UpdateSupplierPinDto } from "./dto/update-supplier-pin.dto";
+import { UpdateSupplierProfileDto } from "./dto/update-supplier-profile.dto";
 
 type AuthenticatedRequest = Request & {
   user: {
@@ -92,6 +93,17 @@ export class CatalogController {
     @Body() dto: UpdateSupplierPinDto,
   ) {
     return this.catalogService.updateSupplierPin(request.user.id, dto);
+  }
+
+  // CP16a: storefront logo (media foundation phase — logo only).
+  @Patch("supplier/profile")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPPLIER", "AGRO_DEALER")
+  updateSupplierProfile(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateSupplierProfileDto,
+  ) {
+    return this.catalogService.updateSupplierProfile(request.user.id, dto);
   }
 
   @Get("products/:id")

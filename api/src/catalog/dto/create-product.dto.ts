@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   Min,
 } from "class-validator";
@@ -32,8 +33,9 @@ export class CreateProductDto {
   @IsString()
   unit!: string;
 
+  // CP16a: image must be an https URL (Cloudinary upload result or external).
   @IsOptional()
-  @IsString()
+  @IsUrl({ protocols: ["https"], require_protocol: true })
   imageUrl?: string;
 
   @IsOptional()

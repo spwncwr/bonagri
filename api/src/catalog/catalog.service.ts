@@ -1,13 +1,18 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { MediaService } from "../media/media.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { UpdateInventoryDto } from "./dto/update-inventory.dto";
 import { UpdateSupplierPinDto } from "./dto/update-supplier-pin.dto";
+import { UpdateSupplierProfileDto } from "./dto/update-supplier-profile.dto";
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mediaService: MediaService,
+  ) {}
 
   async getCategories() {
     return this.prisma.category.findMany({
@@ -118,6 +123,9 @@ export class CatalogService {
         price: dto.price,
         unit: dto.unit,
         imageUrl: dto.imageUrl,
+        // CP16a: derive the managed public_id from our own Cloudinary URL
+        // server-side; external URLs store no publicId (nothing to destroy).
+        imagePublicId: this.mediaService.derivePublicId(dto.imageUrl),
         status: dto.status ?? "DRAFT",
         inventory: {
           create: {
@@ -269,21 +277,89 @@ export class CatalogService {
           userId,
         },
       },
-      select: { id: true },
+      select: { id: true, imagePublicId: true },
     });
 
     if (!product) {
       throw new NotFoundException("Supplier product not found");
     }
 
-    return this.prisma.product.update({
+    // CP16a: null clears the image; a changed URL swaps it. Only when the
+    // image field is actually present in the payload (undefined = untouched).
+    const { imageUrl, ...rest } = dto;
+    const nextImagePublicId =
+      imageUrl === undefined
+        ? undefined
+        : this.mediaService.derivePublicId(imageUrl);
+
+    const updated = await this.prisma.product.update({
       where: { id },
-      data: dto,
+      data:
+        imageUrl === undefined
+          ? rest
+          : { ...rest, imageUrl, imagePublicId: nextImagePublicId },
       include: {
         category: true,
         supplier: true,
         inventory: true,
       },
     });
+
+    // Destroy the replaced/cleared asset only after the row is safely updated
+    // (best-effort — a Cloudinary hiccup must not fail the update).
+    if (
+      product.imagePublicId &&
+      nextImagePublicId !== undefined &&
+      nextImagePublicId !== product.imagePublicId
+    ) {
+      await this.mediaService.destroyAsset(product.imagePublicId);
+    }
+
+    return updated;
+  }
+
+  // CP16a: supplier storefront logo (the rest of the profile stays
+  // admin-seeded until a real settings page exists).
+  async updateSupplierProfile(userId: string, dto: UpdateSupplierProfileDto) {
+    const profile = await this.prisma.supplierProfile.findUnique({
+      where: { userId },
+      select: { id: true, logoPublicId: true },
+    });
+
+    if (!profile) {
+      throw new NotFoundException("Supplier profile not found");
+    }
+
+    const nextLogoPublicId =
+      dto.logoUrl === undefined
+        ? undefined
+        : this.mediaService.derivePublicId(dto.logoUrl);
+
+    const updated = await this.prisma.supplierProfile.update({
+      where: { id: profile.id },
+      data:
+        dto.logoUrl === undefined
+          ? {}
+          : { logoUrl: dto.logoUrl, logoPublicId: nextLogoPublicId },
+      select: {
+        id: true,
+        businessName: true,
+        logoUrl: true,
+        logoPublicId: true,
+        verified: true,
+        lat: true,
+        lng: true,
+      },
+    });
+
+    if (
+      profile.logoPublicId &&
+      nextLogoPublicId !== undefined &&
+      nextLogoPublicId !== profile.logoPublicId
+    ) {
+      await this.mediaService.destroyAsset(profile.logoPublicId);
+    }
+
+    return updated;
   }
 }

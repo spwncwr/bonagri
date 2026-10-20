@@ -4947,6 +4947,245 @@ echo
 echo "✓ CHECKPOINT LEDGER FLOW ACCEPTANCE PASSED"
 
 echo
+echo "MEDIA FOUNDATION FLOW (CP16a)"
+echo "========================================"
+
+# CP16a: direct signed browser → Cloudinary uploads. The API only signs,
+# derives and cleans up — no bytes transit it. Without CLOUDINARY_* env the
+# signature endpoint answers 503 and everything else (URL validation, derived
+# public_id, logo fields) still works, which is the local/CI path.
+
+echo
+echo "[O1/8] Signature endpoint guards..."
+
+O_SIG_ANON_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/media/signature" \
+    -H "Content-Type: application/json" \
+    -d '{"kind":"product"}'
+)"
+
+if [[ "$O_SIG_ANON_HTTP" != "401" ]]; then
+  fail "Anonymous upload signing must 401. HTTP $O_SIG_ANON_HTTP"
+fi
+
+O_SIG_BUYER_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/media/signature" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"kind":"product"}'
+)"
+
+if [[ "$O_SIG_BUYER_HTTP" != "403" ]]; then
+  fail "Buyer upload signing must 403 (nothing to upload). HTTP $O_SIG_BUYER_HTTP"
+fi
+
+echo "✓ Signature endpoint: anon 401, buyer 403"
+
+echo
+echo "[O2/8] Supplier signature (configured or graceful 503)..."
+
+O_SIG_HTTP="$(
+  curl -sS -o "$LOG_DIR/o-signature.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/media/signature" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"kind":"product"}'
+)"
+
+if [[ "$O_SIG_HTTP" == "200" ]]; then
+  if ! python3 - "$LOG_DIR/o-signature.json" <<'PYJSON'
+import json, sys
+sig = json.load(open(sys.argv[1], encoding="utf-8"))
+assert sig.get("cloudName"), "missing cloudName"
+assert sig.get("apiKey"), "missing apiKey"
+assert str(sig.get("uploadUrl", "")).startswith("https://api.cloudinary.com/"), sig.get("uploadUrl")
+assert isinstance(sig.get("timestamp"), int), "timestamp must be an int"
+assert sig.get("signature"), "missing signature"
+assert str(sig.get("publicId", "")).startswith("bonagri/product/"), sig.get("publicId")
+PYJSON
+  then
+    cat "$LOG_DIR/o-signature.json"
+    fail "Upload signature payload was missing required fields."
+  fi
+elif [[ "$O_SIG_HTTP" == "503" ]]; then
+  if ! grep -q "Media storage not configured" "$LOG_DIR/o-signature.json"; then
+    cat "$LOG_DIR/o-signature.json"
+    fail "503 signature response must say media storage is not configured."
+  fi
+else
+  cat "$LOG_DIR/o-signature.json"
+  fail "Upload signature must answer 200 (configured) or 503 (unset). HTTP $O_SIG_HTTP"
+fi
+
+echo "✓ Signature flow: 200 with full payload, or graceful 503"
+
+echo
+echo "[O3/8] Unknown upload kind rejected..."
+
+O_KIND_HTTP="$(
+  curl -sS -o "$LOG_DIR/o-kind.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/media/signature" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"kind":"delivery_photo"}'
+)"
+
+if [[ "$O_KIND_HTTP" != "400" ]]; then
+  cat "$LOG_DIR/o-kind.json"
+  fail "Unknown upload kind must 400 (DTO whitelist). HTTP $O_KIND_HTTP"
+fi
+
+echo "✓ Unknown kind rejected (400)"
+
+echo
+echo "[O4/8] Product image URL validation + derived public_id..."
+
+O_PRODUCT_ID="$(
+  curl -sS -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    "$API_URL$API_PREFIX/supplier/products" \
+  | python3 -c 'import json,sys; items=json.load(sys.stdin); print(items[0]["id"] if items else "")'
+)"
+
+if [[ -z "$O_PRODUCT_ID" ]]; then
+  fail "No supplier product available for the media round-trip."
+fi
+
+O_HTTP_URL_HTTP="$(
+  curl -sS -o "$LOG_DIR/o-product-http.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/products/$O_PRODUCT_ID" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"imageUrl":"http://cdn.examplefarm.co.za/insecure.jpg"}'
+)"
+
+if [[ "$O_HTTP_URL_HTTP" != "400" ]]; then
+  cat "$LOG_DIR/o-product-http.json"
+  fail "Insecure image URL must 400. HTTP $O_HTTP_URL_HTTP"
+fi
+
+O_SET_HTTP="$(
+  curl -sS -o "$LOG_DIR/o-product-set.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/products/$O_PRODUCT_ID" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"imageUrl":"https://res.cloudinary.com/bonagri-smoke/image/upload/c_fill,w_800/v1760000000/bonagri/product/smoke-img.jpg"}'
+)"
+
+if [[ "$O_SET_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/o-product-set.json"
+  fail "Cloudinary image URL update failed. HTTP $O_SET_HTTP"
+fi
+
+if ! grep -q '"imagePublicId"[[:space:]]*:[[:space:]]*"bonagri/product/smoke-img"' "$LOG_DIR/o-product-set.json"; then
+  cat "$LOG_DIR/o-product-set.json"
+  fail "Managed Cloudinary URL did not store the derived public_id."
+fi
+
+echo "✓ http:// rejected (400); Cloudinary URL stores derived public_id"
+
+echo
+echo "[O5/8] External URLs store no public_id..."
+
+O_EXT_HTTP="$(
+  curl -sS -o "$LOG_DIR/o-product-ext.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/products/$O_PRODUCT_ID" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"imageUrl":"https://cdn.examplefarm.co.za/tomatoes.jpg"}'
+)"
+
+if [[ "$O_EXT_HTTP" != "200" ]] || ! grep -q '"imagePublicId"[[:space:]]*:[[:space:]]*null' "$LOG_DIR/o-product-ext.json"; then
+  cat "$LOG_DIR/o-product-ext.json"
+  fail "External image URL must store imagePublicId null. HTTP $O_EXT_HTTP"
+fi
+
+echo "✓ External URL accepted, no managed public_id"
+
+echo
+echo "[O6/8] Clearing the product image..."
+
+O_CLEAR_HTTP="$(
+  curl -sS -o "$LOG_DIR/o-product-clear.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/products/$O_PRODUCT_ID" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"imageUrl":null}'
+)"
+
+if [[ "$O_CLEAR_HTTP" != "200" ]] || ! grep -q '"imageUrl"[[:space:]]*:[[:space:]]*null' "$LOG_DIR/o-product-clear.json" || ! grep -q '"imagePublicId"[[:space:]]*:[[:space:]]*null' "$LOG_DIR/o-product-clear.json"; then
+  cat "$LOG_DIR/o-product-clear.json"
+  fail "Clearing the image must wipe imageUrl + imagePublicId. HTTP $O_CLEAR_HTTP"
+fi
+
+echo "✓ imageUrl null clears URL + public_id"
+
+echo
+echo "[O7/8] Supplier logo endpoint guards + validation..."
+
+O_LOGO_BUYER_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/supplier/profile" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"logoUrl":null}'
+)"
+
+if [[ "$O_LOGO_BUYER_HTTP" != "403" ]]; then
+  fail "Buyer logo update must 403. HTTP $O_LOGO_BUYER_HTTP"
+fi
+
+O_LOGO_HTTP_URL_HTTP="$(
+  curl -sS -o "$LOG_DIR/o-logo-http.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/supplier/profile" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"logoUrl":"http://cdn.examplefarm.co.za/logo.jpg"}'
+)"
+
+if [[ "$O_LOGO_HTTP_URL_HTTP" != "400" ]]; then
+  cat "$LOG_DIR/o-logo-http.json"
+  fail "Insecure logo URL must 400. HTTP $O_LOGO_HTTP_URL_HTTP"
+fi
+
+O_LOGO_SET_HTTP="$(
+  curl -sS -o "$LOG_DIR/o-logo-set.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/supplier/profile" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"logoUrl":"https://res.cloudinary.com/bonagri-smoke/image/upload/v1760000000/bonagri/supplier_logo/smoke-logo.png"}'
+)"
+
+if [[ "$O_LOGO_SET_HTTP" != "200" ]] || ! grep -q '"logoPublicId"[[:space:]]*:[[:space:]]*"bonagri/supplier_logo/smoke-logo"' "$LOG_DIR/o-logo-set.json"; then
+  cat "$LOG_DIR/o-logo-set.json"
+  fail "Logo update must store the derived public_id. HTTP $O_LOGO_SET_HTTP"
+fi
+
+echo "✓ Logo endpoint: buyer 403, http 400, derived public_id on set"
+
+echo
+echo "[O8/8] Clearing the logo round-trips back to null..."
+
+O_LOGO_CLEAR_HTTP="$(
+  curl -sS -o "$LOG_DIR/o-logo-clear.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/supplier/profile" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"logoUrl":null}'
+)"
+
+if [[ "$O_LOGO_CLEAR_HTTP" != "200" ]] || ! grep -q '"logoUrl"[[:space:]]*:[[:space:]]*null' "$LOG_DIR/o-logo-clear.json" || ! grep -q '"logoPublicId"[[:space:]]*:[[:space:]]*null' "$LOG_DIR/o-logo-clear.json"; then
+  cat "$LOG_DIR/o-logo-clear.json"
+  fail "Clearing the logo must wipe logoUrl + logoPublicId. HTTP $O_LOGO_CLEAR_HTTP"
+fi
+
+echo "✓ Logo null clears URL + public_id"
+
+echo
+echo "✓ MEDIA FOUNDATION FLOW ACCEPTANCE PASSED"
+
+echo
 echo "ADMIN MANAGEMENT FLOW"
 echo "========================================"
 

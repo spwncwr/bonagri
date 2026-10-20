@@ -3,6 +3,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   Min,
 } from "class-validator";
 
@@ -28,9 +29,11 @@ export class UpdateProductDto {
   @IsString()
   unit?: string;
 
+  // CP16a: https URL to replace the image, or null to clear it (which also
+  // destroys our managed Cloudinary asset server-side). Omit to leave as-is.
   @IsOptional()
-  @IsString()
-  imageUrl?: string;
+  @IsUrl({ protocols: ["https"], require_protocol: true })
+  imageUrl?: string | null;
 
   @IsOptional()
   @IsIn(["DRAFT", "ACTIVE", "INACTIVE"])

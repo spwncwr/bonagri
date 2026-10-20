@@ -15,9 +15,17 @@ function makeService() {
     inventory: { update: jest.fn() },
   };
 
+  // CP16a: Cloudinary interaction is mocked — derive is pure URL parsing,
+  // destroy is best-effort.
+  const media = {
+    derivePublicId: jest.fn().mockReturnValue(null),
+    destroyAsset: jest.fn().mockResolvedValue(undefined),
+  };
+
   return {
-    service: new CatalogService(prisma as never),
+    service: new CatalogService(prisma as never, media as never),
     prisma,
+    media,
   };
 }
 
@@ -249,6 +257,223 @@ describe("CatalogService (CP15a reference pins)", () => {
 
       await expect(
         service.updateSupplierPin("buyer-user-1", { lat: 1, lng: 2 }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+});
+
+describe("CatalogService (CP16a media foundation)", () => {
+  describe("createProduct image handling", () => {
+    it("derives the managed public_id from our own Cloudinary URL", async () => {
+      const { service, prisma, media } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+      media.derivePublicId.mockReturnValue("bonagri/product/uuid-1");
+      prisma.product.create.mockResolvedValue({ id: "prod-1" });
+
+      await service.createProduct("supplier-user-1", {
+        categoryId: "cat-1",
+        name: "Tomatoes 1kg",
+        slug: "tomatoes-1kg",
+        sku: "BON-TOM-1",
+        price: 25,
+        unit: "kg",
+        imageUrl:
+          "https://res.cloudinary.com/demo/image/upload/v123/bonagri/product/uuid-1.jpg",
+      } as never);
+
+      expect(media.derivePublicId).toHaveBeenCalledWith(
+        "https://res.cloudinary.com/demo/image/upload/v123/bonagri/product/uuid-1.jpg",
+      );
+      expect(prisma.product.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            imageUrl:
+              "https://res.cloudinary.com/demo/image/upload/v123/bonagri/product/uuid-1.jpg",
+            imagePublicId: "bonagri/product/uuid-1",
+          }),
+        }),
+      );
+    });
+
+    it("stores no public_id for external URLs (nothing to destroy later)", async () => {
+      const { service, prisma } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+      prisma.product.create.mockResolvedValue({ id: "prod-1" });
+
+      await service.createProduct("supplier-user-1", {
+        categoryId: "cat-1",
+        name: "Tomatoes 1kg",
+        slug: "tomatoes-1kg",
+        sku: "BON-TOM-1",
+        price: 25,
+        unit: "kg",
+        imageUrl: "https://cdn.examplefarm.co.za/tomatoes.jpg",
+      } as never);
+
+      expect(prisma.product.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ imagePublicId: null }),
+        }),
+      );
+    });
+  });
+
+  describe("updateProduct image replace/clear (CP16a)", () => {
+    it("destroys the old managed asset when the image URL changes", async () => {
+      const { service, prisma, media } = makeService();
+      prisma.product.findFirst.mockResolvedValue({
+        id: "prod-1",
+        imagePublicId: "bonagri/product/old",
+      });
+      media.derivePublicId.mockReturnValue("bonagri/product/new");
+      prisma.product.update.mockResolvedValue({ id: "prod-1" });
+
+      await service.updateProduct("prod-1", "supplier-user-1", {
+        imageUrl:
+          "https://res.cloudinary.com/demo/image/upload/v999/bonagri/product/new.jpg",
+      } as never);
+
+      expect(prisma.product.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            imagePublicId: "bonagri/product/new",
+          }),
+        }),
+      );
+      expect(media.destroyAsset).toHaveBeenCalledWith("bonagri/product/old");
+    });
+
+    it("keeps the asset when the URL is unchanged", async () => {
+      const { service, prisma, media } = makeService();
+      prisma.product.findFirst.mockResolvedValue({
+        id: "prod-1",
+        imagePublicId: "bonagri/product/same",
+      });
+      media.derivePublicId.mockReturnValue("bonagri/product/same");
+      prisma.product.update.mockResolvedValue({ id: "prod-1" });
+
+      await service.updateProduct("prod-1", "supplier-user-1", {
+        imageUrl:
+          "https://res.cloudinary.com/demo/image/upload/v1/bonagri/product/same.jpg",
+      } as never);
+
+      expect(media.destroyAsset).not.toHaveBeenCalled();
+    });
+
+    it("clears image + public_id on null and destroys the asset", async () => {
+      const { service, prisma, media } = makeService();
+      prisma.product.findFirst.mockResolvedValue({
+        id: "prod-1",
+        imagePublicId: "bonagri/product/old",
+      });
+      prisma.product.update.mockResolvedValue({ id: "prod-1" });
+
+      await service.updateProduct("prod-1", "supplier-user-1", {
+        imageUrl: null,
+      });
+
+      expect(prisma.product.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            imageUrl: null,
+            imagePublicId: null,
+          }),
+        }),
+      );
+      expect(media.destroyAsset).toHaveBeenCalledWith("bonagri/product/old");
+    });
+
+    it("leaves image fields untouched when imageUrl is omitted", async () => {
+      const { service, prisma, media } = makeService();
+      prisma.product.findFirst.mockResolvedValue({
+        id: "prod-1",
+        imagePublicId: "bonagri/product/kept",
+      });
+      prisma.product.update.mockResolvedValue({ id: "prod-1" });
+
+      await service.updateProduct("prod-1", "supplier-user-1", {
+        name: "Renamed only",
+      } as never);
+
+      const data = prisma.product.update.mock.calls[0][0].data;
+      expect("imagePublicId" in data).toBe(false);
+      expect(media.destroyAsset).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("updateSupplierProfile (CP16a logo)", () => {
+    it("sets the logo and derives its public_id", async () => {
+      const { service, prisma, media } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-1",
+        logoPublicId: null,
+      });
+      media.derivePublicId.mockReturnValue("bonagri/supplier_logo/uuid-9");
+      prisma.supplierProfile.update.mockResolvedValue({ id: "sup-1" });
+
+      await service.updateSupplierProfile("supplier-user-1", {
+        logoUrl:
+          "https://res.cloudinary.com/demo/image/upload/v5/bonagri/supplier_logo/uuid-9.png",
+      });
+
+      expect(prisma.supplierProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "sup-1" },
+          data: {
+            logoUrl:
+              "https://res.cloudinary.com/demo/image/upload/v5/bonagri/supplier_logo/uuid-9.png",
+            logoPublicId: "bonagri/supplier_logo/uuid-9",
+          },
+        }),
+      );
+      expect(media.destroyAsset).not.toHaveBeenCalled();
+    });
+
+    it("replacing the logo destroys the previous managed asset", async () => {
+      const { service, prisma, media } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-1",
+        logoPublicId: "bonagri/supplier_logo/old",
+      });
+      media.derivePublicId.mockReturnValue("bonagri/supplier_logo/new");
+      prisma.supplierProfile.update.mockResolvedValue({ id: "sup-1" });
+
+      await service.updateSupplierProfile("supplier-user-1", {
+        logoUrl:
+          "https://res.cloudinary.com/demo/image/upload/v6/bonagri/supplier_logo/new.png",
+      });
+
+      expect(media.destroyAsset).toHaveBeenCalledWith(
+        "bonagri/supplier_logo/old",
+      );
+    });
+
+    it("clearing the logo on null destroys the managed asset", async () => {
+      const { service, prisma, media } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-1",
+        logoPublicId: "bonagri/supplier_logo/old",
+      });
+      prisma.supplierProfile.update.mockResolvedValue({ id: "sup-1" });
+
+      await service.updateSupplierProfile("supplier-user-1", { logoUrl: null });
+
+      expect(prisma.supplierProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { logoUrl: null, logoPublicId: null },
+        }),
+      );
+      expect(media.destroyAsset).toHaveBeenCalledWith(
+        "bonagri/supplier_logo/old",
+      );
+    });
+
+    it("404s when the account has no supplier profile", async () => {
+      const { service, prisma } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateSupplierProfile("buyer-user-1", { logoUrl: null }),
       ).rejects.toThrow(NotFoundException);
     });
   });

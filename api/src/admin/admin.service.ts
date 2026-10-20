@@ -369,6 +369,7 @@ export class AdminService {
       buyers: countFor(usersByRole, "BUYER"),
       suppliers: countFor(usersByRole, "SUPPLIER"),
       dealers: countFor(usersByRole, "AGRO_DEALER"),
+      transporters: countFor(usersByRole, "TRANSPORTER"),
       admins: countFor(usersByRole, "ADMIN"),
       suspended: suspendedUsers,
     };

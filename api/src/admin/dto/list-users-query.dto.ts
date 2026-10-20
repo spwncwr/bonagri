@@ -2,7 +2,7 @@ import { IsIn, IsOptional, IsString } from "class-validator";
 
 export class ListUsersQueryDto {
   @IsOptional()
-  @IsIn(["BUYER", "SUPPLIER", "AGRO_DEALER", "ADMIN"])
+  @IsIn(["BUYER", "SUPPLIER", "AGRO_DEALER", "TRANSPORTER", "ADMIN"])
   role?: "BUYER" | "SUPPLIER" | "AGRO_DEALER" | "TRANSPORTER" | "ADMIN";
 
   @IsOptional()

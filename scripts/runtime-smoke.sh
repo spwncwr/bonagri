@@ -4557,8 +4557,28 @@ if stats.get("users", {}).get("total", 0) < 3:
 if stats.get("products", {}).get("total", 0) < 1:
     raise SystemExit("ERROR: expected at least 1 product in platform stats")
 
+if "transporters" not in stats.get("users", {}):
+    raise SystemExit("ERROR: stats users breakdown is missing 'transporters'")
+
 print("✓ Platform stats: {} users, {} products, {} orders".format(
     stats["users"]["total"], stats["products"]["total"], stats["orders"]["total"]))
+PYJSON
+
+request GET "$API_URL$API_PREFIX/admin/users?role=TRANSPORTER" "" "$ADMIN_TOKEN" > "$LOG_DIR/admin-users-transporter.json"
+
+python3 - "$LOG_DIR/admin-users-transporter.json" <<'PYJSON'
+import json, sys
+
+users = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if not isinstance(users, list):
+    raise SystemExit("ERROR: /admin/users?role=TRANSPORTER must return a list, got: {}".format(str(users)[:200]))
+
+for u in users:
+    if u.get("role") != "TRANSPORTER":
+        raise SystemExit("ERROR: role filter returned a non-TRANSPORTER user: {}".format(u.get("email")))
+
+print("✓ /admin/users?role=TRANSPORTER -> {} account(s)".format(len(users)))
 PYJSON
 
 echo

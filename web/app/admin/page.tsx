@@ -13,6 +13,7 @@ type Stats = {
     buyers: number;
     suppliers: number;
     dealers: number;
+    transporters: number;
     admins: number;
     suspended: number;
   };
@@ -152,6 +153,7 @@ export default function AdminDashboardPage() {
               <div className="mt-2 text-xs text-slate-600">
                 {stats.users.buyers} buyers · {stats.users.suppliers}{" "}
                 suppliers · {stats.users.dealers} dealers ·{" "}
+                {stats.users.transporters} transporters ·{" "}
                 {stats.users.admins} admins
               </div>
               {stats.users.suspended > 0 ? (

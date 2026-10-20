@@ -528,6 +528,20 @@ describe("AdminService (CP3 management)", () => {
         }),
       );
     });
+
+    it("filters by the TRANSPORTER role", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.user.findMany.mockResolvedValue([]);
+
+      await service.getUsers({ role: "TRANSPORTER" });
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ role: "TRANSPORTER" }),
+        }),
+      );
+    });
   });
 
   describe("getStats", () => {
@@ -537,6 +551,7 @@ describe("AdminService (CP3 management)", () => {
       prisma.user.groupBy.mockResolvedValue([
         { role: "BUYER", _count: { _all: 3 } },
         { role: "SUPPLIER", _count: { _all: 1 } },
+        { role: "TRANSPORTER", _count: { _all: 2 } },
       ]);
       prisma.user.count.mockResolvedValue(1);
       prisma.product.groupBy.mockResolvedValue([
@@ -551,8 +566,9 @@ describe("AdminService (CP3 management)", () => {
 
       const stats = await service.getStats();
 
-      expect(stats.users.total).toBe(4);
+      expect(stats.users.total).toBe(6);
       expect(stats.users.buyers).toBe(3);
+      expect(stats.users.transporters).toBe(2);
       expect(stats.users.suspended).toBe(1);
       expect(stats.products.active).toBe(5);
       expect(stats.orders.delivered).toBe(2);

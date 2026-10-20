@@ -50,6 +50,8 @@ export type SupplierProfileMinAggregateOutputType = {
   verified: boolean | null
   lat: number | null
   lng: number | null
+  logoUrl: string | null
+  logoPublicId: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -68,6 +70,8 @@ export type SupplierProfileMaxAggregateOutputType = {
   verified: boolean | null
   lat: number | null
   lng: number | null
+  logoUrl: string | null
+  logoPublicId: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -86,6 +90,8 @@ export type SupplierProfileCountAggregateOutputType = {
   verified: number
   lat: number
   lng: number
+  logoUrl: number
+  logoPublicId: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -116,6 +122,8 @@ export type SupplierProfileMinAggregateInputType = {
   verified?: true
   lat?: true
   lng?: true
+  logoUrl?: true
+  logoPublicId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -134,6 +142,8 @@ export type SupplierProfileMaxAggregateInputType = {
   verified?: true
   lat?: true
   lng?: true
+  logoUrl?: true
+  logoPublicId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -152,6 +162,8 @@ export type SupplierProfileCountAggregateInputType = {
   verified?: true
   lat?: true
   lng?: true
+  logoUrl?: true
+  logoPublicId?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -257,6 +269,8 @@ export type SupplierProfileGroupByOutputType = {
   verified: boolean
   lat: number | null
   lng: number | null
+  logoUrl: string | null
+  logoPublicId: string | null
   createdAt: Date
   updatedAt: Date
   _count: SupplierProfileCountAggregateOutputType | null
@@ -298,6 +312,8 @@ export type SupplierProfileWhereInput = {
   verified?: Prisma.BoolFilter<"SupplierProfile"> | boolean
   lat?: Prisma.FloatNullableFilter<"SupplierProfile"> | number | null
   lng?: Prisma.FloatNullableFilter<"SupplierProfile"> | number | null
+  logoUrl?: Prisma.StringNullableFilter<"SupplierProfile"> | string | null
+  logoPublicId?: Prisma.StringNullableFilter<"SupplierProfile"> | string | null
   createdAt?: Prisma.DateTimeFilter<"SupplierProfile"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SupplierProfile"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -319,6 +335,8 @@ export type SupplierProfileOrderByWithRelationInput = {
   verified?: Prisma.SortOrder
   lat?: Prisma.SortOrderInput | Prisma.SortOrder
   lng?: Prisma.SortOrderInput | Prisma.SortOrder
+  logoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  logoPublicId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
@@ -343,6 +361,8 @@ export type SupplierProfileWhereUniqueInput = Prisma.AtLeast<{
   verified?: Prisma.BoolFilter<"SupplierProfile"> | boolean
   lat?: Prisma.FloatNullableFilter<"SupplierProfile"> | number | null
   lng?: Prisma.FloatNullableFilter<"SupplierProfile"> | number | null
+  logoUrl?: Prisma.StringNullableFilter<"SupplierProfile"> | string | null
+  logoPublicId?: Prisma.StringNullableFilter<"SupplierProfile"> | string | null
   createdAt?: Prisma.DateTimeFilter<"SupplierProfile"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SupplierProfile"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -364,6 +384,8 @@ export type SupplierProfileOrderByWithAggregationInput = {
   verified?: Prisma.SortOrder
   lat?: Prisma.SortOrderInput | Prisma.SortOrder
   lng?: Prisma.SortOrderInput | Prisma.SortOrder
+  logoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  logoPublicId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.SupplierProfileCountOrderByAggregateInput
@@ -390,6 +412,8 @@ export type SupplierProfileScalarWhereWithAggregatesInput = {
   verified?: Prisma.BoolWithAggregatesFilter<"SupplierProfile"> | boolean
   lat?: Prisma.FloatNullableWithAggregatesFilter<"SupplierProfile"> | number | null
   lng?: Prisma.FloatNullableWithAggregatesFilter<"SupplierProfile"> | number | null
+  logoUrl?: Prisma.StringNullableWithAggregatesFilter<"SupplierProfile"> | string | null
+  logoPublicId?: Prisma.StringNullableWithAggregatesFilter<"SupplierProfile"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SupplierProfile"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SupplierProfile"> | Date | string
 }
@@ -407,6 +431,8 @@ export type SupplierProfileCreateInput = {
   verified?: boolean
   lat?: number | null
   lng?: number | null
+  logoUrl?: string | null
+  logoPublicId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutSupplierProfileInput
@@ -428,6 +454,8 @@ export type SupplierProfileUncheckedCreateInput = {
   verified?: boolean
   lat?: number | null
   lng?: number | null
+  logoUrl?: string | null
+  logoPublicId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   products?: Prisma.ProductUncheckedCreateNestedManyWithoutSupplierInput
@@ -447,6 +475,8 @@ export type SupplierProfileUpdateInput = {
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutSupplierProfileNestedInput
@@ -468,6 +498,8 @@ export type SupplierProfileUncheckedUpdateInput = {
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   products?: Prisma.ProductUncheckedUpdateManyWithoutSupplierNestedInput
@@ -488,6 +520,8 @@ export type SupplierProfileCreateManyInput = {
   verified?: boolean
   lat?: number | null
   lng?: number | null
+  logoUrl?: string | null
+  logoPublicId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -505,6 +539,8 @@ export type SupplierProfileUpdateManyMutationInput = {
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -523,6 +559,8 @@ export type SupplierProfileUncheckedUpdateManyInput = {
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -546,6 +584,8 @@ export type SupplierProfileCountOrderByAggregateInput = {
   verified?: Prisma.SortOrder
   lat?: Prisma.SortOrder
   lng?: Prisma.SortOrder
+  logoUrl?: Prisma.SortOrder
+  logoPublicId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -569,6 +609,8 @@ export type SupplierProfileMaxOrderByAggregateInput = {
   verified?: Prisma.SortOrder
   lat?: Prisma.SortOrder
   lng?: Prisma.SortOrder
+  logoUrl?: Prisma.SortOrder
+  logoPublicId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -587,6 +629,8 @@ export type SupplierProfileMinOrderByAggregateInput = {
   verified?: Prisma.SortOrder
   lat?: Prisma.SortOrder
   lng?: Prisma.SortOrder
+  logoUrl?: Prisma.SortOrder
+  logoPublicId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -686,6 +730,8 @@ export type SupplierProfileCreateWithoutUserInput = {
   verified?: boolean
   lat?: number | null
   lng?: number | null
+  logoUrl?: string | null
+  logoPublicId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   products?: Prisma.ProductCreateNestedManyWithoutSupplierInput
@@ -705,6 +751,8 @@ export type SupplierProfileUncheckedCreateWithoutUserInput = {
   verified?: boolean
   lat?: number | null
   lng?: number | null
+  logoUrl?: string | null
+  logoPublicId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   products?: Prisma.ProductUncheckedCreateNestedManyWithoutSupplierInput
@@ -740,6 +788,8 @@ export type SupplierProfileUpdateWithoutUserInput = {
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   products?: Prisma.ProductUpdateManyWithoutSupplierNestedInput
@@ -759,6 +809,8 @@ export type SupplierProfileUncheckedUpdateWithoutUserInput = {
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   products?: Prisma.ProductUncheckedUpdateManyWithoutSupplierNestedInput
@@ -778,6 +830,8 @@ export type SupplierProfileCreateWithoutProductsInput = {
   verified?: boolean
   lat?: number | null
   lng?: number | null
+  logoUrl?: string | null
+  logoPublicId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutSupplierProfileInput
@@ -798,6 +852,8 @@ export type SupplierProfileUncheckedCreateWithoutProductsInput = {
   verified?: boolean
   lat?: number | null
   lng?: number | null
+  logoUrl?: string | null
+  logoPublicId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   responses?: Prisma.RequestResponseUncheckedCreateNestedManyWithoutSupplierInput
@@ -832,6 +888,8 @@ export type SupplierProfileUpdateWithoutProductsInput = {
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutSupplierProfileNestedInput
@@ -852,6 +910,8 @@ export type SupplierProfileUncheckedUpdateWithoutProductsInput = {
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   responses?: Prisma.RequestResponseUncheckedUpdateManyWithoutSupplierNestedInput
@@ -870,6 +930,8 @@ export type SupplierProfileCreateWithoutResponsesInput = {
   verified?: boolean
   lat?: number | null
   lng?: number | null
+  logoUrl?: string | null
+  logoPublicId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutSupplierProfileInput
@@ -890,6 +952,8 @@ export type SupplierProfileUncheckedCreateWithoutResponsesInput = {
   verified?: boolean
   lat?: number | null
   lng?: number | null
+  logoUrl?: string | null
+  logoPublicId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   products?: Prisma.ProductUncheckedCreateNestedManyWithoutSupplierInput
@@ -924,6 +988,8 @@ export type SupplierProfileUpdateWithoutResponsesInput = {
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutSupplierProfileNestedInput
@@ -944,6 +1010,8 @@ export type SupplierProfileUncheckedUpdateWithoutResponsesInput = {
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   products?: Prisma.ProductUncheckedUpdateManyWithoutSupplierNestedInput
@@ -1003,6 +1071,8 @@ export type SupplierProfileSelect<ExtArgs extends runtime.Types.Extensions.Inter
   verified?: boolean
   lat?: boolean
   lng?: boolean
+  logoUrl?: boolean
+  logoPublicId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -1025,6 +1095,8 @@ export type SupplierProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   verified?: boolean
   lat?: boolean
   lng?: boolean
+  logoUrl?: boolean
+  logoPublicId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -1044,6 +1116,8 @@ export type SupplierProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   verified?: boolean
   lat?: boolean
   lng?: boolean
+  logoUrl?: boolean
+  logoPublicId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -1063,11 +1137,13 @@ export type SupplierProfileSelectScalar = {
   verified?: boolean
   lat?: boolean
   lng?: boolean
+  logoUrl?: boolean
+  logoPublicId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type SupplierProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "businessName" | "description" | "registrationNo" | "phone" | "email" | "address" | "city" | "province" | "verified" | "lat" | "lng" | "createdAt" | "updatedAt", ExtArgs["result"]["supplierProfile"]>
+export type SupplierProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "businessName" | "description" | "registrationNo" | "phone" | "email" | "address" | "city" | "province" | "verified" | "lat" | "lng" | "logoUrl" | "logoPublicId" | "createdAt" | "updatedAt", ExtArgs["result"]["supplierProfile"]>
 export type SupplierProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   products?: boolean | Prisma.SupplierProfile$productsArgs<ExtArgs>
@@ -1102,6 +1178,8 @@ export type $SupplierProfilePayload<ExtArgs extends runtime.Types.Extensions.Int
     verified: boolean
     lat: number | null
     lng: number | null
+    logoUrl: string | null
+    logoPublicId: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["supplierProfile"]>
@@ -1543,6 +1621,8 @@ export interface SupplierProfileFieldRefs {
   readonly verified: Prisma.FieldRef<"SupplierProfile", 'Boolean'>
   readonly lat: Prisma.FieldRef<"SupplierProfile", 'Float'>
   readonly lng: Prisma.FieldRef<"SupplierProfile", 'Float'>
+  readonly logoUrl: Prisma.FieldRef<"SupplierProfile", 'String'>
+  readonly logoPublicId: Prisma.FieldRef<"SupplierProfile", 'String'>
   readonly createdAt: Prisma.FieldRef<"SupplierProfile", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"SupplierProfile", 'DateTime'>
 }

@@ -134,6 +134,8 @@ export const SupplierProfileScalarFieldEnum = {
   verified: 'verified',
   lat: 'lat',
   lng: 'lng',
+  logoUrl: 'logoUrl',
+  logoPublicId: 'logoPublicId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -186,6 +188,7 @@ export const ProductScalarFieldEnum = {
   price: 'price',
   unit: 'unit',
   imageUrl: 'imageUrl',
+  imagePublicId: 'imagePublicId',
   status: 'status',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

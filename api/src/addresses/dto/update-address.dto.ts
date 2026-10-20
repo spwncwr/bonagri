@@ -1,9 +1,13 @@
 import {
   IsBoolean,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
 } from "class-validator";
+import { Type } from "class-transformer";
 
 // Partial update: every field is optional; only provided fields change.
 export class UpdateAddressDto {
@@ -55,4 +59,19 @@ export class UpdateAddressDto {
   @IsOptional()
   @IsBoolean()
   isDefault?: boolean;
+
+  // CP15a: optional delivery reference pin for checkpoint geo-plausibility.
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  lat?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  lng?: number;
 }

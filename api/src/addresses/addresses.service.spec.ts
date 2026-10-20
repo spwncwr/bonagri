@@ -117,6 +117,27 @@ describe("AddressesService (CP2 consumer flow)", () => {
       });
       expect(tx.address.updateMany).not.toHaveBeenCalled();
     });
+
+    it("passes the CP15a delivery reference pin through", async () => {
+      const { service, prisma, tx, primeActiveBuyer } = makeService();
+      primeActiveBuyer();
+      prisma.address.findFirst.mockResolvedValue({
+        id: "addr-1",
+        userId: "buyer-1",
+        isDefault: true,
+      });
+      tx.address.update.mockResolvedValue({ id: "addr-1" });
+
+      await service.updateBuyerAddress("buyer-1", "addr-1", {
+        lat: -23.9,
+        lng: 29.46,
+      });
+
+      expect(tx.address.update).toHaveBeenCalledWith({
+        where: { id: "addr-1" },
+        data: { lat: -23.9, lng: 29.46 },
+      });
+    });
   });
 
   describe("deleteBuyerAddress", () => {

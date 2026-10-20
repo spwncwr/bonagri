@@ -3,6 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { UpdateInventoryDto } from "./dto/update-inventory.dto";
+import { UpdateSupplierPinDto } from "./dto/update-supplier-pin.dto";
 
 @Injectable()
 export class CatalogService {
@@ -176,6 +177,24 @@ export class CatalogService {
         lowStockLevel: product.inventory?.lowStockLevel ?? 0,
         isLowStock: quantity - reservedQuantity <= (product.inventory?.lowStockLevel ?? 0),
       };
+    });
+  }
+
+  // CP15a: farm reference pin for checkpoint geo-plausibility flags.
+  async updateSupplierPin(userId: string, dto: UpdateSupplierPinDto) {
+    const profile = await this.prisma.supplierProfile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!profile) {
+      throw new NotFoundException("Supplier profile not found");
+    }
+
+    return this.prisma.supplierProfile.update({
+      where: { id: profile.id },
+      data: { lat: dto.lat, lng: dto.lng },
+      select: { id: true, businessName: true, lat: true, lng: true },
     });
   }
 

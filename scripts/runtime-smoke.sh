@@ -4495,6 +4495,458 @@ echo
 echo "✓ TRANSPORTER DELIVERY FLOW ACCEPTANCE PASSED"
 
 echo
+echo "========================================"
+echo "CHECKPOINT LEDGER FLOW (CP15a)"
+echo "========================================"
+
+# CP15a: evidence ledger rides BESIDE the CP14 state machine — checkpoints
+# never move OrderStatus/DeliveryStatus. Runs after M (reuses its journey
+# transporter + delivered order) and before the admin section (needs the
+# main smoke buyer to still be a BUYER). Pins: supplier farm pin via
+# PATCH /catalog/supplier/pin, delivery pin via PATCH /addresses/:id.
+
+echo
+echo "[N1/8] Supplier farm pin + delivery id..."
+
+N_PIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-supplier-pin.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/supplier/pin" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"lat":-23.88,"lng":29.45}'
+)"
+
+if [[ "$N_PIN_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/n-supplier-pin.json"
+  fail "Supplier farm pin update failed. HTTP $N_PIN_HTTP"
+fi
+
+if ! grep -q '"lat"[[:space:]]*:[[:space:]]*-23.88' "$LOG_DIR/n-supplier-pin.json"; then
+  cat "$LOG_DIR/n-supplier-pin.json"
+  fail "Supplier pin response did not carry the stored coordinates."
+fi
+
+N_DELIVERY_ID="$(
+  curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$M_ORDER2_ID/delivery" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))'
+)"
+
+if [[ -z "$N_DELIVERY_ID" ]]; then
+  fail "Could not resolve the M order-2 delivery id."
+fi
+
+echo "✓ Farm pin stored; delivery $N_DELIVERY_ID in scope"
+
+echo
+echo "[N2/8] Endpoint guards + create-only surface..."
+
+N_ANON_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Content-Type: application/json" \
+    -d '{"type":"PICKED_UP"}'
+)"
+
+if [[ "$N_ANON_HTTP" != "401" ]]; then
+  fail "Anonymous checkpoint write must 401. HTTP $N_ANON_HTTP"
+fi
+
+N_ANON_READ_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints"
+)"
+
+if [[ "$N_ANON_READ_HTTP" != "401" ]]; then
+  fail "Anonymous checkpoint read must 401. HTTP $N_ANON_READ_HTTP"
+fi
+
+N_BUYER_WRITE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"type":"PICKED_UP"}'
+)"
+
+if [[ "$N_BUYER_WRITE_HTTP" != "403" ]]; then
+  fail "Buyer checkpoint write must 403 (roles). HTTP $N_BUYER_WRITE_HTTP"
+fi
+
+N_GHOST_READ_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/deliveries/00000000-0000-0000-0000-000000000000/checkpoints"
+)"
+
+if [[ "$N_GHOST_READ_HTTP" != "404" ]]; then
+  fail "Unknown delivery read must 404. HTTP $N_GHOST_READ_HTTP"
+fi
+
+N_PATCH_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"note":"tamper"}'
+)"
+
+if [[ "$N_PATCH_HTTP" != "404" ]]; then
+  fail "The ledger must be create-only — PATCH route must not exist. HTTP $N_PATCH_HTTP"
+fi
+
+N_DELETE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X DELETE "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $M_TOKEN"
+)"
+
+if [[ "$N_DELETE_HTTP" != "404" ]]; then
+  fail "The ledger must be create-only — DELETE route must not exist. HTTP $N_DELETE_HTTP"
+fi
+
+echo "✓ Guards hold (401/403/404) and no update/delete route exists"
+
+echo
+echo "[N3/8] Transporter pickup checkpoint next to the farm pin..."
+
+N_PICKUP_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-pickup.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"type":"PICKED_UP","lat":-23.8805,"lng":29.4505,"accuracyM":10,"note":"crates loaded"}'
+)"
+
+if [[ "$N_PICKUP_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/n-pickup.json"
+  fail "Pickup checkpoint write failed. HTTP $N_PICKUP_HTTP"
+fi
+
+python3 - "$LOG_DIR/n-pickup.json" <<'PYJSON'
+import json, sys
+
+cp = json.load(open(sys.argv[1], encoding="utf-8"))
+flags = cp.get("flags", [])
+
+if cp.get("actorRole") != "TRANSPORTER":
+    raise SystemExit("ERROR: checkpoint actorRole must be TRANSPORTER")
+if "NO_PHOTO" not in flags:
+    raise SystemExit("ERROR: CP15a has no photo upload yet — NO_PHOTO must fire: {}".format(flags))
+if "GEO_FAR_PICKUP" in flags:
+    raise SystemExit("ERROR: checkpoint 50m from the farm pin flagged GEO_FAR_PICKUP: {}".format(flags))
+
+print("✓ Pickup checkpoint stored (flags: {})".format(", ".join(flags)))
+PYJSON
+
+echo
+echo "[N4/8] Geo flags: far pickup + impossible speed..."
+
+N_FAR_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-far.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"type":"PICKED_UP","lat":-24.6,"lng":29.45,"accuracyM":10}'
+)"
+
+if [[ "$N_FAR_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/n-far.json"
+  fail "Far pickup checkpoint write failed. HTTP $N_FAR_HTTP"
+fi
+
+python3 - "$LOG_DIR/n-far.json" <<'PYJSON'
+import json, sys
+
+flags = json.load(open(sys.argv[1], encoding="utf-8")).get("flags", [])
+
+if "GEO_FAR_PICKUP" not in flags:
+    raise SystemExit("ERROR: pickup ~80km from the farm pin must flag GEO_FAR_PICKUP: {}".format(flags))
+
+print("✓ Far pickup flagged ({})".format(", ".join(flags)))
+PYJSON
+
+N_TRANSIT_FAR_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-transit-far.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"type":"IN_TRANSIT","lat":-23.0,"lng":29.45,"accuracyM":10}'
+)"
+
+if [[ "$N_TRANSIT_FAR_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/n-transit-far.json"
+  fail "Transit checkpoint write failed. HTTP $N_TRANSIT_FAR_HTTP"
+fi
+
+python3 - "$LOG_DIR/n-transit-far.json" <<'PYJSON'
+import json, sys
+
+flags = json.load(open(sys.argv[1], encoding="utf-8")).get("flags", [])
+
+if "IMPOSSIBLE_SPEED" not in flags:
+    raise SystemExit("ERROR: ~100km jump within seconds must flag IMPOSSIBLE_SPEED: {}".format(flags))
+
+print("✓ Impossible speed flagged ({})".format(", ".join(flags)))
+PYJSON
+
+echo
+echo "[N5/8] Clock skew + low accuracy..."
+
+N_SKEW_AT="$(date -u -v-30M +%Y-%m-%dT%H:%M:%SZ)"
+
+N_SKEW_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-skew.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"type\":\"IN_TRANSIT\",\"lat\":-23.881,\"lng\":29.451,\"accuracyM\":10,\"clientAt\":\"$N_SKEW_AT\"}"
+)"
+
+if [[ "$N_SKEW_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/n-skew.json"
+  fail "Skewed checkpoint write failed. HTTP $N_SKEW_HTTP"
+fi
+
+python3 - "$LOG_DIR/n-skew.json" <<'PYJSON'
+import json, sys
+
+flags = json.load(open(sys.argv[1], encoding="utf-8")).get("flags", [])
+
+if "CLOCK_SKEW" not in flags:
+    raise SystemExit("ERROR: clientAt 30min behind recordedAt must flag CLOCK_SKEW: {}".format(flags))
+
+print("✓ Clock skew flagged ({})".format(", ".join(flags)))
+PYJSON
+
+N_ACC_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-acc.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"type":"IN_TRANSIT","lat":-23.882,"lng":29.452,"accuracyM":250}'
+)"
+
+if [[ "$N_ACC_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/n-acc.json"
+  fail "Low-accuracy checkpoint write failed. HTTP $N_ACC_HTTP"
+fi
+
+python3 - "$LOG_DIR/n-acc.json" <<'PYJSON'
+import json, sys
+
+flags = json.load(open(sys.argv[1], encoding="utf-8")).get("flags", [])
+
+if "LOW_ACCURACY" not in flags:
+    raise SystemExit("ERROR: accuracyM 250 must flag LOW_ACCURACY: {}".format(flags))
+
+print("✓ Low accuracy flagged ({})".format(", ".join(flags)))
+PYJSON
+
+echo
+echo "[N6/8] Delivery checkpoints vs the delivery address pin..."
+
+N_NOPIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-nopin.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"type":"DELIVERED","lat":-23.9,"lng":29.46,"accuracyM":10}'
+)"
+
+if [[ "$N_NOPIN_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/n-nopin.json"
+  fail "Delivered checkpoint write failed. HTTP $N_NOPIN_HTTP"
+fi
+
+python3 - "$LOG_DIR/n-nopin.json" <<'PYJSON'
+import json, sys
+
+flags = json.load(open(sys.argv[1], encoding="utf-8")).get("flags", [])
+
+if "NO_REFERENCE_PIN" not in flags:
+    raise SystemExit("ERROR: DELIVERED with no address pin must flag NO_REFERENCE_PIN: {}".format(flags))
+
+print("✓ Missing reference pin flagged ({})".format(", ".join(flags)))
+PYJSON
+
+N_ADDR_PIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-addr-pin.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/addresses/$ADDRESS_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"lat":-23.9,"lng":29.46}'
+)"
+
+if [[ "$N_ADDR_PIN_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/n-addr-pin.json"
+  fail "Address pin update failed. HTTP $N_ADDR_PIN_HTTP"
+fi
+
+N_NEAR_DROP_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-near-drop.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"type":"DELIVERED","lat":-23.9005,"lng":29.4605,"accuracyM":10}'
+)"
+
+if [[ "$N_NEAR_DROP_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/n-near-drop.json"
+  fail "Near-drop checkpoint write failed. HTTP $N_NEAR_DROP_HTTP"
+fi
+
+python3 - "$LOG_DIR/n-near-drop.json" <<'PYJSON'
+import json, sys
+
+flags = json.load(open(sys.argv[1], encoding="utf-8")).get("flags", [])
+
+if flags != ["NO_PHOTO"]:
+    raise SystemExit("ERROR: on-pin delivery checkpoint with fresh state should be clean (only NO_PHOTO): {}".format(flags))
+
+print("✓ On-pin delivery checkpoint clean (NO_PHOTO only)")
+PYJSON
+
+N_LEDGER="$(
+  curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints"
+)"
+
+echo "$N_LEDGER" > "$LOG_DIR/n-ledger.json"
+
+python3 - "$LOG_DIR/n-ledger.json" <<'PYJSON'
+import json, sys
+
+rows = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if not isinstance(rows, list) or len(rows) < 7:
+    raise SystemExit("ERROR: buyer ledger read must list every checkpoint (got {})".format(len(rows) if isinstance(rows, list) else rows))
+if rows[0].get("type") != "PICKED_UP":
+    raise SystemExit("ERROR: ledger must be ordered by recordedAt asc")
+if any("actorUserId" in row for row in rows):
+    raise SystemExit("ERROR: actorUserId must never leak to the audience")
+
+print("✓ Buyer reads the full {}-row ledger (ordered, no actor ids)".format(len(rows)))
+PYJSON
+
+echo
+echo "[N7/8] Checkpoints never drive the state machine..."
+
+N_SELF_ORDER_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-self-order.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"productId\":\"$PRODUCT_ID\",\"quantity\":1,\"notes\":\"CP15a self-delivery checkpoint order\"}"
+)"
+
+if [[ "$N_SELF_ORDER_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/n-self-order.json"
+  fail "Self-delivery order creation failed. HTTP $N_SELF_ORDER_HTTP"
+fi
+
+N_SELF_ORDER_ID="$(
+  python3 - "$LOG_DIR/n-self-order.json" <<'PYJSON'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+
+order = data.get("order") if isinstance(data.get("order"), dict) else data
+
+if not order.get("id"):
+    raise SystemExit("CP15a order id missing from creation response.")
+
+print(order["id"])
+PYJSON
+)"
+
+for N_STEP in CONFIRMED PROCESSING READY_FOR_DELIVERY; do
+  N_STEP_HTTP="$(
+    curl -sS -o "$LOG_DIR/n-self-$N_STEP.json" -w "%{http_code}" \
+      -X PATCH "$API_URL$API_PREFIX/orders/$N_SELF_ORDER_ID/status" \
+      -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"status\":\"$N_STEP\"}"
+  )"
+
+  if [[ "$N_STEP_HTTP" != "200" ]]; then
+    cat "$LOG_DIR/n-self-$N_STEP.json"
+    fail "Self-delivery transition to $N_STEP failed. HTTP $N_STEP_HTTP"
+  fi
+done
+
+N_SELF_DELIVERY_ID="$(
+  curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$N_SELF_ORDER_ID/delivery" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))'
+)"
+
+if [[ -z "$N_SELF_DELIVERY_ID" ]]; then
+  fail "READY_FOR_DELIVERY did not seed a delivery row."
+fi
+
+echo
+echo "[N8/8] Supplier self-delivery evidence + state-machine isolation..."
+
+N_SELF_CP_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-self-cp.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/deliveries/$N_SELF_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"type":"PICKED_UP","lat":-23.8802,"lng":29.4502,"accuracyM":9,"note":"loaded the bakkie"}'
+)"
+
+if [[ "$N_SELF_CP_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/n-self-cp.json"
+  fail "Self-delivery checkpoint write failed. HTTP $N_SELF_CP_HTTP"
+fi
+
+python3 - "$LOG_DIR/n-self-cp.json" <<'PYJSON'
+import json, sys
+
+cp = json.load(open(sys.argv[1], encoding="utf-8"))
+flags = cp.get("flags", [])
+
+if cp.get("actorRole") != "SUPPLIER":
+    raise SystemExit("ERROR: self-delivery checkpoint actorRole must be SUPPLIER: {}".format(cp))
+if "NO_PHOTO" not in flags:
+    raise SystemExit("ERROR: required self-delivery pickup must flag NO_PHOTO: {}".format(flags))
+
+print("✓ Supplier self-delivery checkpoint stored (actorRole SUPPLIER)")
+PYJSON
+
+N_SELF_STATE="$(
+  curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$N_SELF_ORDER_ID"
+)"
+
+if ! echo "$N_SELF_STATE" | grep -q '"status"[[:space:]]*:[[:space:]]*"READY_FOR_DELIVERY"'; then
+  echo "$N_SELF_STATE"
+  fail "A checkpoint moved the order state — the ledger must never drive the machine."
+fi
+
+echo "✓ Order still READY_FOR_DELIVERY after a pickup checkpoint"
+
+N_SELF_LOCKOUT_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/deliveries/$N_DELIVERY_ID/checkpoints" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"type":"DELIVERED","lat":-23.9,"lng":29.46}'
+)"
+
+if [[ "$N_SELF_LOCKOUT_HTTP" != "404" ]]; then
+  fail "Supplier writing checkpoints on a transporter-owned delivery must 404. HTTP $N_SELF_LOCKOUT_HTTP"
+fi
+
+echo "✓ Supplier locked out of transporter-owned ledgers (404)"
+
+echo
+echo "✓ CHECKPOINT LEDGER FLOW ACCEPTANCE PASSED"
+
+echo
 echo "ADMIN MANAGEMENT FLOW"
 echo "========================================"
 

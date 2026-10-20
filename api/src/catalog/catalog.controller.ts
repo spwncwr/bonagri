@@ -19,6 +19,7 @@ import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { UpdateInventoryDto } from "./dto/update-inventory.dto";
+import { UpdateSupplierPinDto } from "./dto/update-supplier-pin.dto";
 
 type AuthenticatedRequest = Request & {
   user: {
@@ -80,6 +81,17 @@ export class CatalogController {
       productId,
       dto,
     );
+  }
+
+  // CP15a: the farm reference pin used by the checkpoint geo-flag engine.
+  @Patch("supplier/pin")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPPLIER", "AGRO_DEALER")
+  updateSupplierPin(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateSupplierPinDto,
+  ) {
+    return this.catalogService.updateSupplierPin(request.user.id, dto);
   }
 
   @Get("products/:id")

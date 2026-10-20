@@ -11,7 +11,7 @@ function makeService() {
       create: jest.fn(),
       update: jest.fn(),
     },
-    supplierProfile: { findUnique: jest.fn() },
+    supplierProfile: { findUnique: jest.fn(), update: jest.fn() },
     inventory: { update: jest.fn() },
   };
 
@@ -211,5 +211,45 @@ describe("CatalogService (CP4 agro dealers)", () => {
         }),
       }),
     );
+  });
+});
+
+describe("CatalogService (CP15a reference pins)", () => {
+  describe("updateSupplierPin", () => {
+    it("stores the farm pin on the caller's own profile", async () => {
+      const { service, prisma } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+      prisma.supplierProfile.update.mockResolvedValue({
+        id: "sup-1",
+        businessName: "Test Farm",
+        lat: -23.88,
+        lng: 29.45,
+      });
+
+      const result = await service.updateSupplierPin("supplier-user-1", {
+        lat: -23.88,
+        lng: 29.45,
+      });
+
+      expect(prisma.supplierProfile.findUnique).toHaveBeenCalledWith({
+        where: { userId: "supplier-user-1" },
+        select: { id: true },
+      });
+      expect(prisma.supplierProfile.update).toHaveBeenCalledWith({
+        where: { id: "sup-1" },
+        data: { lat: -23.88, lng: 29.45 },
+        select: { id: true, businessName: true, lat: true, lng: true },
+      });
+      expect(result).toBeDefined();
+    });
+
+    it("404s when the account has no supplier profile", async () => {
+      const { service, prisma } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateSupplierPin("buyer-user-1", { lat: 1, lng: 2 }),
+      ).rejects.toThrow(NotFoundException);
+    });
   });
 });

@@ -176,6 +176,11 @@ export class AddressesService {
           ...(dto.isDefault !== undefined
             ? { isDefault: dto.isDefault }
             : {}),
+          // CP15a: delivery reference pin (either half may be cleared with
+          // an explicit null via the pair semantics — partial pairs are
+          // rejected by the flag engine, not here).
+          ...(dto.lat !== undefined ? { lat: dto.lat } : {}),
+          ...(dto.lng !== undefined ? { lng: dto.lng } : {}),
         },
       });
     });

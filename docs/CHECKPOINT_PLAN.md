@@ -62,6 +62,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP13 | Trust & ops hygiene (CI, e2e fix, rate limiting) | 2026-10-19 | done (385034a–a0c19be) |
 | CP14 | Transporter role (delivery jobs) | 2026-10-20 | done (073d779–7de6646) |
 | CP15 | Trust bridge (checkpoint evidence) | 2026-10-20 | CP15a done (`3377cc0`–`0d48cf2`); CP15b–d pending |
+| CP16 | Media & branding (Cloudinary) | 2026-10-20 | CP16a done (`599dcbe`–`74acca8`); CP16b–c pending |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
 
@@ -934,6 +935,69 @@ orders).
 (ledger create-only enforcement, flag rules incl. speed/skew/photo-dedupe 409,
 receipt/handover transitions + 72h lazy confirm + dispute wiring, guards);
 smoke; web build/lint; deployed API + browser journey; docs commit.
+
+### CP16 — Media & branding (Cloudinary)
+
+**Status**: designed + **CP16a (media foundation) landed 2026-10-20**
+(`599dcbe` schema → `74acca8` feature); CP16b–c pending. Requires a Cloudinary
+account (free tier) with
+`CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` set in
+`api/.env` and Render — until then the signature endpoint answers 503 and the
+stack runs on the URL-paste fallback.
+
+**Problem (verified 2026-10-20)**: zero images rendered anywhere in `web/`
+(no `<img>`/`next/image` tags at all). `Product.imageUrl` is a write-only
+free-text field — supplier forms collect it, the API stores/returns it,
+nothing displays it. No upload exists anywhere (no multer/cloudinary), the
+site logo is a duplicated text wordmark, and `SupplierProfile` has no branding
+field.
+
+**Architecture**: signed **direct browser → Cloudinary** uploads — bytes never
+transit the Render API (100kb JSON body limit; no reason to proxy MBs):
+1. `POST /api/media/signature` (JWT; SUPPLIER/AGRO_DEALER/ADMIN; buyer → 403)
+   returns `{cloudName, apiKey, uploadUrl, timestamp, signature, publicId}`
+   for a **server-generated** `bonagri/<kind>/<uuid>` public_id (clients
+   cannot squat paths).
+2. Browser POSTs the file straight to `api.cloudinary.com`, gets back
+   `secure_url` + `public_id`, submits the URL with its entity form.
+3. API validates `https`-only URLs (400 otherwise), **derives**
+   `imagePublicId`/`logoPublicId` back out of our own `res.cloudinary.com`
+   URLs server-side (never trusts the client), and best-effort **destroys**
+   the old asset on replace/clear (after the row update, errors swallowed).
+
+**User decisions (2026-10-20)**: CP15b delivery photos stay **bytea**
+(evidence semantics — append-only, sha256 dedupe, counterparty-only serving;
+Cloudinary owns public/catalog media only). Cloudinary account to be created
+by the user before the CP16b live journey.
+
+- **CP16a — Media foundation (API)** ✅ **done 2026-10-20**: `cloudinary` dep;
+  `media/` module (signature + config-guard 503 + derive + destroy);
+  migration `20261020122650_add_media_fields` (`Product.imagePublicId?`,
+  `SupplierProfile.logoUrl?/logoPublicId?`) + committed client; product
+  create/update `imageUrl` → https-validated (update also accepts `null` to
+  clear); new `PATCH /api/supplier/profile` (logoUrl partial update); unit
+  tests (signature guard/shape, derive URL vectors incl. transform segments
+  and foreign-host negatives, destroy best-effort, catalog replace/clear
+  matrix, logo ownership); **smoke section O** (O1–O8). ⚠️ **Gate gotcha
+  (caught by the smoke, now routine)**: `prisma migrate dev` did **not**
+  regenerate the committed client under `src/generated/prisma/` (Prisma 7
+  config) — runtime 500 `Unknown argument imagePublicId` until an explicit
+  `npx prisma generate`; run it after every migration.
+- **CP16b — Product photos (web)**: `lib/media.ts` sign→direct-upload helper
+  + `<ImageUpload>` widget (client size/format cap → sign → upload → preview);
+  product new/edit forms switch from URL paste to upload (URL paste stays as
+  fallback); marketplace card + product modal + order lines render `<img>`
+  with the existing tone/visual panel as fallback; Cloudinary URL builder
+  (`w_`/`q_auto`/`f_auto`) so the free-tier server does zero image work.
+- **CP16c — Branding**: shared `<Logo>` component replacing the duplicated
+  wordmarks; favicon + PWA icons + og-image regenerated from the logo;
+  supplier logo upload UI + display (marketplace cards, supplier hub,
+  transport hub); site-logo admin edit path via the ADMIN-signed media flow.
+
+**Gates (standing)**: migration + committed client; unit tests; smoke
+section(s); api/web build+lint; deployed live journey (CP16b/c need real
+CLOUDINARY envs — uploads + displayed images verified in browser); docs
+commit.
 
 ## 4. Checkpoint hygiene rules
 

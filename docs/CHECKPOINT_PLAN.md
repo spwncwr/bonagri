@@ -60,7 +60,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP11 | Payments (manual EFT + invoices) | 2026-10-14 | done (4a6067b) |
 | CP12 | Delivery tracking | 2026-10-18 | done (d8e180c) |
 | CP13 | Trust & ops hygiene (CI, e2e fix, rate limiting) | 2026-10-19 | done (385034a–a0c19be) |
-| CP14 | Transporter role (delivery jobs) | — | pending |
+| CP14 | Transporter role (delivery jobs) | 2026-10-20 | done (073d779–7de6646) |
 | CP15 | Trust bridge (checkpoint evidence) | — | pending (design draft 2026-10-20) |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
@@ -608,7 +608,9 @@ DB writes anywhere — nothing to trap/restore/purge):
 
 ### CP14 — Transporter role (delivery jobs)
 
-**Status**: pending — design approved 2026-10-19 (spec for implementation).
+**Status**: done — design 2026-10-19; schema `073d779` + feature `7de6646`
+(CI green); deployed and **live journey green 2026-10-20** (log below); docs
+closed in this checkpoint's docs commit.
 
 **Why it fits**: today the supplier is simultaneously seller and courier — it
 drives `READY_FOR_DELIVERY → OUT_FOR_DELIVERY → DELIVERED` and types driver
@@ -742,14 +744,43 @@ API + browser journey; docs commit. Prod bootstrap for the journey: promote a
 dedicated user to TRANSPORTER via admin (role is single-valued — never
 re-role dev@/buyer@/dealer@).
 
-**Live-journey sketch** (to finalize during implementation): admin promotes a
-journey-dedicated account (register+verify fresh user on prod, or reuse a
-non-demo account) → verified → supplier walks an order to READY_FOR_DELIVERY
-and publishes the job → transporter claims (anonymous/other-transporter sees
-nothing → 409 race proof) → pickup flips order OUT_FOR_DELIVERY + buyer strip
-→ in-transit → complete → DELIVERED + invoice intact → FAILED path on a
-second job → re-dispatch → browser legs: supplier publish/lockout UI,
-transporter hub actions, buyer chips.
+**Live journey 2026-10-20 (prod)** — all legs green:
+
+- *Bootstrap*: product owner registered + verified a dedicated journey
+  account on the site (no re-role of dev@/buyer@/dealer@) → admin promote →
+  **Journey Transport** (Limpopo, city Polokwane, `serviceProvinces
+  ["Limpopo"]`) → `GET /admin/transporters` → verify toggle → transporter
+  login 201. Buyer leg used the approved **buyer@ temporary-demote on Neon**
+  (restored to SUPPLIER afterwards).
+- *API run (37 checks)*: order A `BON-20261020-527304` — walk to
+  READY_FOR_DELIVERY → anon board **401** / buyer **403** → publish → claim
+  (**second claim 409** "You already claimed this delivery job") → re-publish
+  **409** "already claimed or in progress" → supplier `OUT_FOR_DELIVERY`
+  **403** "This delivery is assigned to a transporter" → pickup → in-transit →
+  complete → **DELIVERED + `INV-BON-20261020-527304`**, delivery stamps
+  `pickedUpAt`/`deliveredAt`, buyer detail shows the transporter businessName.
+  Order B `BON-20261020-125561` failure loop — pickup → transit → **fail**
+  ("Buyer unreachable at gate, no answer on phone") → order **stays
+  OUT_FOR_DELIVERY** (no backward transition) + `failedReason`/`failedAt`
+  visible to the buyer → re-dispatch to board (PENDING, unclaimed) →
+  re-publish → re-claim → **retry pickup with `pickedUpAt` preserved**
+  (`2026-10-20T03:46:38.718Z` byte-identical across the failure) → transit →
+  complete → **DELIVERED + invoice**.
+- *Browser run* (order C `BON-20261020-722951`): supplier **Publish to
+  transporters** → "On the claim board — Published 20 Oct 2026, 05:55 —
+  transporters covering Limpopo can claim it" + Unpublish → hub claim board
+  (city-level card, board 1 → 0 after claim; full buyer name/phone/address
+  unlock **only after** claim) → **Confirm pickup** → **Start transit** →
+  buyer `#orders` chips **OUT FOR DELIVERY / IN TRANSIT** → supplier lockout
+  strip "**With Journey Transport since 20 Oct 2026, 06:03** — they drive the
+  rest of this order from their hub" with the self-delivery button suppressed
+  → **Mark delivered** → hub "Delivery completed. Thank you!" + History 3/3
+  Delivered; buyer `/orders/[id]` timeline shows `Out for delivery ·
+  Transporter` / `Delivered · Transporter` + tracking panel "Transporter
+  Journey Transport" + dispute nudge; invoices intact on all three orders.
+- *Residue (documented)*: three journey orders with invoices, the verified
+  **Journey Transport** profile (kept for future journeys) and buyer@'s
+  journey notifications remain on prod; buyer@ restored to SUPPLIER.
 
 ### CP15 — Trust bridge (checkpoint evidence & counterparty confirmation)
 

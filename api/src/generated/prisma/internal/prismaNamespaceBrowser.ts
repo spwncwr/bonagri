@@ -68,6 +68,8 @@ export const ModelName = {
   OrderItem: 'OrderItem',
   Payment: 'Payment',
   Delivery: 'Delivery',
+  DeliveryCheckpoint: 'DeliveryCheckpoint',
+  DeliveryPhoto: 'DeliveryPhoto',
   TransporterProfile: 'TransporterProfile',
   Notification: 'Notification',
   Invoice: 'Invoice'
@@ -130,6 +132,8 @@ export const SupplierProfileScalarFieldEnum = {
   city: 'city',
   province: 'province',
   verified: 'verified',
+  lat: 'lat',
+  lng: 'lng',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -150,6 +154,8 @@ export const AddressScalarFieldEnum = {
   postalCode: 'postalCode',
   country: 'country',
   isDefault: 'isDefault',
+  lat: 'lat',
+  lng: 'lng',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -354,11 +360,46 @@ export const DeliveryScalarFieldEnum = {
   pickedUpAt: 'pickedUpAt',
   deliveredAt: 'deliveredAt',
   notes: 'notes',
+  receiptStatus: 'receiptStatus',
+  receiptAt: 'receiptAt',
+  receiptNote: 'receiptNote',
+  handoverAt: 'handoverAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type DeliveryScalarFieldEnum = (typeof DeliveryScalarFieldEnum)[keyof typeof DeliveryScalarFieldEnum]
+
+
+export const DeliveryCheckpointScalarFieldEnum = {
+  id: 'id',
+  deliveryId: 'deliveryId',
+  type: 'type',
+  actorUserId: 'actorUserId',
+  actorRole: 'actorRole',
+  lat: 'lat',
+  lng: 'lng',
+  accuracyM: 'accuracyM',
+  clientAt: 'clientAt',
+  recordedAt: 'recordedAt',
+  photoId: 'photoId',
+  flags: 'flags',
+  note: 'note'
+} as const
+
+export type DeliveryCheckpointScalarFieldEnum = (typeof DeliveryCheckpointScalarFieldEnum)[keyof typeof DeliveryCheckpointScalarFieldEnum]
+
+
+export const DeliveryPhotoScalarFieldEnum = {
+  id: 'id',
+  sha256: 'sha256',
+  mime: 'mime',
+  bytes: 'bytes',
+  data: 'data',
+  createdAt: 'createdAt'
+} as const
+
+export type DeliveryPhotoScalarFieldEnum = (typeof DeliveryPhotoScalarFieldEnum)[keyof typeof DeliveryPhotoScalarFieldEnum]
 
 
 export const TransporterProfileScalarFieldEnum = {

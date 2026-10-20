@@ -414,6 +414,8 @@ export const ModelName = {
   OrderItem: 'OrderItem',
   Payment: 'Payment',
   Delivery: 'Delivery',
+  DeliveryCheckpoint: 'DeliveryCheckpoint',
+  DeliveryPhoto: 'DeliveryPhoto',
   TransporterProfile: 'TransporterProfile',
   Notification: 'Notification',
   Invoice: 'Invoice'
@@ -432,7 +434,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "sellerApplication" | "productRequest" | "requestResponse" | "cartItem" | "orderItem" | "payment" | "delivery" | "transporterProfile" | "notification" | "invoice"
+    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "sellerApplication" | "productRequest" | "requestResponse" | "cartItem" | "orderItem" | "payment" | "delivery" | "deliveryCheckpoint" | "deliveryPhoto" | "transporterProfile" | "notification" | "invoice"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1694,6 +1696,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    DeliveryCheckpoint: {
+      payload: Prisma.$DeliveryCheckpointPayload<ExtArgs>
+      fields: Prisma.DeliveryCheckpointFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DeliveryCheckpointFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryCheckpointPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DeliveryCheckpointFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryCheckpointPayload>
+        }
+        findFirst: {
+          args: Prisma.DeliveryCheckpointFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryCheckpointPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DeliveryCheckpointFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryCheckpointPayload>
+        }
+        findMany: {
+          args: Prisma.DeliveryCheckpointFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryCheckpointPayload>[]
+        }
+        create: {
+          args: Prisma.DeliveryCheckpointCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryCheckpointPayload>
+        }
+        createMany: {
+          args: Prisma.DeliveryCheckpointCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DeliveryCheckpointCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryCheckpointPayload>[]
+        }
+        delete: {
+          args: Prisma.DeliveryCheckpointDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryCheckpointPayload>
+        }
+        update: {
+          args: Prisma.DeliveryCheckpointUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryCheckpointPayload>
+        }
+        deleteMany: {
+          args: Prisma.DeliveryCheckpointDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DeliveryCheckpointUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DeliveryCheckpointUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryCheckpointPayload>[]
+        }
+        upsert: {
+          args: Prisma.DeliveryCheckpointUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryCheckpointPayload>
+        }
+        aggregate: {
+          args: Prisma.DeliveryCheckpointAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDeliveryCheckpoint>
+        }
+        groupBy: {
+          args: Prisma.DeliveryCheckpointGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DeliveryCheckpointGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DeliveryCheckpointCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DeliveryCheckpointCountAggregateOutputType> | number
+        }
+      }
+    }
+    DeliveryPhoto: {
+      payload: Prisma.$DeliveryPhotoPayload<ExtArgs>
+      fields: Prisma.DeliveryPhotoFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DeliveryPhotoFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryPhotoPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DeliveryPhotoFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryPhotoPayload>
+        }
+        findFirst: {
+          args: Prisma.DeliveryPhotoFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryPhotoPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DeliveryPhotoFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryPhotoPayload>
+        }
+        findMany: {
+          args: Prisma.DeliveryPhotoFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryPhotoPayload>[]
+        }
+        create: {
+          args: Prisma.DeliveryPhotoCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryPhotoPayload>
+        }
+        createMany: {
+          args: Prisma.DeliveryPhotoCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DeliveryPhotoCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryPhotoPayload>[]
+        }
+        delete: {
+          args: Prisma.DeliveryPhotoDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryPhotoPayload>
+        }
+        update: {
+          args: Prisma.DeliveryPhotoUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryPhotoPayload>
+        }
+        deleteMany: {
+          args: Prisma.DeliveryPhotoDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DeliveryPhotoUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DeliveryPhotoUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryPhotoPayload>[]
+        }
+        upsert: {
+          args: Prisma.DeliveryPhotoUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeliveryPhotoPayload>
+        }
+        aggregate: {
+          args: Prisma.DeliveryPhotoAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDeliveryPhoto>
+        }
+        groupBy: {
+          args: Prisma.DeliveryPhotoGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DeliveryPhotoGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DeliveryPhotoCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DeliveryPhotoCountAggregateOutputType> | number
+        }
+      }
+    }
     TransporterProfile: {
       payload: Prisma.$TransporterProfilePayload<ExtArgs>
       fields: Prisma.TransporterProfileFieldRefs
@@ -1996,6 +2146,8 @@ export const SupplierProfileScalarFieldEnum = {
   city: 'city',
   province: 'province',
   verified: 'verified',
+  lat: 'lat',
+  lng: 'lng',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -2016,6 +2168,8 @@ export const AddressScalarFieldEnum = {
   postalCode: 'postalCode',
   country: 'country',
   isDefault: 'isDefault',
+  lat: 'lat',
+  lng: 'lng',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -2220,11 +2374,46 @@ export const DeliveryScalarFieldEnum = {
   pickedUpAt: 'pickedUpAt',
   deliveredAt: 'deliveredAt',
   notes: 'notes',
+  receiptStatus: 'receiptStatus',
+  receiptAt: 'receiptAt',
+  receiptNote: 'receiptNote',
+  handoverAt: 'handoverAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type DeliveryScalarFieldEnum = (typeof DeliveryScalarFieldEnum)[keyof typeof DeliveryScalarFieldEnum]
+
+
+export const DeliveryCheckpointScalarFieldEnum = {
+  id: 'id',
+  deliveryId: 'deliveryId',
+  type: 'type',
+  actorUserId: 'actorUserId',
+  actorRole: 'actorRole',
+  lat: 'lat',
+  lng: 'lng',
+  accuracyM: 'accuracyM',
+  clientAt: 'clientAt',
+  recordedAt: 'recordedAt',
+  photoId: 'photoId',
+  flags: 'flags',
+  note: 'note'
+} as const
+
+export type DeliveryCheckpointScalarFieldEnum = (typeof DeliveryCheckpointScalarFieldEnum)[keyof typeof DeliveryCheckpointScalarFieldEnum]
+
+
+export const DeliveryPhotoScalarFieldEnum = {
+  id: 'id',
+  sha256: 'sha256',
+  mime: 'mime',
+  bytes: 'bytes',
+  data: 'data',
+  createdAt: 'createdAt'
+} as const
+
+export type DeliveryPhotoScalarFieldEnum = (typeof DeliveryPhotoScalarFieldEnum)[keyof typeof DeliveryPhotoScalarFieldEnum]
 
 
 export const TransporterProfileScalarFieldEnum = {
@@ -2361,6 +2550,20 @@ export type ListEnumUserStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$P
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
+ * Reference to a field of type 'Float'
+ */
+export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+/**
+ * Reference to a field of type 'Float[]'
+ */
+export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
 
 
@@ -2533,16 +2736,44 @@ export type ListEnumDeliveryStatusFieldRefInput<$PrismaModel> = FieldRefInputTyp
 
 
 /**
- * Reference to a field of type 'Float'
+ * Reference to a field of type 'ReceiptStatus'
  */
-export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+export type EnumReceiptStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReceiptStatus'>
     
 
 
 /**
- * Reference to a field of type 'Float[]'
+ * Reference to a field of type 'ReceiptStatus[]'
  */
-export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+export type ListEnumReceiptStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReceiptStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'CheckpointType'
+ */
+export type EnumCheckpointTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CheckpointType'>
+    
+
+
+/**
+ * Reference to a field of type 'CheckpointType[]'
+ */
+export type ListEnumCheckpointTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CheckpointType[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Bytes'
+ */
+export type BytesFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Bytes'>
+    
+
+
+/**
+ * Reference to a field of type 'Bytes[]'
+ */
+export type ListBytesFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Bytes[]'>
     
 
 /**
@@ -2713,6 +2944,8 @@ export type GlobalOmitConfig = {
   orderItem?: Prisma.OrderItemOmit
   payment?: Prisma.PaymentOmit
   delivery?: Prisma.DeliveryOmit
+  deliveryCheckpoint?: Prisma.DeliveryCheckpointOmit
+  deliveryPhoto?: Prisma.DeliveryPhotoOmit
   transporterProfile?: Prisma.TransporterProfileOmit
   notification?: Prisma.NotificationOmit
   invoice?: Prisma.InvoiceOmit

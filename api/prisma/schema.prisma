@@ -96,6 +96,23 @@ enum RequestResponseStatus {
   WITHDRAWN
 }
 
+// CP15a: append-only checkpoint ledger event types (evidence — never
+// state-machine drivers; CP14's OrderStatus/DeliveryStatus stay authoritative).
+enum CheckpointType {
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+}
+
+// CP15a migration / CP15c behaviour: buyer receipt confirmation lifecycle.
+enum ReceiptStatus {
+  PENDING
+  CONFIRMED
+  CONFIRMED_LAZY
+  DISPUTED
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -152,6 +169,9 @@ model SupplierProfile {
   city           String?
   province       String?
   verified       Boolean   @default(false)
+  // CP15a: optional farm reference pin for checkpoint geo-plausibility flags.
+  lat            Float?
+  lng            Float?
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   products       Product[]
   responses      RequestResponse[]
@@ -176,6 +196,9 @@ model Address {
   postalCode    String?
   country       String   @default("South Africa")
   isDefault     Boolean  @default(false)
+  // CP15a: optional delivery reference pin for checkpoint geo-plausibility flags.
+  lat           Float?
+  lng           Float?
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders        Order[]
   createdAt     DateTime @default(now())
@@ -421,13 +444,58 @@ model Delivery {
   pickedUpAt     DateTime?
   deliveredAt    DateTime?
   notes          String?
-  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // CP15a: counterparty-confirmation fields (schema now, behaviour in CP15c).
+  receiptStatus  ReceiptStatus       @default(PENDING)
+  receiptAt      DateTime?
+  receiptNote    String?
+  handoverAt     DateTime?
+  order          Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   transporter    TransporterProfile? @relation(fields: [transporterId], references: [id], onDelete: SetNull)
+  checkpoints    DeliveryCheckpoint[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
   @@index([status])
   @@index([transporterId])
+}
+
+// CP15a: append-only evidence ledger. Create-only — no update/delete path
+// exists anywhere in the service; flags are computed once at insert and
+// feed governance (CP15d), never a transition decision.
+model DeliveryCheckpoint {
+  id          String         @id @default(uuid())
+  deliveryId  String
+  type        CheckpointType
+  // Plain strings (no FK): an audit record must outlive account changes.
+  actorUserId String
+  actorRole   String
+  lat         Float?
+  lng         Float?
+  accuracyM   Float?
+  // Client capture time (skew vs recordedAt is flagged, never rejected).
+  clientAt    DateTime
+  // Server time — authoritative for speed checks and ordering.
+  recordedAt  DateTime       @default(now())
+  photoId     String?
+  flags       String[]       @default([])
+  note        String?
+  delivery    Delivery       @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  photo       DeliveryPhoto? @relation(fields: [photoId], references: [id], onDelete: SetNull)
+
+  @@index([deliveryId, recordedAt])
+}
+
+// CP15b: photo evidence stored inline (bytea) — volumes are tiny and photos
+// back up with the rows they prove. sha256 unique: one photo can never back
+// two checkpoints. Served only to the order's counterparties.
+model DeliveryPhoto {
+  id          String                @id @default(uuid())
+  sha256      String                @unique
+  mime        String
+  bytes       Int
+  data        Bytes
+  createdAt   DateTime              @default(now())
+  checkpoints DeliveryCheckpoint[]
 }
 
 model TransporterProfile {

@@ -20,8 +20,20 @@ export type SupplierProfileModel = runtime.Types.Result.DefaultSelection<Prisma.
 
 export type AggregateSupplierProfile = {
   _count: SupplierProfileCountAggregateOutputType | null
+  _avg: SupplierProfileAvgAggregateOutputType | null
+  _sum: SupplierProfileSumAggregateOutputType | null
   _min: SupplierProfileMinAggregateOutputType | null
   _max: SupplierProfileMaxAggregateOutputType | null
+}
+
+export type SupplierProfileAvgAggregateOutputType = {
+  lat: number | null
+  lng: number | null
+}
+
+export type SupplierProfileSumAggregateOutputType = {
+  lat: number | null
+  lng: number | null
 }
 
 export type SupplierProfileMinAggregateOutputType = {
@@ -36,6 +48,8 @@ export type SupplierProfileMinAggregateOutputType = {
   city: string | null
   province: string | null
   verified: boolean | null
+  lat: number | null
+  lng: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -52,6 +66,8 @@ export type SupplierProfileMaxAggregateOutputType = {
   city: string | null
   province: string | null
   verified: boolean | null
+  lat: number | null
+  lng: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -68,11 +84,23 @@ export type SupplierProfileCountAggregateOutputType = {
   city: number
   province: number
   verified: number
+  lat: number
+  lng: number
   createdAt: number
   updatedAt: number
   _all: number
 }
 
+
+export type SupplierProfileAvgAggregateInputType = {
+  lat?: true
+  lng?: true
+}
+
+export type SupplierProfileSumAggregateInputType = {
+  lat?: true
+  lng?: true
+}
 
 export type SupplierProfileMinAggregateInputType = {
   id?: true
@@ -86,6 +114,8 @@ export type SupplierProfileMinAggregateInputType = {
   city?: true
   province?: true
   verified?: true
+  lat?: true
+  lng?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -102,6 +132,8 @@ export type SupplierProfileMaxAggregateInputType = {
   city?: true
   province?: true
   verified?: true
+  lat?: true
+  lng?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -118,6 +150,8 @@ export type SupplierProfileCountAggregateInputType = {
   city?: true
   province?: true
   verified?: true
+  lat?: true
+  lng?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -161,6 +195,18 @@ export type SupplierProfileAggregateArgs<ExtArgs extends runtime.Types.Extension
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: SupplierProfileAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: SupplierProfileSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: SupplierProfileMinAggregateInputType
@@ -191,6 +237,8 @@ export type SupplierProfileGroupByArgs<ExtArgs extends runtime.Types.Extensions.
   take?: number
   skip?: number
   _count?: SupplierProfileCountAggregateInputType | true
+  _avg?: SupplierProfileAvgAggregateInputType
+  _sum?: SupplierProfileSumAggregateInputType
   _min?: SupplierProfileMinAggregateInputType
   _max?: SupplierProfileMaxAggregateInputType
 }
@@ -207,9 +255,13 @@ export type SupplierProfileGroupByOutputType = {
   city: string | null
   province: string | null
   verified: boolean
+  lat: number | null
+  lng: number | null
   createdAt: Date
   updatedAt: Date
   _count: SupplierProfileCountAggregateOutputType | null
+  _avg: SupplierProfileAvgAggregateOutputType | null
+  _sum: SupplierProfileSumAggregateOutputType | null
   _min: SupplierProfileMinAggregateOutputType | null
   _max: SupplierProfileMaxAggregateOutputType | null
 }
@@ -244,6 +296,8 @@ export type SupplierProfileWhereInput = {
   city?: Prisma.StringNullableFilter<"SupplierProfile"> | string | null
   province?: Prisma.StringNullableFilter<"SupplierProfile"> | string | null
   verified?: Prisma.BoolFilter<"SupplierProfile"> | boolean
+  lat?: Prisma.FloatNullableFilter<"SupplierProfile"> | number | null
+  lng?: Prisma.FloatNullableFilter<"SupplierProfile"> | number | null
   createdAt?: Prisma.DateTimeFilter<"SupplierProfile"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SupplierProfile"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -263,6 +317,8 @@ export type SupplierProfileOrderByWithRelationInput = {
   city?: Prisma.SortOrderInput | Prisma.SortOrder
   province?: Prisma.SortOrderInput | Prisma.SortOrder
   verified?: Prisma.SortOrder
+  lat?: Prisma.SortOrderInput | Prisma.SortOrder
+  lng?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
@@ -285,6 +341,8 @@ export type SupplierProfileWhereUniqueInput = Prisma.AtLeast<{
   city?: Prisma.StringNullableFilter<"SupplierProfile"> | string | null
   province?: Prisma.StringNullableFilter<"SupplierProfile"> | string | null
   verified?: Prisma.BoolFilter<"SupplierProfile"> | boolean
+  lat?: Prisma.FloatNullableFilter<"SupplierProfile"> | number | null
+  lng?: Prisma.FloatNullableFilter<"SupplierProfile"> | number | null
   createdAt?: Prisma.DateTimeFilter<"SupplierProfile"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SupplierProfile"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -304,11 +362,15 @@ export type SupplierProfileOrderByWithAggregationInput = {
   city?: Prisma.SortOrderInput | Prisma.SortOrder
   province?: Prisma.SortOrderInput | Prisma.SortOrder
   verified?: Prisma.SortOrder
+  lat?: Prisma.SortOrderInput | Prisma.SortOrder
+  lng?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.SupplierProfileCountOrderByAggregateInput
+  _avg?: Prisma.SupplierProfileAvgOrderByAggregateInput
   _max?: Prisma.SupplierProfileMaxOrderByAggregateInput
   _min?: Prisma.SupplierProfileMinOrderByAggregateInput
+  _sum?: Prisma.SupplierProfileSumOrderByAggregateInput
 }
 
 export type SupplierProfileScalarWhereWithAggregatesInput = {
@@ -326,6 +388,8 @@ export type SupplierProfileScalarWhereWithAggregatesInput = {
   city?: Prisma.StringNullableWithAggregatesFilter<"SupplierProfile"> | string | null
   province?: Prisma.StringNullableWithAggregatesFilter<"SupplierProfile"> | string | null
   verified?: Prisma.BoolWithAggregatesFilter<"SupplierProfile"> | boolean
+  lat?: Prisma.FloatNullableWithAggregatesFilter<"SupplierProfile"> | number | null
+  lng?: Prisma.FloatNullableWithAggregatesFilter<"SupplierProfile"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SupplierProfile"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SupplierProfile"> | Date | string
 }
@@ -341,6 +405,8 @@ export type SupplierProfileCreateInput = {
   city?: string | null
   province?: string | null
   verified?: boolean
+  lat?: number | null
+  lng?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutSupplierProfileInput
@@ -360,6 +426,8 @@ export type SupplierProfileUncheckedCreateInput = {
   city?: string | null
   province?: string | null
   verified?: boolean
+  lat?: number | null
+  lng?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   products?: Prisma.ProductUncheckedCreateNestedManyWithoutSupplierInput
@@ -377,6 +445,8 @@ export type SupplierProfileUpdateInput = {
   city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   province?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutSupplierProfileNestedInput
@@ -396,6 +466,8 @@ export type SupplierProfileUncheckedUpdateInput = {
   city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   province?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   products?: Prisma.ProductUncheckedUpdateManyWithoutSupplierNestedInput
@@ -414,6 +486,8 @@ export type SupplierProfileCreateManyInput = {
   city?: string | null
   province?: string | null
   verified?: boolean
+  lat?: number | null
+  lng?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -429,6 +503,8 @@ export type SupplierProfileUpdateManyMutationInput = {
   city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   province?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -445,6 +521,8 @@ export type SupplierProfileUncheckedUpdateManyInput = {
   city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   province?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -466,8 +544,15 @@ export type SupplierProfileCountOrderByAggregateInput = {
   city?: Prisma.SortOrder
   province?: Prisma.SortOrder
   verified?: Prisma.SortOrder
+  lat?: Prisma.SortOrder
+  lng?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type SupplierProfileAvgOrderByAggregateInput = {
+  lat?: Prisma.SortOrder
+  lng?: Prisma.SortOrder
 }
 
 export type SupplierProfileMaxOrderByAggregateInput = {
@@ -482,6 +567,8 @@ export type SupplierProfileMaxOrderByAggregateInput = {
   city?: Prisma.SortOrder
   province?: Prisma.SortOrder
   verified?: Prisma.SortOrder
+  lat?: Prisma.SortOrder
+  lng?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -498,8 +585,15 @@ export type SupplierProfileMinOrderByAggregateInput = {
   city?: Prisma.SortOrder
   province?: Prisma.SortOrder
   verified?: Prisma.SortOrder
+  lat?: Prisma.SortOrder
+  lng?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type SupplierProfileSumOrderByAggregateInput = {
+  lat?: Prisma.SortOrder
+  lng?: Prisma.SortOrder
 }
 
 export type SupplierProfileScalarRelationFilter = {
@@ -543,6 +637,14 @@ export type BoolFieldUpdateOperationsInput = {
   set?: boolean
 }
 
+export type NullableFloatFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type SupplierProfileCreateNestedOneWithoutProductsInput = {
   create?: Prisma.XOR<Prisma.SupplierProfileCreateWithoutProductsInput, Prisma.SupplierProfileUncheckedCreateWithoutProductsInput>
   connectOrCreate?: Prisma.SupplierProfileCreateOrConnectWithoutProductsInput
@@ -582,6 +684,8 @@ export type SupplierProfileCreateWithoutUserInput = {
   city?: string | null
   province?: string | null
   verified?: boolean
+  lat?: number | null
+  lng?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   products?: Prisma.ProductCreateNestedManyWithoutSupplierInput
@@ -599,6 +703,8 @@ export type SupplierProfileUncheckedCreateWithoutUserInput = {
   city?: string | null
   province?: string | null
   verified?: boolean
+  lat?: number | null
+  lng?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   products?: Prisma.ProductUncheckedCreateNestedManyWithoutSupplierInput
@@ -632,6 +738,8 @@ export type SupplierProfileUpdateWithoutUserInput = {
   city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   province?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   products?: Prisma.ProductUpdateManyWithoutSupplierNestedInput
@@ -649,6 +757,8 @@ export type SupplierProfileUncheckedUpdateWithoutUserInput = {
   city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   province?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   products?: Prisma.ProductUncheckedUpdateManyWithoutSupplierNestedInput
@@ -666,6 +776,8 @@ export type SupplierProfileCreateWithoutProductsInput = {
   city?: string | null
   province?: string | null
   verified?: boolean
+  lat?: number | null
+  lng?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutSupplierProfileInput
@@ -684,6 +796,8 @@ export type SupplierProfileUncheckedCreateWithoutProductsInput = {
   city?: string | null
   province?: string | null
   verified?: boolean
+  lat?: number | null
+  lng?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   responses?: Prisma.RequestResponseUncheckedCreateNestedManyWithoutSupplierInput
@@ -716,6 +830,8 @@ export type SupplierProfileUpdateWithoutProductsInput = {
   city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   province?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutSupplierProfileNestedInput
@@ -734,6 +850,8 @@ export type SupplierProfileUncheckedUpdateWithoutProductsInput = {
   city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   province?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   responses?: Prisma.RequestResponseUncheckedUpdateManyWithoutSupplierNestedInput
@@ -750,6 +868,8 @@ export type SupplierProfileCreateWithoutResponsesInput = {
   city?: string | null
   province?: string | null
   verified?: boolean
+  lat?: number | null
+  lng?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutSupplierProfileInput
@@ -768,6 +888,8 @@ export type SupplierProfileUncheckedCreateWithoutResponsesInput = {
   city?: string | null
   province?: string | null
   verified?: boolean
+  lat?: number | null
+  lng?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   products?: Prisma.ProductUncheckedCreateNestedManyWithoutSupplierInput
@@ -800,6 +922,8 @@ export type SupplierProfileUpdateWithoutResponsesInput = {
   city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   province?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutSupplierProfileNestedInput
@@ -818,6 +942,8 @@ export type SupplierProfileUncheckedUpdateWithoutResponsesInput = {
   city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   province?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  lng?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   products?: Prisma.ProductUncheckedUpdateManyWithoutSupplierNestedInput
@@ -875,6 +1001,8 @@ export type SupplierProfileSelect<ExtArgs extends runtime.Types.Extensions.Inter
   city?: boolean
   province?: boolean
   verified?: boolean
+  lat?: boolean
+  lng?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -895,6 +1023,8 @@ export type SupplierProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   city?: boolean
   province?: boolean
   verified?: boolean
+  lat?: boolean
+  lng?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -912,6 +1042,8 @@ export type SupplierProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   city?: boolean
   province?: boolean
   verified?: boolean
+  lat?: boolean
+  lng?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -929,11 +1061,13 @@ export type SupplierProfileSelectScalar = {
   city?: boolean
   province?: boolean
   verified?: boolean
+  lat?: boolean
+  lng?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type SupplierProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "businessName" | "description" | "registrationNo" | "phone" | "email" | "address" | "city" | "province" | "verified" | "createdAt" | "updatedAt", ExtArgs["result"]["supplierProfile"]>
+export type SupplierProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "businessName" | "description" | "registrationNo" | "phone" | "email" | "address" | "city" | "province" | "verified" | "lat" | "lng" | "createdAt" | "updatedAt", ExtArgs["result"]["supplierProfile"]>
 export type SupplierProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   products?: boolean | Prisma.SupplierProfile$productsArgs<ExtArgs>
@@ -966,6 +1100,8 @@ export type $SupplierProfilePayload<ExtArgs extends runtime.Types.Extensions.Int
     city: string | null
     province: string | null
     verified: boolean
+    lat: number | null
+    lng: number | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["supplierProfile"]>
@@ -1405,6 +1541,8 @@ export interface SupplierProfileFieldRefs {
   readonly city: Prisma.FieldRef<"SupplierProfile", 'String'>
   readonly province: Prisma.FieldRef<"SupplierProfile", 'String'>
   readonly verified: Prisma.FieldRef<"SupplierProfile", 'Boolean'>
+  readonly lat: Prisma.FieldRef<"SupplierProfile", 'Float'>
+  readonly lng: Prisma.FieldRef<"SupplierProfile", 'Float'>
   readonly createdAt: Prisma.FieldRef<"SupplierProfile", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"SupplierProfile", 'DateTime'>
 }

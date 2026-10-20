@@ -39,6 +39,10 @@ export type DeliveryMinAggregateOutputType = {
   pickedUpAt: Date | null
   deliveredAt: Date | null
   notes: string | null
+  receiptStatus: $Enums.ReceiptStatus | null
+  receiptAt: Date | null
+  receiptNote: string | null
+  handoverAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -58,6 +62,10 @@ export type DeliveryMaxAggregateOutputType = {
   pickedUpAt: Date | null
   deliveredAt: Date | null
   notes: string | null
+  receiptStatus: $Enums.ReceiptStatus | null
+  receiptAt: Date | null
+  receiptNote: string | null
+  handoverAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -77,6 +85,10 @@ export type DeliveryCountAggregateOutputType = {
   pickedUpAt: number
   deliveredAt: number
   notes: number
+  receiptStatus: number
+  receiptAt: number
+  receiptNote: number
+  handoverAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -98,6 +110,10 @@ export type DeliveryMinAggregateInputType = {
   pickedUpAt?: true
   deliveredAt?: true
   notes?: true
+  receiptStatus?: true
+  receiptAt?: true
+  receiptNote?: true
+  handoverAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -117,6 +133,10 @@ export type DeliveryMaxAggregateInputType = {
   pickedUpAt?: true
   deliveredAt?: true
   notes?: true
+  receiptStatus?: true
+  receiptAt?: true
+  receiptNote?: true
+  handoverAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -136,6 +156,10 @@ export type DeliveryCountAggregateInputType = {
   pickedUpAt?: true
   deliveredAt?: true
   notes?: true
+  receiptStatus?: true
+  receiptAt?: true
+  receiptNote?: true
+  handoverAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -228,6 +252,10 @@ export type DeliveryGroupByOutputType = {
   pickedUpAt: Date | null
   deliveredAt: Date | null
   notes: string | null
+  receiptStatus: $Enums.ReceiptStatus
+  receiptAt: Date | null
+  receiptNote: string | null
+  handoverAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: DeliveryCountAggregateOutputType | null
@@ -268,10 +296,15 @@ export type DeliveryWhereInput = {
   pickedUpAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
   deliveredAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
   notes?: Prisma.StringNullableFilter<"Delivery"> | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFilter<"Delivery"> | $Enums.ReceiptStatus
+  receiptAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
+  receiptNote?: Prisma.StringNullableFilter<"Delivery"> | string | null
+  handoverAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Delivery"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Delivery"> | Date | string
   order?: Prisma.XOR<Prisma.OrderScalarRelationFilter, Prisma.OrderWhereInput>
   transporter?: Prisma.XOR<Prisma.TransporterProfileNullableScalarRelationFilter, Prisma.TransporterProfileWhereInput> | null
+  checkpoints?: Prisma.DeliveryCheckpointListRelationFilter
 }
 
 export type DeliveryOrderByWithRelationInput = {
@@ -289,10 +322,15 @@ export type DeliveryOrderByWithRelationInput = {
   pickedUpAt?: Prisma.SortOrderInput | Prisma.SortOrder
   deliveredAt?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  receiptStatus?: Prisma.SortOrder
+  receiptAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  receiptNote?: Prisma.SortOrderInput | Prisma.SortOrder
+  handoverAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   order?: Prisma.OrderOrderByWithRelationInput
   transporter?: Prisma.TransporterProfileOrderByWithRelationInput
+  checkpoints?: Prisma.DeliveryCheckpointOrderByRelationAggregateInput
 }
 
 export type DeliveryWhereUniqueInput = Prisma.AtLeast<{
@@ -313,10 +351,15 @@ export type DeliveryWhereUniqueInput = Prisma.AtLeast<{
   pickedUpAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
   deliveredAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
   notes?: Prisma.StringNullableFilter<"Delivery"> | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFilter<"Delivery"> | $Enums.ReceiptStatus
+  receiptAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
+  receiptNote?: Prisma.StringNullableFilter<"Delivery"> | string | null
+  handoverAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Delivery"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Delivery"> | Date | string
   order?: Prisma.XOR<Prisma.OrderScalarRelationFilter, Prisma.OrderWhereInput>
   transporter?: Prisma.XOR<Prisma.TransporterProfileNullableScalarRelationFilter, Prisma.TransporterProfileWhereInput> | null
+  checkpoints?: Prisma.DeliveryCheckpointListRelationFilter
 }, "id" | "orderId" | "trackingNumber">
 
 export type DeliveryOrderByWithAggregationInput = {
@@ -334,6 +377,10 @@ export type DeliveryOrderByWithAggregationInput = {
   pickedUpAt?: Prisma.SortOrderInput | Prisma.SortOrder
   deliveredAt?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  receiptStatus?: Prisma.SortOrder
+  receiptAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  receiptNote?: Prisma.SortOrderInput | Prisma.SortOrder
+  handoverAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.DeliveryCountOrderByAggregateInput
@@ -359,6 +406,10 @@ export type DeliveryScalarWhereWithAggregatesInput = {
   pickedUpAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
   deliveredAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
   notes?: Prisma.StringNullableWithAggregatesFilter<"Delivery"> | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusWithAggregatesFilter<"Delivery"> | $Enums.ReceiptStatus
+  receiptAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
+  receiptNote?: Prisma.StringNullableWithAggregatesFilter<"Delivery"> | string | null
+  handoverAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Delivery"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Delivery"> | Date | string
 }
@@ -376,10 +427,15 @@ export type DeliveryCreateInput = {
   pickedUpAt?: Date | string | null
   deliveredAt?: Date | string | null
   notes?: string | null
+  receiptStatus?: $Enums.ReceiptStatus
+  receiptAt?: Date | string | null
+  receiptNote?: string | null
+  handoverAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   order: Prisma.OrderCreateNestedOneWithoutDeliveryInput
   transporter?: Prisma.TransporterProfileCreateNestedOneWithoutDeliveriesInput
+  checkpoints?: Prisma.DeliveryCheckpointCreateNestedManyWithoutDeliveryInput
 }
 
 export type DeliveryUncheckedCreateInput = {
@@ -397,8 +453,13 @@ export type DeliveryUncheckedCreateInput = {
   pickedUpAt?: Date | string | null
   deliveredAt?: Date | string | null
   notes?: string | null
+  receiptStatus?: $Enums.ReceiptStatus
+  receiptAt?: Date | string | null
+  receiptNote?: string | null
+  handoverAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  checkpoints?: Prisma.DeliveryCheckpointUncheckedCreateNestedManyWithoutDeliveryInput
 }
 
 export type DeliveryUpdateInput = {
@@ -414,10 +475,15 @@ export type DeliveryUpdateInput = {
   pickedUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
+  receiptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  receiptNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handoverAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   order?: Prisma.OrderUpdateOneRequiredWithoutDeliveryNestedInput
   transporter?: Prisma.TransporterProfileUpdateOneWithoutDeliveriesNestedInput
+  checkpoints?: Prisma.DeliveryCheckpointUpdateManyWithoutDeliveryNestedInput
 }
 
 export type DeliveryUncheckedUpdateInput = {
@@ -435,8 +501,13 @@ export type DeliveryUncheckedUpdateInput = {
   pickedUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
+  receiptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  receiptNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handoverAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  checkpoints?: Prisma.DeliveryCheckpointUncheckedUpdateManyWithoutDeliveryNestedInput
 }
 
 export type DeliveryCreateManyInput = {
@@ -454,6 +525,10 @@ export type DeliveryCreateManyInput = {
   pickedUpAt?: Date | string | null
   deliveredAt?: Date | string | null
   notes?: string | null
+  receiptStatus?: $Enums.ReceiptStatus
+  receiptAt?: Date | string | null
+  receiptNote?: string | null
+  handoverAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -471,6 +546,10 @@ export type DeliveryUpdateManyMutationInput = {
   pickedUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
+  receiptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  receiptNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handoverAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -490,6 +569,10 @@ export type DeliveryUncheckedUpdateManyInput = {
   pickedUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
+  receiptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  receiptNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handoverAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -514,6 +597,10 @@ export type DeliveryCountOrderByAggregateInput = {
   pickedUpAt?: Prisma.SortOrder
   deliveredAt?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  receiptStatus?: Prisma.SortOrder
+  receiptAt?: Prisma.SortOrder
+  receiptNote?: Prisma.SortOrder
+  handoverAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -533,6 +620,10 @@ export type DeliveryMaxOrderByAggregateInput = {
   pickedUpAt?: Prisma.SortOrder
   deliveredAt?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  receiptStatus?: Prisma.SortOrder
+  receiptAt?: Prisma.SortOrder
+  receiptNote?: Prisma.SortOrder
+  handoverAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -552,8 +643,17 @@ export type DeliveryMinOrderByAggregateInput = {
   pickedUpAt?: Prisma.SortOrder
   deliveredAt?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  receiptStatus?: Prisma.SortOrder
+  receiptAt?: Prisma.SortOrder
+  receiptNote?: Prisma.SortOrder
+  handoverAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type DeliveryScalarRelationFilter = {
+  is?: Prisma.DeliveryWhereInput
+  isNot?: Prisma.DeliveryWhereInput
 }
 
 export type DeliveryListRelationFilter = {
@@ -600,6 +700,24 @@ export type DeliveryUncheckedUpdateOneWithoutOrderNestedInput = {
 
 export type EnumDeliveryStatusFieldUpdateOperationsInput = {
   set?: $Enums.DeliveryStatus
+}
+
+export type EnumReceiptStatusFieldUpdateOperationsInput = {
+  set?: $Enums.ReceiptStatus
+}
+
+export type DeliveryCreateNestedOneWithoutCheckpointsInput = {
+  create?: Prisma.XOR<Prisma.DeliveryCreateWithoutCheckpointsInput, Prisma.DeliveryUncheckedCreateWithoutCheckpointsInput>
+  connectOrCreate?: Prisma.DeliveryCreateOrConnectWithoutCheckpointsInput
+  connect?: Prisma.DeliveryWhereUniqueInput
+}
+
+export type DeliveryUpdateOneRequiredWithoutCheckpointsNestedInput = {
+  create?: Prisma.XOR<Prisma.DeliveryCreateWithoutCheckpointsInput, Prisma.DeliveryUncheckedCreateWithoutCheckpointsInput>
+  connectOrCreate?: Prisma.DeliveryCreateOrConnectWithoutCheckpointsInput
+  upsert?: Prisma.DeliveryUpsertWithoutCheckpointsInput
+  connect?: Prisma.DeliveryWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DeliveryUpdateToOneWithWhereWithoutCheckpointsInput, Prisma.DeliveryUpdateWithoutCheckpointsInput>, Prisma.DeliveryUncheckedUpdateWithoutCheckpointsInput>
 }
 
 export type DeliveryCreateNestedManyWithoutTransporterInput = {
@@ -657,9 +775,14 @@ export type DeliveryCreateWithoutOrderInput = {
   pickedUpAt?: Date | string | null
   deliveredAt?: Date | string | null
   notes?: string | null
+  receiptStatus?: $Enums.ReceiptStatus
+  receiptAt?: Date | string | null
+  receiptNote?: string | null
+  handoverAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   transporter?: Prisma.TransporterProfileCreateNestedOneWithoutDeliveriesInput
+  checkpoints?: Prisma.DeliveryCheckpointCreateNestedManyWithoutDeliveryInput
 }
 
 export type DeliveryUncheckedCreateWithoutOrderInput = {
@@ -676,8 +799,13 @@ export type DeliveryUncheckedCreateWithoutOrderInput = {
   pickedUpAt?: Date | string | null
   deliveredAt?: Date | string | null
   notes?: string | null
+  receiptStatus?: $Enums.ReceiptStatus
+  receiptAt?: Date | string | null
+  receiptNote?: string | null
+  handoverAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  checkpoints?: Prisma.DeliveryCheckpointUncheckedCreateNestedManyWithoutDeliveryInput
 }
 
 export type DeliveryCreateOrConnectWithoutOrderInput = {
@@ -709,9 +837,14 @@ export type DeliveryUpdateWithoutOrderInput = {
   pickedUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
+  receiptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  receiptNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handoverAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   transporter?: Prisma.TransporterProfileUpdateOneWithoutDeliveriesNestedInput
+  checkpoints?: Prisma.DeliveryCheckpointUpdateManyWithoutDeliveryNestedInput
 }
 
 export type DeliveryUncheckedUpdateWithoutOrderInput = {
@@ -728,6 +861,119 @@ export type DeliveryUncheckedUpdateWithoutOrderInput = {
   pickedUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
+  receiptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  receiptNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handoverAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  checkpoints?: Prisma.DeliveryCheckpointUncheckedUpdateManyWithoutDeliveryNestedInput
+}
+
+export type DeliveryCreateWithoutCheckpointsInput = {
+  id?: string
+  status?: $Enums.DeliveryStatus
+  publishedAt?: Date | string | null
+  failedReason?: string | null
+  failedAt?: Date | string | null
+  trackingNumber?: string | null
+  driverName?: string | null
+  driverPhone?: string | null
+  estimatedDate?: Date | string | null
+  pickedUpAt?: Date | string | null
+  deliveredAt?: Date | string | null
+  notes?: string | null
+  receiptStatus?: $Enums.ReceiptStatus
+  receiptAt?: Date | string | null
+  receiptNote?: string | null
+  handoverAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  order: Prisma.OrderCreateNestedOneWithoutDeliveryInput
+  transporter?: Prisma.TransporterProfileCreateNestedOneWithoutDeliveriesInput
+}
+
+export type DeliveryUncheckedCreateWithoutCheckpointsInput = {
+  id?: string
+  orderId: string
+  status?: $Enums.DeliveryStatus
+  transporterId?: string | null
+  publishedAt?: Date | string | null
+  failedReason?: string | null
+  failedAt?: Date | string | null
+  trackingNumber?: string | null
+  driverName?: string | null
+  driverPhone?: string | null
+  estimatedDate?: Date | string | null
+  pickedUpAt?: Date | string | null
+  deliveredAt?: Date | string | null
+  notes?: string | null
+  receiptStatus?: $Enums.ReceiptStatus
+  receiptAt?: Date | string | null
+  receiptNote?: string | null
+  handoverAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type DeliveryCreateOrConnectWithoutCheckpointsInput = {
+  where: Prisma.DeliveryWhereUniqueInput
+  create: Prisma.XOR<Prisma.DeliveryCreateWithoutCheckpointsInput, Prisma.DeliveryUncheckedCreateWithoutCheckpointsInput>
+}
+
+export type DeliveryUpsertWithoutCheckpointsInput = {
+  update: Prisma.XOR<Prisma.DeliveryUpdateWithoutCheckpointsInput, Prisma.DeliveryUncheckedUpdateWithoutCheckpointsInput>
+  create: Prisma.XOR<Prisma.DeliveryCreateWithoutCheckpointsInput, Prisma.DeliveryUncheckedCreateWithoutCheckpointsInput>
+  where?: Prisma.DeliveryWhereInput
+}
+
+export type DeliveryUpdateToOneWithWhereWithoutCheckpointsInput = {
+  where?: Prisma.DeliveryWhereInput
+  data: Prisma.XOR<Prisma.DeliveryUpdateWithoutCheckpointsInput, Prisma.DeliveryUncheckedUpdateWithoutCheckpointsInput>
+}
+
+export type DeliveryUpdateWithoutCheckpointsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  failedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  driverName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  driverPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pickedUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
+  receiptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  receiptNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handoverAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  order?: Prisma.OrderUpdateOneRequiredWithoutDeliveryNestedInput
+  transporter?: Prisma.TransporterProfileUpdateOneWithoutDeliveriesNestedInput
+}
+
+export type DeliveryUncheckedUpdateWithoutCheckpointsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  orderId?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+  transporterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  failedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  driverName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  driverPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estimatedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pickedUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
+  receiptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  receiptNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handoverAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -745,9 +991,14 @@ export type DeliveryCreateWithoutTransporterInput = {
   pickedUpAt?: Date | string | null
   deliveredAt?: Date | string | null
   notes?: string | null
+  receiptStatus?: $Enums.ReceiptStatus
+  receiptAt?: Date | string | null
+  receiptNote?: string | null
+  handoverAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   order: Prisma.OrderCreateNestedOneWithoutDeliveryInput
+  checkpoints?: Prisma.DeliveryCheckpointCreateNestedManyWithoutDeliveryInput
 }
 
 export type DeliveryUncheckedCreateWithoutTransporterInput = {
@@ -764,8 +1015,13 @@ export type DeliveryUncheckedCreateWithoutTransporterInput = {
   pickedUpAt?: Date | string | null
   deliveredAt?: Date | string | null
   notes?: string | null
+  receiptStatus?: $Enums.ReceiptStatus
+  receiptAt?: Date | string | null
+  receiptNote?: string | null
+  handoverAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  checkpoints?: Prisma.DeliveryCheckpointUncheckedCreateNestedManyWithoutDeliveryInput
 }
 
 export type DeliveryCreateOrConnectWithoutTransporterInput = {
@@ -812,6 +1068,10 @@ export type DeliveryScalarWhereInput = {
   pickedUpAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
   deliveredAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
   notes?: Prisma.StringNullableFilter<"Delivery"> | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFilter<"Delivery"> | $Enums.ReceiptStatus
+  receiptAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
+  receiptNote?: Prisma.StringNullableFilter<"Delivery"> | string | null
+  handoverAt?: Prisma.DateTimeNullableFilter<"Delivery"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Delivery"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Delivery"> | Date | string
 }
@@ -830,6 +1090,10 @@ export type DeliveryCreateManyTransporterInput = {
   pickedUpAt?: Date | string | null
   deliveredAt?: Date | string | null
   notes?: string | null
+  receiptStatus?: $Enums.ReceiptStatus
+  receiptAt?: Date | string | null
+  receiptNote?: string | null
+  handoverAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -847,9 +1111,14 @@ export type DeliveryUpdateWithoutTransporterInput = {
   pickedUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
+  receiptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  receiptNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handoverAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   order?: Prisma.OrderUpdateOneRequiredWithoutDeliveryNestedInput
+  checkpoints?: Prisma.DeliveryCheckpointUpdateManyWithoutDeliveryNestedInput
 }
 
 export type DeliveryUncheckedUpdateWithoutTransporterInput = {
@@ -866,8 +1135,13 @@ export type DeliveryUncheckedUpdateWithoutTransporterInput = {
   pickedUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
+  receiptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  receiptNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handoverAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  checkpoints?: Prisma.DeliveryCheckpointUncheckedUpdateManyWithoutDeliveryNestedInput
 }
 
 export type DeliveryUncheckedUpdateManyWithoutTransporterInput = {
@@ -884,10 +1158,43 @@ export type DeliveryUncheckedUpdateManyWithoutTransporterInput = {
   pickedUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptStatus?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
+  receiptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  receiptNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handoverAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+
+/**
+ * Count Type DeliveryCountOutputType
+ */
+
+export type DeliveryCountOutputType = {
+  checkpoints: number
+}
+
+export type DeliveryCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  checkpoints?: boolean | DeliveryCountOutputTypeCountCheckpointsArgs
+}
+
+/**
+ * DeliveryCountOutputType without action
+ */
+export type DeliveryCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DeliveryCountOutputType
+   */
+  select?: Prisma.DeliveryCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * DeliveryCountOutputType without action
+ */
+export type DeliveryCountOutputTypeCountCheckpointsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DeliveryCheckpointWhereInput
+}
 
 
 export type DeliverySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -905,10 +1212,16 @@ export type DeliverySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   pickedUpAt?: boolean
   deliveredAt?: boolean
   notes?: boolean
+  receiptStatus?: boolean
+  receiptAt?: boolean
+  receiptNote?: boolean
+  handoverAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   order?: boolean | Prisma.OrderDefaultArgs<ExtArgs>
   transporter?: boolean | Prisma.Delivery$transporterArgs<ExtArgs>
+  checkpoints?: boolean | Prisma.Delivery$checkpointsArgs<ExtArgs>
+  _count?: boolean | Prisma.DeliveryCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["delivery"]>
 
 export type DeliverySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -926,6 +1239,10 @@ export type DeliverySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   pickedUpAt?: boolean
   deliveredAt?: boolean
   notes?: boolean
+  receiptStatus?: boolean
+  receiptAt?: boolean
+  receiptNote?: boolean
+  handoverAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   order?: boolean | Prisma.OrderDefaultArgs<ExtArgs>
@@ -947,6 +1264,10 @@ export type DeliverySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   pickedUpAt?: boolean
   deliveredAt?: boolean
   notes?: boolean
+  receiptStatus?: boolean
+  receiptAt?: boolean
+  receiptNote?: boolean
+  handoverAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   order?: boolean | Prisma.OrderDefaultArgs<ExtArgs>
@@ -968,14 +1289,20 @@ export type DeliverySelectScalar = {
   pickedUpAt?: boolean
   deliveredAt?: boolean
   notes?: boolean
+  receiptStatus?: boolean
+  receiptAt?: boolean
+  receiptNote?: boolean
+  handoverAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type DeliveryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "orderId" | "status" | "transporterId" | "publishedAt" | "failedReason" | "failedAt" | "trackingNumber" | "driverName" | "driverPhone" | "estimatedDate" | "pickedUpAt" | "deliveredAt" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["delivery"]>
+export type DeliveryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "orderId" | "status" | "transporterId" | "publishedAt" | "failedReason" | "failedAt" | "trackingNumber" | "driverName" | "driverPhone" | "estimatedDate" | "pickedUpAt" | "deliveredAt" | "notes" | "receiptStatus" | "receiptAt" | "receiptNote" | "handoverAt" | "createdAt" | "updatedAt", ExtArgs["result"]["delivery"]>
 export type DeliveryInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   order?: boolean | Prisma.OrderDefaultArgs<ExtArgs>
   transporter?: boolean | Prisma.Delivery$transporterArgs<ExtArgs>
+  checkpoints?: boolean | Prisma.Delivery$checkpointsArgs<ExtArgs>
+  _count?: boolean | Prisma.DeliveryCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type DeliveryIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   order?: boolean | Prisma.OrderDefaultArgs<ExtArgs>
@@ -991,6 +1318,7 @@ export type $DeliveryPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
   objects: {
     order: Prisma.$OrderPayload<ExtArgs>
     transporter: Prisma.$TransporterProfilePayload<ExtArgs> | null
+    checkpoints: Prisma.$DeliveryCheckpointPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1007,6 +1335,10 @@ export type $DeliveryPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     pickedUpAt: Date | null
     deliveredAt: Date | null
     notes: string | null
+    receiptStatus: $Enums.ReceiptStatus
+    receiptAt: Date | null
+    receiptNote: string | null
+    handoverAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["delivery"]>
@@ -1405,6 +1737,7 @@ export interface Prisma__DeliveryClient<T, Null = never, ExtArgs extends runtime
   readonly [Symbol.toStringTag]: "PrismaPromise"
   order<T extends Prisma.OrderDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.OrderDefaultArgs<ExtArgs>>): Prisma.Prisma__OrderClient<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   transporter<T extends Prisma.Delivery$transporterArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Delivery$transporterArgs<ExtArgs>>): Prisma.Prisma__TransporterProfileClient<runtime.Types.Result.GetResult<Prisma.$TransporterProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  checkpoints<T extends Prisma.Delivery$checkpointsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Delivery$checkpointsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DeliveryCheckpointPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1448,6 +1781,10 @@ export interface DeliveryFieldRefs {
   readonly pickedUpAt: Prisma.FieldRef<"Delivery", 'DateTime'>
   readonly deliveredAt: Prisma.FieldRef<"Delivery", 'DateTime'>
   readonly notes: Prisma.FieldRef<"Delivery", 'String'>
+  readonly receiptStatus: Prisma.FieldRef<"Delivery", 'ReceiptStatus'>
+  readonly receiptAt: Prisma.FieldRef<"Delivery", 'DateTime'>
+  readonly receiptNote: Prisma.FieldRef<"Delivery", 'String'>
+  readonly handoverAt: Prisma.FieldRef<"Delivery", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Delivery", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Delivery", 'DateTime'>
 }
@@ -1867,6 +2204,30 @@ export type Delivery$transporterArgs<ExtArgs extends runtime.Types.Extensions.In
    */
   include?: Prisma.TransporterProfileInclude<ExtArgs> | null
   where?: Prisma.TransporterProfileWhereInput
+}
+
+/**
+ * Delivery.checkpoints
+ */
+export type Delivery$checkpointsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DeliveryCheckpoint
+   */
+  select?: Prisma.DeliveryCheckpointSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DeliveryCheckpoint
+   */
+  omit?: Prisma.DeliveryCheckpointOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DeliveryCheckpointInclude<ExtArgs> | null
+  where?: Prisma.DeliveryCheckpointWhereInput
+  orderBy?: Prisma.DeliveryCheckpointOrderByWithRelationInput | Prisma.DeliveryCheckpointOrderByWithRelationInput[]
+  cursor?: Prisma.DeliveryCheckpointWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DeliveryCheckpointScalarFieldEnum | Prisma.DeliveryCheckpointScalarFieldEnum[]
 }
 
 /**

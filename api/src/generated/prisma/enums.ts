@@ -129,3 +129,23 @@ export const RequestResponseStatus = {
 } as const
 
 export type RequestResponseStatus = (typeof RequestResponseStatus)[keyof typeof RequestResponseStatus]
+
+
+export const CheckpointType = {
+  PICKED_UP: 'PICKED_UP',
+  IN_TRANSIT: 'IN_TRANSIT',
+  DELIVERED: 'DELIVERED',
+  FAILED: 'FAILED'
+} as const
+
+export type CheckpointType = (typeof CheckpointType)[keyof typeof CheckpointType]
+
+
+export const ReceiptStatus = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  CONFIRMED_LAZY: 'CONFIRMED_LAZY',
+  DISPUTED: 'DISPUTED'
+} as const
+
+export type ReceiptStatus = (typeof ReceiptStatus)[keyof typeof ReceiptStatus]

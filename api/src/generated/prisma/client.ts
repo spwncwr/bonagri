@@ -125,6 +125,16 @@ export type Payment = Prisma.PaymentModel
  */
 export type Delivery = Prisma.DeliveryModel
 /**
+ * Model DeliveryCheckpoint
+ * 
+ */
+export type DeliveryCheckpoint = Prisma.DeliveryCheckpointModel
+/**
+ * Model DeliveryPhoto
+ * 
+ */
+export type DeliveryPhoto = Prisma.DeliveryPhotoModel
+/**
  * Model TransporterProfile
  * 
  */

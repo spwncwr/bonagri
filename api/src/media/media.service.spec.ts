@@ -114,6 +114,19 @@ describe("MediaService (CP16a media foundation)", () => {
       ).toBeNull();
     });
 
+    it("never derives assets outside our bonagri/ folder (shared account safety)", () => {
+      expect(
+        service.derivePublicId(
+          "https://res.cloudinary.com/bonagri-live/image/upload/v123/other-app/hero-photo.jpg",
+        ),
+      ).toBeNull();
+      expect(
+        service.derivePublicId(
+          "https://res.cloudinary.com/bonagri-live/image/upload/c_fill,w_50/v9/sample.png",
+        ),
+      ).toBeNull();
+    });
+
     it("returns null for any other host", () => {
       expect(
         service.derivePublicId("https://cdn.examplefarm.co.za/tomatoes.jpg"),

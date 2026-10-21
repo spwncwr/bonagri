@@ -5101,7 +5101,22 @@ if [[ "$O_EXT_HTTP" != "200" ]] || ! grep -q '"imagePublicId"[[:space:]]*:[[:spa
   fail "External image URL must store imagePublicId null. HTTP $O_EXT_HTTP"
 fi
 
-echo "✓ External URL accepted, no managed public_id"
+# Shared-account safety: a Cloudinary URL from OUR cloud but a foreign folder
+# must never be derived — a replace/clear would destroy an asset we don't own.
+O_FOREIGN_HTTP="$(
+  curl -sS -o "$LOG_DIR/o-product-foreign.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/products/$O_PRODUCT_ID" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"imageUrl":"https://res.cloudinary.com/bonagri-smoke/image/upload/v1760000001/other-app/hero.jpg"}'
+)"
+
+if [[ "$O_FOREIGN_HTTP" != "200" ]] || ! grep -q '"imagePublicId"[[:space:]]*:[[:space:]]*null' "$LOG_DIR/o-product-foreign.json"; then
+  cat "$LOG_DIR/o-product-foreign.json"
+  fail "Foreign-folder Cloudinary URL must store imagePublicId null. HTTP $O_FOREIGN_HTTP"
+fi
+
+echo "✓ External + foreign-folder URLs accepted, no managed public_id"
 
 echo
 echo "[O6/8] Clearing the product image..."

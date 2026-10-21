@@ -92,10 +92,21 @@ export class MediaService {
       return null;
     }
 
-    return (
+    const id =
       match[1].replace(/\.(jpe?g|png|webp|gif|avif|svg|bmp|tiff)$/i, "") ||
-      null
-    );
+      null;
+    if (!id) {
+      return null;
+    }
+
+    // Only OUR folder is a managed asset. A URL from someone else's folder —
+    // including another app sharing this Cloudinary account — must never be
+    // derivable, or a replace/clear could destroy an asset we don't own.
+    if (!id.startsWith("bonagri/")) {
+      return null;
+    }
+
+    return id;
   }
 
   // Best-effort: an asset we no longer reference should go, but a Cloudinary

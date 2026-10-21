@@ -983,6 +983,11 @@ by the user before the CP16b live journey.
   regenerate the committed client under `src/generated/prisma/` (Prisma 7
   config) — runtime 500 `Unknown argument imagePublicId` until an explicit
   `npx prisma generate`; run it after every migration.
+  **Same-day hardening (`45431b8`)**: `derivePublicId` now requires the
+  `bonagri/` folder prefix — a Cloudinary URL from *another folder on the
+  same account* (the user runs a second app on their Cloudinary) is treated
+  as external: stored, never derived, **never destroyed**. Unit vectors +
+  smoke O5 foreign-folder leg; live-verified on prod (3/3).
 - **CP16b — Product photos (web)**: `lib/media.ts` sign→direct-upload helper
   + `<ImageUpload>` widget (client size/format cap → sign → upload → preview);
   product new/edit forms switch from URL paste to upload (URL paste stays as

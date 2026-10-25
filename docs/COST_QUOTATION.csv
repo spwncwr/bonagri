@@ -1,0 +1,54 @@
+category,service,plan,billing_type,scenario,quantity,unit_price_usd,monthly_usd,annual_usd,one_time_usd,source_url,date_checked,status,notes
+Hosting,Render,Starter 0.5c-512mb x2 (API+web),MONTHLY,launch,2,7.00,14.00,,,https://render.com/pricing,2026-10-22,VERIFIED,Budget: Hobby free (cold starts); Premium: Basic 1c-2g x2 = $50
+Database,Neon,Launch 0.25 CU (mostly suspended),USAGE-BASED,launch,1,,10.00,,,https://neon.tech/pricing,2026-10-22,UNVERIFIED,$0.106/CU-hr + $0.35/GB-mo; estimate. Budget: Neon Free $0
+Backups,Cloudflare R2,Standard pg_dump storage,USAGE-BASED,launch,2,0.015,1.00,,,https://developers.cloudflare.com/r2/pricing,2026-10-22,VERIFIED,10 GB-mo free tier; free egress
+Images,Cloudinary,Free (25 credits/mo),MONTHLY,launch,1,0.00,0.00,,,https://cloudinary.com/pricing,2026-10-22,VERIFIED,Already integrated; upgrade to Plus $89/mo if 25-credit cap hit
+CDN/SSL/DNS,Cloudflare,Free plan,MONTHLY,launch,1,0.00,0.00,,,https://www.cloudflare.com/plans/,2026-10-22,VERIFIED,CDN + Universal SSL + DNS; Pro $25/mo is premium option
+Transactional email,Resend,"Free (3k/mo, 100/day)",MONTHLY,launch,1,0.00,0.00,,,https://resend.com/pricing,2026-10-22,VERIFIED,~57 emails/day avg at pilot; watch 100/day cap on spikes
+Mailboxes,Zoho Mail,Lite (5-user minimum),MONTHLY,launch,5,1.00,5.00,,,https://www.zoho.com/mail/zohomail-pricing.html,2026-10-22,VERIFIED,Annual billing. Budget: Zoho Free $0; Premium: Google Workspace $7/user
+Monitoring,Sentry Developer + UptimeRobot Free,Free tiers,MONTHLY,launch,1,0.00,0.00,,,https://sentry.io/pricing/,2026-10-22,VERIFIED,5k errors/mo + 50 monitors. Premium: Sentry Team $26/mo
+CI/CD + secrets,GitHub Actions,Free allowance,MONTHLY,launch,1,0.00,0.00,,,https://docs.github.com/en/billing,2026-10-22,VERIFIED,"2,000 min/mo private repo; unlimited if public"
+One-time setup,Legal counsel,T&C + privacy + refund docs,ONE-TIME,launch,1,800.00,,,800.00,,2026-10-22,UNVERIFIED,Mid of $300-1500 market range; must satisfy ETCSA 2016 + DPA 2024
+One-time setup,CRIPC Malawi,"Incorporation MK75,000 + name reservation MK20,000",ONE-TIME,launch,1,54.60,,,54.60,https://portal.trade.gov.mw/en-gb/site/display/238,2026-10-22,VERIFIED,"MK95,000 total at RBM mid rate"
+One-time setup,SMS sender ID,Alphanumeric sender ID (Airtel+TNM),ONE-TIME,launch,1,100.00,,,100.00,,2026-10-22,UNVERIFIED,Proxy fee (eSMS Africa $100); Africa's Talking currently free to raise
+One-time setup,Google Play Console,Developer registration,ONE-TIME,launch,1,25.00,,,25.00,https://support.google.com/googleplay/android-developer/answer/6112435,2026-10-22,VERIFIED,One-time; no monthly fee; 0% commission on physical goods
+One-time setup,.mw registry (SDNP),2-yr minimum registration (2 names),ONE-TIME,launch,1,95.00,,,95.00,https://www.registrar.mw/policies/SDNP-dot-MW-Fees-Policy-ver-1.6.pdf,2026-10-22,UNVERIFIED,Registry $40/yr x2 + retail markup est; bonagri.mw/.co.mw available 2026-10-22
+Domain,Cloudflare Registrar,.com transfer-in/renewal,ANNUAL,launch,1,10.46,,10.46,,https://developers.cloudflare.com/registrar,2026-10-22,VERIFIED,At-cost; contingent on acquiring bonagri.com (parked on Afternic)
+Compliance,Malawi DPA,Data controller registration (small band),ANNUAL,launch,1,29.00,,29.00,,https://www.dpa.mw/download/data-protection-registration-regulations-2025/,2026-10-22,UNVERIFIED,Draft regs 2025; reportedly mandatory from 2026-09-01
+Payments,Airtel Money MW,Merchant MDR on wallet GMV,PER-TRANSACTION,launch,10500.00 USD GMV,0.0300,315.00,,,UNVERIFIED (Schedule II bilateral),2026-10-22,UNVERIFIED,70% of $15k GMV; benchmark 3% - get operator quote (Q2)
+Payments,Flutterwave MW,Card MDR,PER-TRANSACTION,launch,3000.00 USD GMV,0.0480,144.00,,,https://flutterwave.com/mw/pricing,2026-10-22,VERIFIED,"20% of $15k GMV; RBM-registered. Alternatives: PayChangu 3%, Pesapal 3.5%"
+Payments,Flutterwave MW,Bank payout to suppliers,PER-TRANSACTION,launch,20,1.1534,23.00,,,https://flutterwave.com/mw/pricing,2026-10-22,VERIFIED,"MK2,000/transfer x 20 suppliers; +0.05% levy over MK100k (MRA)"
+SMS,Africa's Talking,Bulk SMS basic tier,USAGE-BASED,launch,1000,0.0130,13.00,,,https://africastalking.com/pricing,2026-10-22,VERIFIED,2 SMS/order x 500 orders; local rate 7-25x cheaper than Twilio
+Contingency,Buffer,15% of Year-1,MONTHLY,launch,1,,92.68,,,,2026-10-22,UNVERIFIED,"15% x $7,414 / 12"
+Hosting,Render,Basic 1c-2g x2 (API+web),MONTHLY,growth,2,25.00,50.00,,,https://render.com/pricing,2026-10-22,VERIFIED,Budget: Starter x2 $14; Premium: Pro x2 ~$170 (UNVERIFIED est)
+Database,Neon,Launch 0.5 CU + 15 GB,USAGE-BASED,growth,1,,45.00,,,https://neon.tech/pricing,2026-10-22,UNVERIFIED,Est. at continuous 0.5 CU + 15 GB storage + snapshots
+Backups,Cloudflare R2,Standard storage (15 GB),USAGE-BASED,growth,15,0.015,1.00,,,https://developers.cloudflare.com/r2/pricing,2026-10-22,VERIFIED,
+Images,Cloudinary,Plus - 225 credits (annual billing),MONTHLY,growth,1,89.00,89.00,,,https://cloudinary.com/pricing,2026-10-22,VERIFIED,~145 credits needed at 10k images; Free tier insufficient
+CDN/SSL/DNS,Cloudflare,Free plan,MONTHLY,growth,1,0.00,0.00,,,https://www.cloudflare.com/plans/,2026-10-22,VERIFIED,
+Transactional email,Resend,Pro (50k/mo),MONTHLY,growth,1,20.00,20.00,,,https://resend.com/pricing,2026-10-22,VERIFIED,Free 100/day cap exceeded (~500/day)
+Mailboxes,Zoho Mail,Premium (3 users),MONTHLY,growth,3,4.00,12.00,,,https://www.zoho.com/mail/zohomail-pricing.html,2026-10-22,VERIFIED,
+Monitoring,Sentry,Team (50k errors/mo),MONTHLY,growth,1,26.00,26.00,,,https://sentry.io/pricing/,2026-10-22,VERIFIED,Free tier adequate until error volume grows
+CI/CD + secrets,GitHub Actions,Free allowance,MONTHLY,growth,1,0.00,0.00,,,https://docs.github.com/en/billing,2026-10-22,VERIFIED,
+Domain/annual,Cloudflare + .mw + Apple + DPA,.com $10.46 + .mw $45 + Apple $99 + DPA $29,ANNUAL,growth,1,183.46,,183.46,,https://developer.apple.com/programs/,2026-10-22,UNVERIFIED,.mw retail est; Apple when iOS ships; split in notes
+Payments,Airtel Money MW,Merchant MDR on wallet GMV,PER-TRANSACTION,growth,105000.00 USD GMV,0.0300,3150.00,,,UNVERIFIED (Schedule II bilateral),2026-10-22,UNVERIFIED,70% of $150k GMV
+Payments,Flutterwave MW,Card MDR,PER-TRANSACTION,growth,30000.00 USD GMV,0.0480,1440.00,,,https://flutterwave.com/mw/pricing,2026-10-22,VERIFIED,20% of $150k GMV
+Payments,Flutterwave MW,Bank payout to suppliers,PER-TRANSACTION,growth,100,1.1534,115.00,,,https://flutterwave.com/mw/pricing,2026-10-22,VERIFIED,100 suppliers
+SMS,Africa's Talking,Bulk SMS basic tier,USAGE-BASED,growth,10000,0.0130,130.00,,,https://africastalking.com/pricing,2026-10-22,VERIFIED,"2 SMS/order x 5,000 orders"
+Contingency,Buffer,12% of Year-1,MONTHLY,growth,1,,611.19,,,,2026-10-22,UNVERIFIED,"12% x $61,119 / 12"
+Hosting,Render,Pro (API) + Basic (web),MONTHLY,scale,1,110.00,110.00,,,https://render.com/pricing,2026-10-22,UNVERIFIED,Pro ~$85 est (tier not rendered); Basic $25 verified. Budget: Basic x2 $50
+Database,Neon,Scale 1 CU + 50 GB,USAGE-BASED,scale,1,,180.00,,,https://neon.tech/pricing,2026-10-22,UNVERIFIED,$0.222/CU-hr continuous + $0.35/GB-mo; est.
+Backups,Cloudflare R2,Standard storage (50 GB),USAGE-BASED,scale,50,0.015,2.00,,,https://developers.cloudflare.com/r2/pricing,2026-10-22,VERIFIED,
+Images,Cloudinary,Advanced - 600 credits (annual billing),MONTHLY,scale,1,249.00,249.00,,,https://cloudinary.com/pricing,2026-10-22,VERIFIED,~550 credits at 100k images; Enterprise custom beyond. Migration to Cloudflare Images+R2 ~$60 est.
+CDN/SSL/DNS,Cloudflare,Free plan,MONTHLY,scale,1,0.00,0.00,,,https://www.cloudflare.com/plans/,2026-10-22,VERIFIED,
+Transactional email,Resend,Pro base,MONTHLY,scale,1,20.00,20.00,,,https://resend.com/pricing,2026-10-22,VERIFIED,100k extra emails billed in usage row below
+Transactional email,Resend,Overage 100k emails,USAGE-BASED,scale,100,0.90,90.00,,,https://resend.com/pricing,2026-10-22,VERIFIED,~150k emails/mo at 3/order
+Mailboxes,Zoho Mail,Premium (10 users),MONTHLY,scale,10,4.00,40.00,,,https://www.zoho.com/mail/zohomail-pricing.html,2026-10-22,VERIFIED,
+Monitoring,Sentry Team + UptimeRobot Solo,Team + Solo,MONTHLY,scale,1,36.00,36.00,,,https://sentry.io/pricing/,2026-10-22,VERIFIED,$26 + $10. Premium: Sentry Business + Datadog $166
+CI/CD + secrets,GitHub Actions,Overage,USAGE-BASED,scale,1000,0.0060,6.00,,,https://docs.github.com/en/billing,2026-10-22,VERIFIED,Linux min overage after 2k free
+Domain/annual,Cloudflare + .mw + Apple + DPA,Same as Growth,ANNUAL,scale,1,183.46,,183.46,,https://developer.apple.com/programs/,2026-10-22,UNVERIFIED,
+Payments,Airtel Money MW,Merchant MDR on wallet GMV,PER-TRANSACTION,scale,1050000.00 USD GMV,0.0300,31500.00,,,UNVERIFIED (Schedule II bilateral),2026-10-22,UNVERIFIED,70% of $1.05M GMV - single largest line in quotation
+Payments,Flutterwave MW,Card MDR,PER-TRANSACTION,scale,300000.00 USD GMV,0.0480,14400.00,,,https://flutterwave.com/mw/pricing,2026-10-22,VERIFIED,20% of $1.05M GMV
+Payments,Flutterwave MW,Bank payout to suppliers + levy,PER-TRANSACTION,scale,500,1.1534,575.00,,,https://flutterwave.com/mw/pricing,2026-10-22,VERIFIED,500 suppliers; 0.05% MRA levy on transfers > MK100k
+SMS,Africa's Talking,Bulk SMS volume tier,USAGE-BASED,scale,100000,0.0105,1050.00,,,https://africastalking.com/pricing,2026-10-22,VERIFIED,"2 SMS/order x 50,000 orders; tier MWK 15-26"
+Maps (future),Google Maps Platform,Geocode + matrix + JS beyond free caps,USAGE-BASED,scale,50000,0.0044,220.00,,,https://developers.google.com/maps/billing-and-pricing/pricing,2026-10-22,VERIFIED,Free 10k/SKU/mo covers up to Growth; Mapbox alt ~$100 (50k free loads)
+Contingency,Buffer,10% of Year-1,MONTHLY,scale,1,,4858.33,,,,2026-10-22,UNVERIFIED,"10% x $581,919 / 12"

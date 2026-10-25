@@ -154,6 +154,35 @@ describe("MediaService (CP16a media foundation)", () => {
       expect(destroySpy).not.toHaveBeenCalled();
     });
 
+    it("applies the SDK config from the env before destroying", async () => {
+      setEnv({
+        CLOUDINARY_CLOUD_NAME: "bonagri-test",
+        CLOUDINARY_API_KEY: "key123",
+        CLOUDINARY_API_SECRET: "secret123",
+      });
+      const service = new MediaService();
+      // Regression for the CP16b live journey: without this, the SDK's global
+      // config stayed empty and destroy failed with "Must supply api_key".
+      const configSpy = jest.spyOn(cloudinary, "config");
+      const destroySpy = jest
+        .spyOn(cloudinary.uploader, "destroy")
+        .mockResolvedValue({ result: "ok" } as never);
+
+      await service.destroyAsset("bonagri/product/old");
+
+      expect(configSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cloud_name: "bonagri-test",
+          api_key: "key123",
+          api_secret: "secret123",
+          secure: true,
+        }),
+      );
+      expect(configSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        destroySpy.mock.invocationCallOrder[0],
+      );
+    });
+
     it("swallows Cloudinary errors (best-effort cleanup)", async () => {
       setEnv({
         CLOUDINARY_CLOUD_NAME: "bonagri-test",

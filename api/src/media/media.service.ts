@@ -109,12 +109,36 @@ export class MediaService {
     return id;
   }
 
+  // The signing path passes the api_secret explicitly, but the SDK's own
+  // operations (uploader.destroy) read the *global* Cloudinary config — which
+  // nothing set, so destroy failed with "Must supply api_key". Found by the
+  // CP16b live journey: signing worked while every cleanup silently 404'd on
+  // a missing key. Applied per-call so env changes are picked up too.
+  private applyConfig(): void {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return;
+    }
+
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+      secure: true,
+    });
+  }
+
   // Best-effort: an asset we no longer reference should go, but a Cloudinary
   // hiccup must never fail the product/logo update that triggered it.
   async destroyAsset(publicId?: string | null): Promise<void> {
     if (!publicId || !this.isConfigured()) {
       return;
     }
+
+    this.applyConfig();
 
     try {
       await cloudinary.uploader.destroy(publicId, { invalidate: true });

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthGuard from "../../../../components/auth/auth-guard";
+import ImageUpload from "../../../../components/media/image-upload";
 import { authHeaders } from "../../../../lib/auth";
 
 const API_BASE_URL =
@@ -321,12 +322,23 @@ export default function NewProductPage() {
               </div>
 
               <div>
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Photo{" "}
+                  <span className="font-normal text-slate-400">(optional)</span>
+                </span>
+                <ImageUpload
+                  kind="product"
+                  value={imageUrl}
+                  onChange={setImageUrl}
+                />
+              </div>
+
+              <div>
                 <label
                   htmlFor="imageUrl"
                   className="mb-2 block text-sm font-medium text-slate-700"
                 >
-                  Image URL{" "}
-                  <span className="font-normal text-slate-400">(optional)</span>
+                  …or paste an image URL
                 </label>
                 <input
                   id="imageUrl"

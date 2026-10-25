@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import NotificationsPanel from "../components/notifications/notifications-panel";
 import { authHeaders, fetchCurrentUser, clearAuth, type AuthUser } from "../lib/auth";
+import { buildImageUrl } from "../lib/media";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -17,6 +18,7 @@ type ApiProduct = {
   price: string;
   unit: string;
   status: string;
+  imageUrl: string | null;
   category: {
     name: string;
     slug: string;
@@ -59,6 +61,7 @@ type Product = {
   unit: string;
   supplier: string;
   verified: boolean;
+  imageUrl: string | null;
   tone: string;
   visual: string;
 };
@@ -188,6 +191,7 @@ function mapApiProduct(product: ApiProduct): Product {
     unit: `/ ${product.unit}`,
     supplier: product.supplier.businessName,
     verified: product.supplier.verified,
+    imageUrl: product.imageUrl ?? null,
     tone: visual.tone,
     visual: visual.visual,
   };
@@ -249,6 +253,7 @@ export default function Home() {
         quantity: number;
         unitPrice: string;
         lineTotal: string;
+        product?: { imageUrl?: string | null } | null;
       }>;
       deliveryAddress: {
         city: string;
@@ -1176,6 +1181,24 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* CP16b: supplier photo covers the tone panel; on load error
+                    it hides and the tone/visual fallback below shows again.
+                    Plain <img> is deliberate: Cloudinary serves the resized/
+                    auto-format bytes, so a Next image proxy would only burn
+                    Render free-tier CPU re-doing that work. */}
+                {buildImageUrl(product.imageUrl, 640) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={buildImageUrl(product.imageUrl, 640) as string}
+                    alt={product.name}
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : null}
+
                 <div className="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-[9px] font-black uppercase tracking-wide text-[#17633a]">
                   {product.verified ? "✓ Verified" : "Supplier"}
                 </div>
@@ -1252,6 +1275,17 @@ export default function Home() {
                     {selectedProduct.visual}
                   </div>
                 </div>
+                {buildImageUrl(selectedProduct.imageUrl, 800) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={buildImageUrl(selectedProduct.imageUrl, 800) as string}
+                    alt={selectedProduct.name}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : null}
                 <div className="absolute right-5 top-5">
                   <button
                     type="button"
@@ -2271,8 +2305,28 @@ export default function Home() {
                               key={`${order.id}-${item.productName}`}
                               className="flex flex-wrap items-center justify-between gap-3 text-xs"
                             >
-                              <span className="font-bold text-[#344238]">
-                                {item.productName}
+                              <span className="flex min-w-0 items-center gap-2 font-bold text-[#344238]">
+                                {buildImageUrl(item.product?.imageUrl, 80) ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={
+                                      buildImageUrl(
+                                        item.product?.imageUrl,
+                                        80,
+                                      ) as string
+                                    }
+                                    alt=""
+                                    loading="lazy"
+                                    className="h-7 w-7 shrink-0 rounded-md object-cover"
+                                    onError={(event) => {
+                                      event.currentTarget.style.display =
+                                        "none";
+                                    }}
+                                  />
+                                ) : null}
+                                <span className="truncate">
+                                  {item.productName}
+                                </span>
                               </span>
                               <span className="text-[#69756c]">
                                 {item.quantity} × R{item.unitPrice}

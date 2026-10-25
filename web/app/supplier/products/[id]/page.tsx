@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthGuard from "../../../../components/auth/auth-guard";
+import ImageUpload from "../../../../components/media/image-upload";
 import { authHeaders } from "../../../../lib/auth";
 
 const API_BASE_URL =
@@ -119,7 +120,9 @@ export default function EditProductPage() {
           description: description.trim() === "" ? undefined : description,
           price: Number(price),
           unit,
-          imageUrl: imageUrl.trim() === "" ? undefined : imageUrl.trim(),
+          // CP16b: empty field now means "clear the image" (null destroys the
+          // managed Cloudinary asset server-side); a pasted URL replaces it.
+          imageUrl: imageUrl.trim() === "" ? null : imageUrl.trim(),
           status,
         }),
       });
@@ -312,12 +315,25 @@ export default function EditProductPage() {
                 </div>
 
                 <div>
+                  <span className="mb-2 block text-sm font-medium text-slate-700">
+                    Photo{" "}
+                    <span className="font-normal text-slate-400">
+                      (optional)
+                    </span>
+                  </span>
+                  <ImageUpload
+                    kind="product"
+                    value={imageUrl}
+                    onChange={setImageUrl}
+                  />
+                </div>
+
+                <div>
                   <label
                     htmlFor="imageUrl"
                     className="mb-2 block text-sm font-medium text-slate-700"
                   >
-                    Image URL{" "}
-                    <span className="font-normal text-slate-400">(optional)</span>
+                    …or paste an image URL
                   </label>
                   <input
                     id="imageUrl"

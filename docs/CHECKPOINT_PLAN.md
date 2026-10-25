@@ -62,7 +62,7 @@ Pre-existing known failures that do **not** block a checkpoint (note them if hit
 | CP13 | Trust & ops hygiene (CI, e2e fix, rate limiting) | 2026-10-19 | done (385034a–a0c19be) |
 | CP14 | Transporter role (delivery jobs) | 2026-10-20 | done (073d779–7de6646) |
 | CP15 | Trust bridge (checkpoint evidence) | 2026-10-20 | CP15a done (`3377cc0`–`0d48cf2`); CP15b–d pending |
-| CP16 | Media & branding (Cloudinary) | 2026-10-20 | CP16a done (`599dcbe`–`74acca8`); CP16b–c pending |
+| CP16 | Media & branding (Cloudinary) | 2026-10-20 | CP16a–b done (`599dcbe`–`a2d7405`); CP16c pending |
 
 Update the Status column (`pending` → `done (commit)`) as each CP lands.
 
@@ -938,12 +938,13 @@ smoke; web build/lint; deployed API + browser journey; docs commit.
 
 ### CP16 — Media & branding (Cloudinary)
 
-**Status**: designed + **CP16a (media foundation) landed 2026-10-20**
-(`599dcbe` schema → `74acca8` feature); CP16b–c pending. Requires a Cloudinary
-account (free tier) with
-`CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` set in
-`api/.env` and Render — until then the signature endpoint answers 503 and the
-stack runs on the URL-paste fallback.
+**Status**: **CP16a (media foundation) landed 2026-10-20** (`599dcbe` schema
+→ `74acca8` feature), **CP16b (product photos) landed 2026-10-25**
+(`0838cc7` widget/rendering + `a2d7405` destroy fix) and **live-journey
+verified on prod with real credentials**; CP16c pending. The
+`CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` envs
+are now set in `api/.env` and Render (2026-10-25), so the signature endpoint
+answers 201 with a full payload instead of the 503 fallback.
 
 **Problem (verified 2026-10-20)**: zero images rendered anywhere in `web/`
 (no `<img>`/`next/image` tags at all). `Product.imageUrl` is a write-only
@@ -967,8 +968,9 @@ transit the Render API (100kb JSON body limit; no reason to proxy MBs):
 
 **User decisions (2026-10-20)**: CP15b delivery photos stay **bytea**
 (evidence semantics — append-only, sha256 dedupe, counterparty-only serving;
-Cloudinary owns public/catalog media only). Cloudinary account to be created
-by the user before the CP16b live journey.
+Cloudinary owns public/catalog media only). The user created a dedicated
+Cloudinary account (2026-10-25) and set the three env vars in `api/.env` +
+Render themselves — the values were never handled by the agent.
 
 - **CP16a — Media foundation (API)** ✅ **done 2026-10-20**: `cloudinary` dep;
   `media/` module (signature + config-guard 503 + derive + destroy);
@@ -988,21 +990,38 @@ by the user before the CP16b live journey.
   same account* (the user runs a second app on their Cloudinary) is treated
   as external: stored, never derived, **never destroyed**. Unit vectors +
   smoke O5 foreign-folder leg; live-verified on prod (3/3).
-- **CP16b — Product photos (web)**: `lib/media.ts` sign→direct-upload helper
-  + `<ImageUpload>` widget (client size/format cap → sign → upload → preview);
-  product new/edit forms switch from URL paste to upload (URL paste stays as
-  fallback); marketplace card + product modal + order lines render `<img>`
-  with the existing tone/visual panel as fallback; Cloudinary URL builder
-  (`w_`/`q_auto`/`f_auto`) so the free-tier server does zero image work.
+- **CP16b — Product photos (web)** ✅ **done 2026-10-25** (`0838cc7` +
+  fix `a2d7405`): `lib/media.ts` sign→direct-upload helper + `<ImageUpload>`
+  widget (client size/format cap → sign → upload → preview; 503 → amber
+  "not enabled" note instead of a red failure); product new/edit forms switch
+  from URL paste to upload (URL paste stays as fallback, both bound to the
+  same `imageUrl` state; edit form sends `null` when empty to clear); +
+  marketplace card + product modal + buyer order lines render `<img>` with
+  the existing tone/visual panel as fallback (`onError` hides the broken
+  image); Cloudinary URL builder (`w_640/800/320/80` + `q_auto,f_auto`) so
+  the free-tier server does zero image work — plain `<img>` is deliberate
+  (a Next image proxy would only re-do Cloudinary's work on Render CPU).
+  **Live journey 2026-10-25 (local + prod, real credentials)**: signature
+  201 → direct upload 200 → transformed fetch 200 → widget preview decoded
+  → saved listing → card decoded at `w_640` → modal at `w_800` → clear leg
+  (row nulled + asset **destroyed**, Admin API 404, public/transformed 404
+  after CDN purge) → URL-paste leg (stored verbatim, foreign folder never
+  derived/destroyed, builder passthrough) → tone-panel fallback (0 `<img>`s)
+  → order plumbing (`GET /api/orders` items carry `product.imageUrl`).
+  **Real bug found by the journey**: `destroyAsset` never called
+  `cloudinary.config()` — signing passed the secret explicitly so it worked,
+  while every cleanup silently failed with "Must supply api_key". Fixed in
+  `a2d7405` (+ regression test asserting `config` precedes `destroy`);
+  tests **279 → 280**; verified destroyed on prod.
 - **CP16c — Branding**: shared `<Logo>` component replacing the duplicated
   wordmarks; favicon + PWA icons + og-image regenerated from the logo;
   supplier logo upload UI + display (marketplace cards, supplier hub,
   transport hub); site-logo admin edit path via the ADMIN-signed media flow.
 
 **Gates (standing)**: migration + committed client; unit tests; smoke
-section(s); api/web build+lint; deployed live journey (CP16b/c need real
-CLOUDINARY envs — uploads + displayed images verified in browser); docs
-commit.
+section(s); api/web build+lint; deployed live journey (**CP16b done
+2026-10-25** — uploads + displayed images verified in the browser, local and
+prod; CP16c journey still to run); docs commit.
 
 ## 4. Checkpoint hygiene rules
 

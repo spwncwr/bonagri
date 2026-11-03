@@ -1325,6 +1325,22 @@ if [[ "$DEALER_CREATE_HTTP" != "200" ]] && [[ "$DEALER_CREATE_HTTP" != "201" ]];
   fail "Dealer product creation failed. HTTP $DEALER_CREATE_HTTP"
 fi
 
+# A well-formed but unknown categoryId must be refused up front (400), not
+# surface as a foreign-key 500 — listings may only land in real categories.
+BOGUS_CATEGORY_HTTP="$(
+  curl -sS -o "$LOG_DIR/dealer-bogus-category.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/products" \
+    -H "Authorization: Bearer $DEALER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"categoryId\":\"11111111-2222-4333-8444-555555555555\",\"name\":\"Ghost Category Tool\",\"slug\":\"ghost-category-tool-$DEALER_TS\",\"sku\":\"BON-GHOST-$DEALER_TS\",\"price\":10,\"unit\":\"each\"}")"
+
+if [[ "$BOGUS_CATEGORY_HTTP" != "400" ]]; then
+  cat "$LOG_DIR/dealer-bogus-category.json"
+  fail "Unknown category should be 400, got HTTP $BOGUS_CATEGORY_HTTP"
+fi
+
+echo "✓ Unknown categoryId rejected with 400"
+
 DEALER_PRODUCT_ID="$(
   python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/dealer-product-create.json"
 )"
@@ -4994,7 +5010,9 @@ O_SIG_HTTP="$(
     -d '{"kind":"product"}'
 )"
 
-if [[ "$O_SIG_HTTP" == "200" ]]; then
+# 201 is Nest's default for POST and is what the endpoint has always returned
+# when configured (the web client checks response.ok, so any 2xx works).
+if [[ "$O_SIG_HTTP" == "200" || "$O_SIG_HTTP" == "201" ]]; then
   if ! python3 - "$LOG_DIR/o-signature.json" <<'PYJSON'
 import json, sys
 sig = json.load(open(sys.argv[1], encoding="utf-8"))
@@ -5016,7 +5034,7 @@ elif [[ "$O_SIG_HTTP" == "503" ]]; then
   fi
 else
   cat "$LOG_DIR/o-signature.json"
-  fail "Upload signature must answer 200 (configured) or 503 (unset). HTTP $O_SIG_HTTP"
+  fail "Upload signature must answer 200/201 (configured) or 503 (unset). HTTP $O_SIG_HTTP"
 fi
 
 echo "✓ Signature flow: 200 with full payload, or graceful 503"
@@ -5199,6 +5217,270 @@ echo "✓ Logo null clears URL + public_id"
 
 echo
 echo "✓ MEDIA FOUNDATION FLOW ACCEPTANCE PASSED"
+
+echo
+echo "PRODUCT REVIEWS & RATINGS FLOW (CP17)"
+echo "========================================"
+
+# This section runs before the admin flow on purpose: A2 re-roles the main
+# smoke buyer to SUPPLIER, while review writes are buyer-only. The main buyer
+# already has DELIVERED orders (supplier journey S + dealer journey D + CP12
+# journey K), which is what makes them eligible to review.
+# The flow is idempotent: repeat runs hit the 409 duplicate branch instead of
+# failing.
+
+echo "[R1/6] Public review reads + anonymous guards..."
+
+R_LIST_HTTP="$(
+  curl -sS -o "$LOG_DIR/r-reviews.json" -w "%{http_code}" \
+    "$API_URL$API_PREFIX/products/$PRODUCT_ID/reviews"
+)"
+
+if [[ "$R_LIST_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/r-reviews.json"
+  fail "Public review list failed. HTTP $R_LIST_HTTP"
+fi
+
+python3 - "$LOG_DIR/r-reviews.json" "$PRODUCT_ID" <<'PYJSON'
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+if data.get("productId") != sys.argv[2]:
+    raise SystemExit("ERROR: review payload is scoped to the wrong product")
+
+if not isinstance(data.get("items"), list):
+    raise SystemExit("ERROR: review payload is missing the items list")
+
+if data.get("count") != len(data["items"]):
+    raise SystemExit("ERROR: count does not match the returned items")
+
+print("✓ Public review list: summary + {} review(s)".format(len(data["items"])))
+PYJSON
+
+R_UNKNOWN_ID="11111111-2222-4333-8444-555555555555"
+R_UNKNOWN_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    "$API_URL$API_PREFIX/products/$R_UNKNOWN_ID/reviews"
+)"
+
+if [[ "$R_UNKNOWN_HTTP" != "404" ]]; then
+  fail "Unknown product review read should be 404, got HTTP $R_UNKNOWN_HTTP"
+fi
+echo "✓ Unknown product -> 404"
+
+R_ANON_POST_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"rating":5}' \
+    "$API_URL$API_PREFIX/products/$PRODUCT_ID/reviews"
+)"
+
+if [[ "$R_ANON_POST_HTTP" != "401" ]]; then
+  fail "Anonymous review write should be 401, got HTTP $R_ANON_POST_HTTP"
+fi
+
+R_ANON_MINE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    "$API_URL$API_PREFIX/products/$PRODUCT_ID/reviews/mine"
+)"
+
+if [[ "$R_ANON_MINE_HTTP" != "401" ]]; then
+  fail "Anonymous /reviews/mine should be 401, got HTTP $R_ANON_MINE_HTTP"
+fi
+echo "✓ Anonymous write + /mine -> 401"
+
+echo
+echo "[R2/6] Role and delivered-order eligibility guards..."
+
+R_SUP_POST_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" -X POST \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"rating":5}' \
+    "$API_URL$API_PREFIX/products/$PRODUCT_ID/reviews"
+)"
+
+if [[ "$R_SUP_POST_HTTP" != "403" ]]; then
+  fail "Supplier review write should be 403 (buyer-only), got HTTP $R_SUP_POST_HTTP"
+fi
+echo "✓ Supplier write -> 403"
+
+R_BAD_RATING_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" -X POST \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"rating":6}' \
+    "$API_URL$API_PREFIX/products/$PRODUCT_ID/reviews"
+)"
+
+if [[ "$R_BAD_RATING_HTTP" != "400" ]]; then
+  fail "Out-of-range rating should be 400, got HTTP $R_BAD_RATING_HTTP"
+fi
+echo "✓ rating=6 rejected with 400"
+
+# Pick an ACTIVE product this buyer has NEVER received (their delivered
+# orders are computed from the API, so new journeys cannot break the check).
+curl -sS -o "$LOG_DIR/r-orders.json" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "$API_URL$API_PREFIX/orders"
+curl -sS -o "$LOG_DIR/r-products.json" \
+  "$API_URL$API_PREFIX/products"
+
+R_INELIGIBLE_ID="$(
+  python3 - "$LOG_DIR/r-orders.json" "$LOG_DIR/r-products.json" <<'PYJSON'
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    orders = json.load(f)
+with open(sys.argv[2]) as f:
+    products = json.load(f)
+
+delivered_ids = set()
+for order in orders:
+    if order.get("status") != "DELIVERED":
+        continue
+    for item in order.get("items", []):
+        product_id = (item.get("product") or {}).get("id")
+        if product_id:
+            delivered_ids.add(product_id)
+
+for product in products:
+    if product.get("status") != "ACTIVE":
+        continue
+    if product.get("id") in delivered_ids:
+        continue
+    print(product["id"])
+    break
+else:
+    raise SystemExit("ERROR: no eligible-free ACTIVE product for the 403 check")
+PYJSON
+)"
+
+R_INELIGIBLE_HTTP="$(
+  curl -sS -o "$LOG_DIR/r-ineligible.json" -w "%{http_code}" -X POST \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"rating":5,"comment":"Should be refused"}' \
+    "$API_URL$API_PREFIX/products/$R_INELIGIBLE_ID/reviews"
+)"
+
+if [[ "$R_INELIGIBLE_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/r-ineligible.json"
+  fail "Review without a delivered order should be 403, got HTTP $R_INELIGIBLE_HTTP"
+fi
+echo "✓ No delivered order for that product -> 403"
+
+echo
+echo "[R3/6] Eligible buyer posts a review..."
+
+R_CREATE_BODY="{\"rating\":4,\"comment\":\"Fresh and well packed - smoke test\"}"
+R_CREATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/r-create.json" -w "%{http_code}" -X POST \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$R_CREATE_BODY" \
+    "$API_URL$API_PREFIX/products/$PRODUCT_ID/reviews"
+)"
+
+case "$R_CREATE_HTTP" in
+  200 | 201)
+    echo "✓ Review created (HTTP $R_CREATE_HTTP)"
+    ;;
+  409)
+    # Repeat run: this buyer already reviewed the pinned product.
+    echo "✓ Review already exists from a previous run (HTTP 409)"
+    ;;
+  *)
+    cat "$LOG_DIR/r-create.json"
+    fail "Review creation failed. HTTP $R_CREATE_HTTP"
+    ;;
+esac
+
+echo
+echo "[R4/6] One review per buyer per product..."
+
+R_DUP_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" -X POST \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"rating":1}' \
+    "$API_URL$API_PREFIX/products/$PRODUCT_ID/reviews"
+)"
+
+if [[ "$R_DUP_HTTP" != "409" ]]; then
+  fail "Duplicate review should be 409, got HTTP $R_DUP_HTTP"
+fi
+echo "✓ Second review rejected with 409"
+
+echo
+echo "[R5/6] The rating summary lands in the catalog payloads..."
+
+curl -sS -o "$LOG_DIR/r-catalog.json" "$API_URL$API_PREFIX/products"
+curl -sS -o "$LOG_DIR/r-detail.json" "$API_URL$API_PREFIX/products/$PRODUCT_ID"
+curl -sS -o "$LOG_DIR/r-mine.json" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "$API_URL$API_PREFIX/products/$PRODUCT_ID/reviews/mine"
+
+python3 - "$LOG_DIR/r-catalog.json" "$LOG_DIR/r-detail.json" \
+  "$LOG_DIR/r-mine.json" "$PRODUCT_ID" <<'PYJSON'
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    catalog = json.load(f)
+with open(sys.argv[2]) as f:
+    detail = json.load(f)
+with open(sys.argv[3]) as f:
+    mine = json.load(f)
+
+product_id = sys.argv[4]
+listed = next((p for p in catalog if p.get("id") == product_id), None)
+
+if listed is None:
+    raise SystemExit("ERROR: reviewed product missing from GET /products")
+
+for label, product in (("list", listed), ("detail", detail)):
+    average = product.get("ratingAverage")
+    count = product.get("ratingCount")
+    if not isinstance(count, int) or count < 1:
+        raise SystemExit(
+            "ERROR: {} payload has no ratingCount ({!r})".format(label, count)
+        )
+    if not isinstance(average, (int, float)) or average < 1:
+        raise SystemExit(
+            "ERROR: {} payload has no ratingAverage ({!r})".format(label, average)
+        )
+    print(
+        "✓ {} payload: {}★ average from {} review(s)".format(
+            label, average, count
+        )
+    )
+
+if mine.get("canReview"):
+    raise SystemExit("ERROR: buyer must not be able to review twice")
+if not mine.get("review"):
+    raise SystemExit("ERROR: /reviews/mine did not return the buyer's review")
+print("✓ /reviews/mine returns the stored review, canReview=False")
+PYJSON
+
+echo
+echo "[R6/6] The product screen route serves..."
+
+R_ROUTE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" "$WEB_URL/products/$PRODUCT_ID"
+)"
+
+if [[ "$R_ROUTE_HTTP" != "200" ]]; then
+  fail "Web route /products/<id> should return 200, got HTTP $R_ROUTE_HTTP"
+fi
+echo "✓ Web route /products/<id> -> 200"
+
+echo
+echo "✓ PRODUCT REVIEWS & RATINGS FLOW ACCEPTANCE PASSED"
 
 echo
 echo "ADMIN MANAGEMENT FLOW"
@@ -5614,6 +5896,385 @@ echo
 echo "✓ ADMIN MANAGEMENT FLOW ACCEPTANCE PASSED"
 
 echo
+echo "MARKETPLACE PROMOTIONS FLOW"
+echo "========================================"
+
+if [ -z "${ADMIN_TOKEN:-}" ]; then
+  echo "⚠ Promotions section SKIPPED: admin login did not run."
+else
+
+echo
+echo "[P1/4] Campaign management is admin-only..."
+
+PROMO_ANON_HTTP="$(
+  curl -sS -o "$LOG_DIR/promo-anon-admin.json" -w "%{http_code}" \
+    "$API_URL$API_PREFIX/admin/promotions"
+)"
+
+if [[ "$PROMO_ANON_HTTP" != "401" ]]; then
+  cat "$LOG_DIR/promo-anon-admin.json"
+  fail "Anonymous campaign admin request returned HTTP $PROMO_ANON_HTTP, expected 401"
+fi
+
+echo "✓ Anonymous campaign admin request rejected (401)"
+
+PROMO_SUPPLIER_HTTP="$(
+  curl -sS -o "$LOG_DIR/promo-supplier-admin.json" -w "%{http_code}" \
+    "$API_URL$API_PREFIX/admin/promotions" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN"
+)"
+
+if [[ "$PROMO_SUPPLIER_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/promo-supplier-admin.json"
+  fail "Non-admin campaign admin request returned HTTP $PROMO_SUPPLIER_HTTP, expected 403"
+fi
+
+echo "✓ Non-admin campaign admin request rejected (403)"
+
+echo
+echo "[P2/4] Admin publishes a campaign that resolves real catalog data..."
+
+PROMO_TS="$(date +%s)"
+PROMO_NAME="Smoke Promotions $PROMO_TS"
+
+# Any product works for the campaign; it must merely still have sellable
+# stock, or the public resolver correctly drops the card.
+PROMO_PRODUCT_ID="$(
+  request GET "$API_URL$API_PREFIX/products" "" | python3 -c '
+import json, sys
+products = json.load(sys.stdin)
+available = [
+    product
+    for product in products
+    if product.get("inventory")
+    and product["inventory"].get("quantity", 0) - product["inventory"].get("reservedQuantity", 0) > 0
+]
+if not available:
+    raise SystemExit("ERROR: no product with available stock for the promotions flow")
+print(available[0]["id"])
+'
+)"
+
+PROMO_PAYLOAD="$(
+  python3 -c '
+import json, sys
+print(json.dumps({
+    "name": sys.argv[1],
+    "headline": "Smoke test harvest deal",
+    "description": "Created by the runtime smoke test.",
+    "type": "FEATURED_PRODUCTS",
+    "status": "ACTIVE",
+    "layout": "BANNER",
+    "placement": "HOME_TOP",
+    "priority": 1000,
+    "ctaText": "View offer",
+    "isSponsored": True,
+    "destinationType": "PRODUCT",
+    "destinationId": sys.argv[2],
+    "products": [{"productId": sys.argv[2]}],
+}))
+' "$PROMO_NAME" "$PROMO_PRODUCT_ID"
+)"
+
+CREATE_PROMO_HTTP="$(
+  curl -sS -o "$LOG_DIR/promo-create.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/promotions" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$PROMO_PAYLOAD"
+)"
+
+if [[ "$CREATE_PROMO_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/promo-create.json"
+  fail "Campaign creation failed. HTTP $CREATE_PROMO_HTTP"
+fi
+
+PROMO_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/promo-create.json"
+)"
+
+if [ -z "$PROMO_ID" ]; then
+  fail "Campaign creation returned no id"
+fi
+
+echo "✓ Campaign $PROMO_ID published (ACTIVE)"
+
+request GET "$API_URL$API_PREFIX/promotions?placement=HOME_TOP&limit=10" "" > "$LOG_DIR/promo-public.json"
+
+python3 - "$LOG_DIR/promo-public.json" "$PROMO_ID" "$PROMO_PRODUCT_ID" <<'PYJSON'
+import json, sys
+
+campaigns = json.load(open(sys.argv[1], encoding="utf-8"))
+campaign_id, product_id = sys.argv[2], sys.argv[3]
+
+if not isinstance(campaigns, list):
+    raise SystemExit("ERROR: public promotions must return a list")
+
+match = next((campaign for campaign in campaigns if campaign.get("id") == campaign_id), None)
+
+if match is None:
+    raise SystemExit("ERROR: active campaign missing from the public feed")
+
+if not any(product.get("id") == product_id for product in match.get("products", [])):
+    raise SystemExit("ERROR: campaign did not resolve the real product")
+
+for forbidden in ("status", "effectiveStatus", "impressions", "clicks", "createdAt", "updatedAt"):
+    if forbidden in match:
+        raise SystemExit("ERROR: public campaign exposes admin field {!r}".format(forbidden))
+
+print("✓ Campaign visible publicly with real product data and no admin fields")
+PYJSON
+
+echo
+echo "[P3/4] Drafts/scheduled stay private; analytics dedupe events..."
+
+PROMO_DRAFT_PAYLOAD="$(
+  python3 -c '
+import json, sys
+print(json.dumps({
+    "name": sys.argv[1] + " draft",
+    "headline": "Unpublished draft",
+    "type": "FEATURED_PRODUCTS",
+    "status": "DRAFT",
+    "placement": "HOME_TOP",
+    "priority": 999,
+    "destinationType": "PRODUCT",
+    "destinationId": sys.argv[2],
+    "products": [{"productId": sys.argv[2]}],
+}))
+' "$PROMO_NAME" "$PROMO_PRODUCT_ID"
+)"
+
+CREATE_DRAFT_HTTP="$(
+  curl -sS -o "$LOG_DIR/promo-draft.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/promotions" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$PROMO_DRAFT_PAYLOAD"
+)"
+
+if [[ "$CREATE_DRAFT_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/promo-draft.json"
+  fail "Draft campaign creation failed. HTTP $CREATE_DRAFT_HTTP"
+fi
+
+PROMO_DRAFT_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/promo-draft.json"
+)"
+
+PROMO_START_AT="$(
+  python3 -c 'import datetime; print((datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)).isoformat().replace("+00:00", "Z"))'
+)"
+
+PROMO_SCHEDULED_PAYLOAD="$(
+  python3 -c '
+import json, sys
+print(json.dumps({
+    "name": sys.argv[1] + " scheduled",
+    "headline": "Scheduled for later",
+    "type": "FEATURED_PRODUCTS",
+    "status": "SCHEDULED",
+    "placement": "HOME_TOP",
+    "priority": 998,
+    "startAt": sys.argv[3],
+    "destinationType": "PRODUCT",
+    "destinationId": sys.argv[2],
+    "products": [{"productId": sys.argv[2]}],
+}))
+' "$PROMO_NAME" "$PROMO_PRODUCT_ID" "$PROMO_START_AT"
+)"
+
+CREATE_SCHEDULED_HTTP="$(
+  curl -sS -o "$LOG_DIR/promo-scheduled.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/promotions" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$PROMO_SCHEDULED_PAYLOAD"
+)"
+
+if [[ "$CREATE_SCHEDULED_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/promo-scheduled.json"
+  fail "Scheduled campaign creation failed. HTTP $CREATE_SCHEDULED_HTTP"
+fi
+
+PROMO_SCHEDULED_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/promo-scheduled.json"
+)"
+
+PROMO_PUBLIC_AFTER_DRAFTS="$(
+  request GET "$API_URL$API_PREFIX/promotions?placement=HOME_TOP&limit=10" ""
+)"
+
+python3 - "$PROMO_PUBLIC_AFTER_DRAFTS" "$PROMO_DRAFT_ID" "$PROMO_SCHEDULED_ID" <<'PYJSON'
+import json, sys
+
+campaigns = json.loads(sys.argv[1])
+hidden = {sys.argv[2], sys.argv[3]}
+
+leaked = [campaign.get("id") for campaign in campaigns if campaign.get("id") in hidden]
+
+if leaked:
+    raise SystemExit("ERROR: draft/scheduled campaigns leaked publicly: {}".format(leaked))
+
+print("✓ Draft and scheduled campaigns are not public")
+PYJSON
+
+PROMO_IMPRESSION_KEY="smoke-impression-$PROMO_TS"
+PROMO_IMPRESSION_BODY="{\"events\":[{\"campaignId\":\"$PROMO_ID\",\"type\":\"IMPRESSION\",\"eventKey\":\"$PROMO_IMPRESSION_KEY\"}]}"
+
+request POST "$API_URL$API_PREFIX/promotions/events" "$PROMO_IMPRESSION_BODY" > "$LOG_DIR/promo-event-first.json"
+request POST "$API_URL$API_PREFIX/promotions/events" "$PROMO_IMPRESSION_BODY" > "$LOG_DIR/promo-event-duplicate.json"
+
+python3 - "$LOG_DIR/promo-event-first.json" "$LOG_DIR/promo-event-duplicate.json" <<'PYJSON'
+import json, sys
+
+first = json.load(open(sys.argv[1], encoding="utf-8"))
+duplicate = json.load(open(sys.argv[2], encoding="utf-8"))
+
+if first.get("accepted") != 1:
+    raise SystemExit("ERROR: first impression was not accepted")
+
+if duplicate.get("accepted") != 0:
+    raise SystemExit("ERROR: duplicate impression was counted twice")
+
+print("✓ Impression recorded once; duplicate eventKey ignored")
+PYJSON
+
+PROMO_CLICK_BODY="{\"events\":[{\"campaignId\":\"$PROMO_ID\",\"type\":\"CLICK\",\"eventKey\":\"smoke-click-$PROMO_TS\"}]}"
+request POST "$API_URL$API_PREFIX/promotions/events" "$PROMO_CLICK_BODY" > "$LOG_DIR/promo-event-click.json"
+
+request GET "$API_URL$API_PREFIX/admin/promotions/$PROMO_ID" "" "$ADMIN_TOKEN" > "$LOG_DIR/promo-admin-detail.json"
+
+python3 - "$LOG_DIR/promo-admin-detail.json" <<'PYJSON'
+import json, sys
+
+campaign = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if campaign.get("impressions") != 1 or campaign.get("clicks") != 1:
+    raise SystemExit(
+        "ERROR: campaign counters are wrong (impressions={}, clicks={})".format(
+            campaign.get("impressions"), campaign.get("clicks")
+        )
+    )
+
+print("✓ Admin counters: 1 impression, 1 click")
+PYJSON
+
+echo
+echo "[P4/4] Pause, preview, resume and delete control public visibility..."
+
+PROMO_PAUSE_HTTP="$(
+  curl -sS -o "$LOG_DIR/promo-pause.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/promotions/$PROMO_ID/pause" \
+    -H "Authorization: Bearer $ADMIN_TOKEN"
+)"
+
+if [[ "$PROMO_PAUSE_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/promo-pause.json"
+  fail "Pausing the campaign failed. HTTP $PROMO_PAUSE_HTTP"
+fi
+
+PROMO_PUBLIC_PAUSED="$(
+  request GET "$API_URL$API_PREFIX/promotions?placement=HOME_TOP&limit=10" ""
+)"
+
+python3 - "$PROMO_PUBLIC_PAUSED" "$PROMO_ID" <<'PYJSON'
+import json, sys
+
+campaigns = json.loads(sys.argv[1])
+campaign_id = sys.argv[2]
+
+if any(campaign.get("id") == campaign_id for campaign in campaigns):
+    raise SystemExit("ERROR: paused campaign is still public")
+
+print("✓ Paused campaign hidden from the public feed")
+PYJSON
+
+PROMO_PREVIEW_HTTP="$(
+  curl -sS -o "$LOG_DIR/promo-preview.json" -w "%{http_code}" \
+    "$API_URL$API_PREFIX/admin/promotions/$PROMO_ID/preview" \
+    -H "Authorization: Bearer $ADMIN_TOKEN"
+)"
+
+if [[ "$PROMO_PREVIEW_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/promo-preview.json"
+  fail "Admin preview failed. HTTP $PROMO_PREVIEW_HTTP"
+fi
+
+PROMO_RESUME_HTTP="$(
+  curl -sS -o "$LOG_DIR/promo-resume.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/promotions/$PROMO_ID/resume" \
+    -H "Authorization: Bearer $ADMIN_TOKEN"
+)"
+
+if [[ "$PROMO_RESUME_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/promo-resume.json"
+  fail "Resuming the campaign failed. HTTP $PROMO_RESUME_HTTP"
+fi
+
+PROMO_PUBLIC_RESUMED="$(
+  request GET "$API_URL$API_PREFIX/promotions?placement=HOME_TOP&limit=10" ""
+)"
+
+python3 - "$PROMO_PUBLIC_RESUMED" "$PROMO_ID" <<'PYJSON'
+import json, sys
+
+campaigns = json.loads(sys.argv[1])
+campaign_id = sys.argv[2]
+
+if not any(campaign.get("id") == campaign_id for campaign in campaigns):
+    raise SystemExit("ERROR: resumed campaign is not public again")
+
+print("✓ Resumed campaign public again")
+PYJSON
+
+PROMO_DELETE_HTTP="$(
+  curl -sS -o "$LOG_DIR/promo-delete.json" -w "%{http_code}" \
+    -X DELETE "$API_URL$API_PREFIX/admin/promotions/$PROMO_ID" \
+    -H "Authorization: Bearer $ADMIN_TOKEN"
+)"
+
+if [[ "$PROMO_DELETE_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/promo-delete.json"
+  fail "Deleting the campaign failed. HTTP $PROMO_DELETE_HTTP"
+fi
+
+PROMO_PUBLIC_DELETED="$(
+  request GET "$API_URL$API_PREFIX/promotions?placement=HOME_TOP&limit=10" ""
+)"
+
+python3 - "$PROMO_PUBLIC_DELETED" "$PROMO_ID" <<'PYJSON'
+import json, sys
+
+campaigns = json.loads(sys.argv[1])
+campaign_id = sys.argv[2]
+
+if any(campaign.get("id") == campaign_id for campaign in campaigns):
+    raise SystemExit("ERROR: deleted campaign is still public")
+
+print("✓ Deleted campaign removed from the public feed")
+PYJSON
+
+for PROMO_CLEANUP_ID in "$PROMO_DRAFT_ID" "$PROMO_SCHEDULED_ID"; do
+  PROMO_CLEANUP_HTTP="$(
+    curl -sS -o /dev/null -w "%{http_code}" \
+      -X DELETE "$API_URL$API_PREFIX/admin/promotions/$PROMO_CLEANUP_ID" \
+      -H "Authorization: Bearer $ADMIN_TOKEN"
+  )"
+
+  if [[ "$PROMO_CLEANUP_HTTP" != "200" ]]; then
+    fail "Cleaning up campaign $PROMO_CLEANUP_ID failed. HTTP $PROMO_CLEANUP_HTTP"
+  fi
+done
+
+echo "✓ Draft and scheduled campaigns cleaned up"
+
+echo
+echo "✓ MARKETPLACE PROMOTIONS FLOW ACCEPTANCE PASSED"
+
+fi
+
+echo
 echo "RATE LIMITING FLOW"
 echo "========================================"
 
@@ -5690,6 +6351,60 @@ echo "✓ Legitimate login works again once the window resets (no restart needed
 
 echo
 echo "✓ RATE LIMITING FLOW ACCEPTANCE PASSED"
+
+echo
+echo "MOBILE APP ROUTES (HOME / EXPLORE / CART / PROFILE)"
+echo "========================================"
+
+echo "[M1/2] The buyer app routes render..."
+
+MOBILE_HOME_CODE="$(
+  curl -sS -m 90 -o "$LOG_DIR/mobile-home.html" -w "%{http_code}" \
+    "$WEB_URL/")"
+
+if [[ "$MOBILE_HOME_CODE" != "200" ]]; then
+  fail "Mobile route / returned HTTP $MOBILE_HOME_CODE"
+fi
+
+# Guests (and crawlers) must keep the marketing hero on "/".
+if ! grep -q "Agricultural trade" "$LOG_DIR/mobile-home.html"; then
+  fail "Guest home no longer renders the marketing hero"
+fi
+
+echo "✓ Mobile route / -> 200 with the guest marketing hero"
+
+for MOBILE_ROUTE in "/explore" "/cart" "/profile"; do
+  MOBILE_ROUTE_FILE="$LOG_DIR/mobile-route.html"
+  MOBILE_ROUTE_CODE="$(
+    curl -sS -m 90 -o "$MOBILE_ROUTE_FILE" -w "%{http_code}" \
+      "$WEB_URL$MOBILE_ROUTE")"
+
+  if [[ "$MOBILE_ROUTE_CODE" != "200" ]]; then
+    fail "Mobile route $MOBILE_ROUTE returned HTTP $MOBILE_ROUTE_CODE"
+  fi
+
+  if ! grep -q "Checking your BonAgri session" "$MOBILE_ROUTE_FILE"; then
+    fail "Mobile route $MOBILE_ROUTE is not behind the buyer session guard"
+  fi
+
+  echo "✓ Mobile route $MOBILE_ROUTE -> 200 (buyer-guarded shell)"
+done
+
+echo
+echo "[M2/2] The explore route honours the category query parameter..."
+
+MOBILE_CAT_CODE="$(
+  curl -sS -m 90 -o "$LOG_DIR/mobile-route.html" -w "%{http_code}" \
+    "$WEB_URL/explore?cat=Fruits")"
+
+if [[ "$MOBILE_CAT_CODE" != "200" ]]; then
+  fail "Mobile route /explore?cat=Fruits returned HTTP $MOBILE_CAT_CODE"
+fi
+
+echo "✓ Mobile route /explore?cat=Fruits -> 200"
+
+echo
+echo "✓ MOBILE APP ROUTES ACCEPTANCE PASSED"
 
 echo
 echo "RUNTIME SMOKE TEST CLEANUP"

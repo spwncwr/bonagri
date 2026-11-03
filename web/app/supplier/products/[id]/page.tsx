@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthGuard from "../../../../components/auth/auth-guard";
+import { BrandLogo } from "../../../../components/brand/logo";
 import ImageUpload from "../../../../components/media/image-upload";
+import { ArrowLeftIcon } from "../../../../components/mobile/icons";
 import { authHeaders } from "../../../../lib/auth";
 
 const API_BASE_URL =
@@ -154,9 +156,7 @@ export default function EditProductPage() {
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                BonAgri
-              </p>
+              <BrandLogo height={24} />
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">
                 Edit listing
               </h1>
@@ -169,9 +169,10 @@ export default function EditProductPage() {
 
             <Link
               href="/supplier/products"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
-              ← My listings
+              <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
+              My listings
             </Link>
           </div>
         </header>

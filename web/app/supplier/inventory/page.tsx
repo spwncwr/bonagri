@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AuthGuard from "../../../components/auth/auth-guard";
+import { BrandLogo } from "../../../components/brand/logo";
 
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders } from "../../../lib/auth";
@@ -323,9 +324,7 @@ export default function SupplierInventoryPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-              BonAgri
-            </p>
+            <BrandLogo height={24} />
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">
               Supplier Inventory
             </h1>

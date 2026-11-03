@@ -3,9 +3,28 @@
 import Link from "next/link";
 import AuthGuard from "../../components/auth/auth-guard";
 import NotificationsPanel from "../../components/notifications/notifications-panel";
-import { authHeaders, clearAuth, fetchCurrentUser, type UserRole } from "../../lib/auth";
+
+import SupplierShell from "../../components/supplier/supplier-shell";
+import {
+  CoveragePanel,
+  FlowCard,
+  KpiCard,
+  PipelineDonut,
+  StockHealthCard,
+  type CoverageCity,
+  type CoverageMarker,
+  type StockHealthLine,
+} from "../../components/supplier/dashboard-panels";
+import {
+  ArrowRightIcon,
+  BoxIcon,
+  PlusIcon,
+  ShieldIcon,
+  TruckIcon,
+} from "../../components/mobile/icons";
+import { resolvePoint } from "../../lib/geo";
+import { authHeaders, fetchCurrentUser, type UserRole } from "../../lib/auth";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -59,6 +78,8 @@ type SupplierOrder = {
     city: string;
     province?: string | null;
     postalCode?: string | null;
+    lat?: number | null;
+    lng?: number | null;
   };
   payment: {
     id: string;
@@ -201,6 +222,17 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+// Dashboard stock panel mirrors GET /api/supplier/inventory.
+type SupplierInventoryLine = {
+  productId: string;
+  name: string;
+  availableQuantity: number;
+  reservedQuantity: number;
+  quantity: number;
+  lowStockLevel: number;
+  isLowStock: boolean;
+};
+
 // CP14: verified transporters offered in the post-failure re-dispatch
 // dropdown (mirrors GET /api/transport/transporters).
 type VerifiedTransporter = {
@@ -214,7 +246,6 @@ type VerifiedTransporter = {
 };
 
 export default function SupplierPage() {
-  const router = useRouter();
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
@@ -232,6 +263,8 @@ export default function SupplierPage() {
   });
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"ALL" | OrderStatus>("ALL");
+  const [search, setSearch] = useState("");
+  const [inventory, setInventory] = useState<SupplierInventoryLine[]>([]);
   const [vendorRole, setVendorRole] = useState<UserRole | null>(null);
   const [disputes, setDisputes] = useState<VendorDispute[]>([]);
   const [buyerRequests, setBuyerRequests] = useState<BuyerRequest[]>([]);
@@ -262,6 +295,28 @@ export default function SupplierPage() {
         setTransporters(Array.isArray(data) ? (data as VerifiedTransporter[]) : []);
       })
       .catch(() => setTransporters([]));
+  }, []);
+
+  // Stock health panel reads the same endpoint the inventory screen edits, so
+  // the dashboard never shows a number the vendor cannot act on.
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetch(`${API_BASE_URL}/api/supplier/inventory`, {
+      cache: "no-store",
+      headers: authHeaders(),
+    })
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => {
+        if (!cancelled) {
+          setInventory(Array.isArray(data) ? (data as SupplierInventoryLine[]) : []);
+        }
+      })
+      .catch(() => setInventory([]));
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -727,12 +782,29 @@ export default function SupplierPage() {
   };
 
   const filteredOrders = useMemo(() => {
-    if (filter === "ALL") {
-      return orders;
-    }
+    const needle = search.trim().toLowerCase();
 
-    return orders.filter((order) => order.status === filter);
-  }, [filter, orders]);
+    return orders.filter((order) => {
+      if (filter !== "ALL" && order.status !== filter) return false;
+      if (!needle) return true;
+
+      const haystack = [
+        order.orderNumber,
+        `${order.user.firstName} ${order.user.lastName}`,
+        order.user.email,
+        order.deliveryAddress.city,
+        order.deliveryAddress.addressLine1,
+        order.delivery?.driverName ?? "",
+        order.delivery?.trackingNumber ?? "",
+        order.delivery?.transporter?.businessName ?? "",
+        ...order.items.map((item) => item.productName),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(needle);
+    });
+  }, [filter, orders, search]);
 
   const counts = useMemo(
     () => ({
@@ -749,86 +821,427 @@ export default function SupplierPage() {
       completed: orders.filter(
         (order) => order.status === "DELIVERED",
       ).length,
+      cancelled: orders.filter(
+        (order) => order.status === "CANCELLED",
+      ).length,
+      byStatus: orders.reduce<Record<string, number>>((acc, order) => {
+        acc[order.status] = (acc[order.status] ?? 0) + 1;
+        return acc;
+      }, {}),
+      awaitingPayment: orders.filter(
+        (order) =>
+          order.payment?.provider === "MANUAL_EFT" &&
+          order.payment.status === "PENDING",
+      ).length,
+      // Money arrives as Decimal strings; summing once here keeps the KPI card
+      // honest about what has actually been delivered.
+      deliveredValue: orders
+        .filter((order) => order.status === "DELIVERED")
+        .reduce((sum, order) => sum + Number(order.total), 0),
+      openOrders: orders.filter((order) =>
+        [
+          "PENDING",
+          "CONFIRMED",
+          "PROCESSING",
+          "READY_FOR_DELIVERY",
+          "OUT_FOR_DELIVERY",
+        ].includes(order.status),
+      ).length,
     }),
     [orders],
   );
 
+  const stockLines = useMemo<StockHealthLine[]>(
+    () =>
+      [...inventory]
+        .sort(
+          (a, b) =>
+            Number(a.isLowStock) - Number(b.isLowStock) ||
+            a.availableQuantity - b.availableQuantity,
+        )
+        .slice(0, 5)
+        .map((line) => ({
+          productId: line.productId,
+          name: line.name,
+          available: line.availableQuantity,
+          reserved: line.reservedQuantity,
+          threshold: line.lowStockLevel,
+          low: line.isLowStock,
+        })),
+    [inventory],
+  );
+
+  // One figure the header bell, the attention card and the queue all agree on.
+  const attentionCount = useMemo(
+    () =>
+      inventory.filter((line) => line.isLowStock).length +
+      counts.awaitingPayment +
+      disputes.filter(
+        (dispute) => dispute.status === "OPEN" || dispute.status === "UNDER_REVIEW",
+      ).length,
+    [inventory, counts.awaitingPayment, disputes],
+  );
+
+  const coverage = useMemo(() => {
+    const markers: CoverageMarker[] = [];
+    const byCity = new Map<string, CoverageCity>();
+
+    for (const order of orders) {
+      if (
+        order.status === "CANCELLED" ||
+        order.status === "DELIVERED" ||
+        !order.deliveryAddress
+      ) {
+        continue;
+      }
+
+      const { point, approximate } = resolvePoint(
+        order.deliveryAddress.lat,
+        order.deliveryAddress.lng,
+        order.deliveryAddress.city,
+      );
+
+      const cityKey = `${order.deliveryAddress.city} • ${
+        order.deliveryAddress.province ?? "—"
+      }`;
+      const existing = byCity.get(cityKey);
+
+      if (existing) {
+        existing.orders += 1;
+        if (!approximate) existing.pinned += 1;
+      } else {
+        byCity.set(cityKey, {
+          city: order.deliveryAddress.city,
+          province: order.deliveryAddress.province ?? "Not stated",
+          orders: 1,
+          pinned: approximate ? 0 : 1,
+        });
+      }
+
+      if (!point) continue;
+
+      markers.push({
+        id: order.id,
+        lat: point.lat,
+        lng: point.lng,
+        approximate,
+        city: order.deliveryAddress.city,
+        label: `${order.orderNumber} • ${order.user.firstName ?? "Buyer"}`,
+        tone:
+          order.status === "OUT_FOR_DELIVERY"
+            ? "info"
+            : order.status === "READY_FOR_DELIVERY"
+              ? "warning"
+              : "brand",
+      });
+    }
+
+    return {
+      markers,
+      cities: [...byCity.values()].sort((a, b) => b.orders - a.orders),
+    };
+  }, [orders]);
+
   return (
     <AuthGuard allowedRoles={["SUPPLIER", "AGRO_DEALER"]}>
-      <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-              BonAgri
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              {vendorRole === "AGRO_DEALER"
-                ? "Agro Dealer Operations"
-                : "Supplier Operations"}
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              {vendorRole === "AGRO_DEALER"
-                ? "Manage your tool and equipment orders, fulfilment and delivery readiness."
-                : "Manage incoming orders, fulfilment and delivery readiness."}
-            </p>
+      <SupplierShell
+        vendorRole={vendorRole}
+        query={search}
+        onQueryChange={setSearch}
+        attention={attentionCount}
+      >
+        {/* The reference splits the screen: an analysis stack on the left, one
+            tall map column on the right. Everything here is real desk data. */}
+        <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+          <div className="grid content-start gap-5" id="insights">
+            {/* Segmented control + the one primary action. */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div
+                role="group"
+                aria-label="Queue shortcuts"
+                className="grid min-w-[240px] flex-1 grid-cols-2 gap-1 rounded-full border border-line bg-surface p-1"
+              >
+                {(
+                  [
+                    ["DELIVERED", "Delivered", counts.completed],
+                    ["PENDING", "Pending", counts.pending],
+                  ] as const
+                ).map(([value, label, tally]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={filter === value}
+                    onClick={() => {
+                      setFilter(filter === value ? "ALL" : value);
+                      document
+                        .getElementById("queue")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                    className={`flex items-center justify-between gap-2 rounded-full px-4 py-2.5 text-xs font-black transition ${
+                      filter === value
+                        ? "bg-brand text-brand-ink"
+                        : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+                    }`}
+                    style={
+                      filter === value
+                        ? undefined
+                        : {
+                            backgroundImage:
+                              "repeating-linear-gradient(115deg, var(--theme-elevated-surface) 0 4px, transparent 4px 9px)",
+                          }
+                    }
+                  >
+                    {label}
+                    <span className="tabular-nums">{tally}</span>
+                  </button>
+                ))}
+              </div>
+
+              <Link
+                href="/supplier/products/new"
+                className="flex shrink-0 items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-black text-page transition hover:opacity-90"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/15">
+                  <PlusIcon className="h-3.5 w-3.5" />
+                </span>
+                New listing
+              </Link>
+            </div>
+
+            {/* 2x2 stat grid beside the tall flow card. */}
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <KpiCard
+                  label="Open orders"
+                  value={counts.openOrders}
+                  unit="live"
+                  hint={`${counts.pending} awaiting confirmation`}
+                />
+                <KpiCard
+                  label="Inventory lines"
+                  value={inventory.length}
+                  unit="listed"
+                  hint={`${
+                    inventory.filter((line) => line.isLowStock).length
+                  } at reorder level`}
+                />
+                <KpiCard
+                  label="Delivered value"
+                  value={`R${counts.deliveredValue.toLocaleString("en-ZA", {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}`}
+                  unit={`${counts.completed} orders`}
+                />
+                <KpiCard
+                  label="Needs attention"
+                  value={attentionCount}
+                  unit="items"
+                  hint={`${counts.awaitingPayment} EFT to approve • ${
+                    disputes.filter(
+                      (dispute) =>
+                        dispute.status === "OPEN" ||
+                        dispute.status === "UNDER_REVIEW",
+                    ).length
+                  } open disputes`}
+                />
+              </div>
+
+              <FlowCard
+                title="Order flow"
+                rows={[
+                  {
+                    label: "Awaiting EFT approval",
+                    value: String(counts.awaitingPayment),
+                    Icon: ShieldIcon,
+                  },
+                  {
+                    label: "Ready for pickup",
+                    value: String(counts.byStatus["READY_FOR_DELIVERY"] ?? 0),
+                    Icon: BoxIcon,
+                  },
+                  {
+                    label: "Out for delivery",
+                    value: String(counts.delivery),
+                    Icon: TruckIcon,
+                  },
+                ]}
+                heroValue={String(counts.openOrders)}
+                heroLabel="orders in progress"
+                bars={[
+                  {
+                    label: "Pending",
+                    value: counts.byStatus["PENDING"] ?? 0,
+                    colorVar: "--theme-warning",
+                  },
+                  {
+                    label: "Confirmed",
+                    value: counts.byStatus["CONFIRMED"] ?? 0,
+                    colorVar: "--theme-info",
+                  },
+                  {
+                    label: "Packing",
+                    value: counts.byStatus["PROCESSING"] ?? 0,
+                    colorVar: "--theme-accent-color",
+                  },
+                  {
+                    label: "Ready",
+                    value: counts.byStatus["READY_FOR_DELIVERY"] ?? 0,
+                    colorVar: "--theme-success",
+                  },
+                ]}
+              />
+            </div>
+
+            {/* Gradient stock card + performance donut. */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <StockHealthCard
+                lines={stockLines}
+                lowCount={
+                  inventory.filter((line) => line.isLowStock).length
+                }
+                totalLines={inventory.length}
+              />
+
+              <PipelineDonut
+                segments={[
+                  {
+                    label: "Delivered",
+                    value: counts.completed,
+                    colorVar: "--theme-success",
+                  },
+                  {
+                    label: "In progress",
+                    value: counts.openOrders,
+                    colorVar: "--theme-warning",
+                  },
+                  {
+                    label: "Cancelled",
+                    value: counts.cancelled,
+                    colorVar: "--theme-error",
+                  },
+                ]}
+                centerValue={
+                  counts.total === 0
+                    ? "—"
+                    : `${Math.round((counts.completed / counts.total) * 100)}%`
+                }
+                centerLabel="Completed"
+              />
+            </div>
+
+            {/* The reference's three photo cards, filled with live demand. */}
+            <div>
+              <div className="flex items-center justify-between gap-3 px-1">
+                <h2 className="text-sm font-black tracking-tight text-ink">
+                  Open demand
+                </h2>
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById("demand")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
+                  className="text-[11px] font-black uppercase tracking-wide text-success-bright"
+                >
+                  Full board
+                </button>
+              </div>
+
+              {buyerRequests.length === 0 ? (
+                <p className="mt-3 rounded-3xl border border-dashed border-line bg-surface px-4 py-6 text-center text-xs text-ink-muted">
+                  No buyers are asking for supply right now.
+                </p>
+              ) : (
+                <ul className="mt-3 grid gap-4 sm:grid-cols-3">
+                  {buyerRequests.slice(0, 3).map((request) => {
+                    const answered = myResponses.some(
+                      (item) => item.request.id === request.id,
+                    );
+
+                    return (
+                      <li
+                        key={request.id}
+                        className="flex flex-col justify-between gap-3 rounded-3xl border border-line bg-surface p-4"
+                      >
+                        <div>
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                              answered
+                                ? "bg-surface-raised text-ink-muted"
+                                : "bg-success-soft text-success-bright"
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                answered ? "bg-ink-disabled" : "bg-success"
+                              }`}
+                            />
+                            {answered ? "Responded" : "Open"}
+                          </span>
+                          <p className="mt-3 line-clamp-2 text-sm font-black leading-5 text-ink">
+                            {request.title}
+                          </p>
+                          <p className="mt-1 text-[11px] leading-5 text-ink-muted">
+                            {request.quantity.toLocaleString("en-ZA")}{" "}
+                            {request.unit}
+                            {request.destinationCity
+                              ? ` • → ${request.destinationCity}`
+                              : ""}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={answered}
+                          onClick={() => {
+                            setRespondError("");
+                            setRespondNotice("");
+                            setRespondingTo(answered ? null : request.id);
+                            document
+                              .getElementById("demand")
+                              ?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
+                          }}
+                          className="rounded-full border border-line bg-surface-raised px-3 py-2 text-xs font-black text-ink transition hover:bg-page disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {answered ? "Already answered" : "Quote supply"}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/supplier/products"
-              className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
-            >
-              My listings
-            </Link>
-
-            <Link
-              href="/supplier/inventory"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Inventory
-            </Link>
-
-            <Link
-              href="/"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Marketplace
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => {
-                clearAuth();
-                router.replace("/login");
-              }}
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Logout
-            </button>
-          </div>
+          <CoveragePanel
+            markers={coverage.markers}
+            cities={coverage.cities}
+            headline={`${counts.openOrders} open orders heading to ${
+              coverage.cities.length
+            } destination${coverage.cities.length === 1 ? "" : "s"}.`}
+          />
         </div>
-      </header>
 
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <SummaryCard label="Total orders" value={counts.total} />
-          <SummaryCard label="Pending" value={counts.pending} />
-          <SummaryCard label="Active" value={counts.active} />
-          <SummaryCard label="Delivery" value={counts.delivery} />
-          <SummaryCard label="Delivered" value={counts.completed} />
-        </section>
-
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section
+          id="queue"
+          className="mt-5 scroll-mt-28 rounded-3xl border border-line bg-surface p-4 sm:p-5"
+        >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Order queue</h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <h2 className="text-lg font-black tracking-tight text-ink">
+                Order queue
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">
                 Move each order through the BonAgri fulfilment lifecycle.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:flex-wrap lg:overflow-visible lg:pb-0">
               {(
                 [
                   ["ALL", "All"],
@@ -845,37 +1258,52 @@ export default function SupplierPage() {
                   key={value}
                   type="button"
                   onClick={() => setFilter(value)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                  aria-pressed={filter === value}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
                     filter === value
-                      ? "border-emerald-700 bg-emerald-700 text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                      ? "border-transparent bg-brand text-brand-ink"
+                      : "border-line bg-surface-raised text-ink-muted hover:bg-page hover:text-ink"
                   }`}
                 >
                   {label}
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] leading-none ${
+                      filter === value
+                        ? "bg-black/15"
+                        : "bg-surface text-ink-faint"
+                    }`}
+                  >
+                    {value === "ALL"
+                      ? orders.length
+                      : (counts.byStatus[value] ?? 0)}
+                  </span>
                 </button>
               ))}
             </div>
           </div>
 
           {error && (
-            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div
+              role="alert"
+              className="mt-5 rounded-2xl border border-danger-soft bg-danger-soft px-4 py-3 text-sm text-danger-bright"
+            >
               {error}
             </div>
           )}
 
           {jobNotice && (
-            <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="mt-5 rounded-2xl border border-success-soft bg-success-soft px-4 py-3 text-sm text-success-bright">
               {jobNotice}
             </div>
           )}
 
           {loading ? (
-            <div className="py-16 text-center text-sm text-slate-500">
+            <div className="py-16 text-center text-sm text-ink-muted">
               Loading supplier orders...
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="font-medium text-slate-700">
+              <p className="font-medium text-ink-soft">
                 No orders in this queue.
               </p>
               <p className="mt-1 text-sm text-slate-500">
@@ -897,12 +1325,12 @@ export default function SupplierPage() {
                 return (
                   <article
                     key={order.id}
-                    className="rounded-2xl border border-slate-200 p-5"
+                    className="rounded-3xl border border-line bg-page p-4 sm:p-5"
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold">
+                          <h3 className="font-black tracking-tight text-ink">
                             {order.orderNumber}
                           </h3>
 
@@ -913,24 +1341,22 @@ export default function SupplierPage() {
                           </span>
                         </div>
 
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-ink-muted">
                           {formatDate(order.createdAt)}
                         </p>
                       </div>
 
-                      <div className="text-left lg:text-right">
-                        <p className="text-xs text-slate-500">
-                          Order total
-                        </p>
-                        <p className="text-lg font-semibold">
+                      <div className="min-w-0 text-left lg:text-right">
+                        <p className="text-xs text-ink-muted">Order total</p>
+                        <p className="text-lg font-black tabular-nums text-ink">
                           {money(order.total)}
                         </p>
                       </div>
                     </div>
 
                     <div className="mt-5 grid gap-5 lg:grid-cols-[1.3fr_1fr_1fr]">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-faint">
                           Products
                         </p>
 
@@ -938,19 +1364,19 @@ export default function SupplierPage() {
                           {order.items.map((item) => (
                             <div
                               key={item.id}
-                              className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3"
+                              className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-3 py-3"
                             >
-                              <div>
-                                <p className="text-sm font-medium">
+                              <div className="min-w-0">
+                                <p className="break-words text-sm font-medium">
                                   {item.productName}
                                 </p>
-                                <p className="text-xs text-slate-500">
+                                <p className="text-xs text-ink-muted">
                                   {item.quantity} {item.product.unit} ×{" "}
                                   {money(item.unitPrice)}
                                 </p>
                               </div>
 
-                              <p className="text-sm font-semibold">
+                              <p className="shrink-0 text-sm font-semibold tabular-nums">
                                 {money(item.lineTotal)}
                               </p>
                             </div>
@@ -958,40 +1384,44 @@ export default function SupplierPage() {
                         </div>
                       </div>
 
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-faint">
                           Buyer
                         </p>
 
                         <div className="mt-2 text-sm">
-                          <p className="font-medium">
+                          <p className="font-medium break-words">
                             {order.user.firstName} {order.user.lastName}
                           </p>
-                          <p className="mt-1 text-slate-500">
+                          <p className="mt-1 break-all text-ink-muted">
                             {order.user.email}
                           </p>
                           {order.user.phone && (
-                            <p className="mt-1 text-slate-500">
+                            <p className="mt-1 text-ink-muted">
                               {order.user.phone}
                             </p>
                           )}
                         </div>
                       </div>
 
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-faint">
                           Delivery
                         </p>
 
                         <div className="mt-2 text-sm">
                           {order.deliveryAddress.label && (
-                            <p className="font-medium">
+                            <p className="font-medium break-words">
                               {order.deliveryAddress.label}
                             </p>
                           )}
-                          <p>{order.deliveryAddress.addressLine1}</p>
+                          <p className="break-words">
+                            {order.deliveryAddress.addressLine1}
+                          </p>
                           {order.deliveryAddress.addressLine2 && (
-                            <p>{order.deliveryAddress.addressLine2}</p>
+                            <p className="break-words">
+                              {order.deliveryAddress.addressLine2}
+                            </p>
                           )}
                           <p>
                             {order.deliveryAddress.city}
@@ -1286,10 +1716,14 @@ export default function SupplierPage() {
                       <div className="mt-4">
                         <Link
                           href={`/orders/${order.id}/invoice`}
-                          className="text-sm font-medium text-emerald-700 transition hover:text-emerald-800"
+                          className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 transition hover:text-emerald-800"
                         >
                           Invoice {order.invoice.invoiceNumber} — open
-                          printable view →
+                          printable view
+                          <ArrowRightIcon
+                            className="h-4 w-4"
+                            strokeWidth={2.2}
+                          />
                         </Link>
                       </div>
                     ) : null}
@@ -1476,15 +1910,20 @@ export default function SupplierPage() {
           )}
         </section>
 
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Disputes</h2>
-          <p className="mt-1 text-sm text-slate-500">
+        <section
+          id="disputes"
+          className="mt-5 scroll-mt-28 rounded-3xl border border-line bg-surface p-4 sm:p-5"
+        >
+          <h2 className="text-lg font-black tracking-tight text-ink">
+            Disputes
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-ink-muted">
             Disputes buyers have opened on orders containing your products. The
             BonAgri team reviews each one with the order timeline as evidence.
           </p>
 
           {disputes.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+            <div className="mt-5 rounded-2xl border border-dashed border-line bg-page p-8 text-center text-sm text-ink-muted">
               No disputes on your orders. Keep fulfilling on time and this list
               will stay empty.
             </div>
@@ -1493,7 +1932,7 @@ export default function SupplierPage() {
               {disputes.map((dispute) => (
                 <article
                   key={dispute.id}
-                  className="rounded-2xl border border-slate-200 p-5"
+                  className="rounded-2xl border border-line bg-page p-4 sm:p-5"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -1556,9 +1995,14 @@ export default function SupplierPage() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Buyer requests</h2>
-          <p className="mt-1 text-sm text-[#69756c]">
+        <section
+          id="demand"
+          className="mt-5 scroll-mt-28 rounded-3xl border border-line bg-surface p-4 sm:p-5"
+        >
+          <h2 className="text-lg font-black tracking-tight text-ink">
+            Buyer requests
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-ink-muted">
             Open demand buyers have posted. Respond with what you can supply —
             the buyer accepts the response they like best.
           </p>
@@ -1734,9 +2178,14 @@ export default function SupplierPage() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">My responses</h2>
-          <p className="mt-1 text-sm text-[#69756c]">
+        <section
+          id="responses"
+          className="mt-5 scroll-mt-28 rounded-3xl border border-line bg-surface p-4 sm:p-5"
+        >
+          <h2 className="text-lg font-black tracking-tight text-ink">
+            My responses
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-ink-muted">
             Responses you have sent on buyer requests. Accepted responses mean
             the buyer picked you.
           </p>
@@ -1811,30 +2260,10 @@ export default function SupplierPage() {
           )}
         </section>
 
-        <div className="mt-8">
+        <div id="notifications" className="mt-8 scroll-mt-28">
           <NotificationsPanel title="Notifications" />
         </div>
-      </div>
-      </main>
+      </SupplierShell>
     </AuthGuard>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-        {label}
-      </p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight">
-        {value}
-      </p>
-    </div>
   );
 }

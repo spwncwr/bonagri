@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import ImageUpload from "../../../components/media/image-upload";
 import { authHeaders } from "../../../lib/auth";
+import { AdminRowsSkeleton } from "../../../components/admin/admin-ui";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -11,6 +13,7 @@ type Category = {
   name: string;
   slug: string;
   description: string | null;
+  imageUrl?: string | null;
 };
 
 function apiError(data: { message?: string | string[] } | null, fallback: string) {
@@ -26,10 +29,12 @@ export default function AdminCategoriesPage() {
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -95,6 +100,7 @@ export default function AdminCategoriesPage() {
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || undefined,
+          imageUrl: imageUrl.trim() || undefined,
         }),
       });
 
@@ -107,6 +113,7 @@ export default function AdminCategoriesPage() {
 
       setName("");
       setDescription("");
+      setImageUrl("");
       await reload();
     } catch (err) {
       setError(
@@ -133,6 +140,7 @@ export default function AdminCategoriesPage() {
           body: JSON.stringify({
             name: editName.trim(),
             description: editDescription.trim(),
+            imageUrl: editImageUrl.trim() ? editImageUrl.trim() : null,
           }),
         },
       );
@@ -145,6 +153,7 @@ export default function AdminCategoriesPage() {
       }
 
       setEditingId(null);
+      setEditImageUrl("");
       await reload();
     } catch (err) {
       setError(
@@ -180,7 +189,7 @@ export default function AdminCategoriesPage() {
       >
         <h2 className="text-sm font-bold text-slate-900">New category</h2>
 
-        <div className="mt-4 flex flex-wrap items-end gap-3">
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div>
             <label
               htmlFor="cat-name"
@@ -196,11 +205,11 @@ export default function AdminCategoriesPage() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Poultry & Livestock"
-              className="w-64 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
             />
           </div>
 
-          <div className="min-w-52 flex-1">
+          <div>
             <label
               htmlFor="cat-desc"
               className="mb-1 block text-xs font-medium text-slate-600"
@@ -214,26 +223,66 @@ export default function AdminCategoriesPage() {
               maxLength={300}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
+              placeholder="Fresh regional produce..."
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
             />
           </div>
+        </div>
 
+        <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-600">
+            Category Image (Rounded Disc)
+          </span>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="shrink-0">
+              <span className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-slate-300 bg-white shadow-sm">
+                {imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={imageUrl}
+                    alt="Category preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-[10px] font-bold uppercase text-slate-400">
+                    No image
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="flex-1 space-y-2">
+              <ImageUpload
+                kind="category"
+                value={imageUrl}
+                onChange={setImageUrl}
+              />
+              <input
+                type="url"
+                placeholder="…or paste image URL directly"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-100"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-xs text-slate-500">
+            The URL slug is generated automatically from the name.
+          </p>
           <button
             type="submit"
             disabled={creating || !name.trim()}
-            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg bg-emerald-700 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {creating ? "Creating..." : "Create"}
+            {creating ? "Creating..." : "Create Category"}
           </button>
         </div>
-
-        <p className="mt-3 text-xs text-slate-500">
-          The URL slug is generated automatically from the name.
-        </p>
       </form>
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading categories...</p>
+        <AdminRowsSkeleton rows={4} label="Loading categories..." rowHeight="h-16" />
       ) : (
         <div className="space-y-3">
           {categories.map((category) => (
@@ -243,22 +292,86 @@ export default function AdminCategoriesPage() {
             >
               {editingId === category.id ? (
                 <div className="space-y-3">
-                  <input
-                    type="text"
-                    required
-                    maxLength={80}
-                    value={editName}
-                    onChange={(event) => setEditName(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                  />
-                  <input
-                    type="text"
-                    maxLength={300}
-                    value={editDescription}
-                    onChange={(event) => setEditDescription(event.target.value)}
-                    placeholder="Description"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                  />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                        Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={80}
+                        value={editName}
+                        onChange={(event) => setEditName(event.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                        Description
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={300}
+                        value={editDescription}
+                        onChange={(event) =>
+                          setEditDescription(event.target.value)
+                        }
+                        placeholder="Description"
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                    <span className="mb-2 block text-xs font-semibold text-slate-600">
+                      Category Image
+                    </span>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <div className="shrink-0">
+                        <span className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-slate-300 bg-white shadow-sm">
+                          {editImageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={editImageUrl}
+                              alt="Edit preview"
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-[10px] font-bold uppercase text-slate-400">
+                              None
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <ImageUpload
+                          kind="category"
+                          value={editImageUrl}
+                          onChange={setEditImageUrl}
+                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="url"
+                            placeholder="…or paste image URL"
+                            value={editImageUrl}
+                            onChange={(e) => setEditImageUrl(e.target.value)}
+                            className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-100"
+                          />
+                          {editImageUrl ? (
+                            <button
+                              type="button"
+                              onClick={() => setEditImageUrl("")}
+                              className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                            >
+                              Remove
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -271,7 +384,10 @@ export default function AdminCategoriesPage() {
                     <button
                       type="button"
                       disabled={savingId === category.id}
-                      onClick={() => setEditingId(null)}
+                      onClick={() => {
+                        setEditingId(null);
+                        setEditImageUrl("");
+                      }}
                       className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
                       Cancel
@@ -280,20 +396,36 @@ export default function AdminCategoriesPage() {
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-900">
-                        {category.name}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        /{category.slug}
-                      </span>
+                  <div className="flex items-center gap-3">
+                    <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 shadow-sm">
+                      {category.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={category.imageUrl}
+                          alt={category.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xs font-bold uppercase text-slate-400">
+                          {category.name.slice(0, 2)}
+                        </span>
+                      )}
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-900">
+                          {category.name}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          /{category.slug}
+                        </span>
+                      </div>
+                      {category.description ? (
+                        <p className="mt-0.5 text-xs text-slate-600">
+                          {category.description}
+                        </p>
+                      ) : null}
                     </div>
-                    {category.description ? (
-                      <p className="mt-0.5 text-xs text-slate-600">
-                        {category.description}
-                      </p>
-                    ) : null}
                   </div>
 
                   <button
@@ -302,6 +434,7 @@ export default function AdminCategoriesPage() {
                       setEditingId(category.id);
                       setEditName(category.name);
                       setEditDescription(category.description ?? "");
+                      setEditImageUrl(category.imageUrl ?? "");
                     }}
                     className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                   >

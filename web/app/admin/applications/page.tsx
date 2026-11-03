@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { authHeaders } from "../../../lib/auth";
+import { AdminRowsSkeleton } from "../../../components/admin/admin-ui";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -192,7 +193,7 @@ export default function AdminApplicationsPage() {
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading applications...</p>
+        <AdminRowsSkeleton rows={3} label="Loading applications..." rowHeight="h-28" />
       ) : applications.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-600">
           No seller applications yet. Buyers can apply from the

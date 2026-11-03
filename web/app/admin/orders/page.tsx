@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { authHeaders } from "../../../lib/auth";
+import { AdminRowsSkeleton } from "../../../components/admin/admin-ui";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -127,7 +128,7 @@ export default function AdminOrdersPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading orders...</p>
+        <AdminRowsSkeleton rows={5} label="Loading orders..." rowHeight="h-24" />
       ) : visible.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-600">
           No orders with this status.

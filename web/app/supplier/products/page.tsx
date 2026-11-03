@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import AuthGuard from "../../../components/auth/auth-guard";
+import { BrandLogo } from "../../../components/brand/logo";
 import { authHeaders } from "../../../lib/auth";
 
 const API_BASE_URL =
@@ -145,9 +146,7 @@ export default function SupplierProductsPage() {
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                BonAgri
-              </p>
+              <BrandLogo height={24} />
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">
                 My listings
               </h1>
@@ -234,7 +233,7 @@ export default function SupplierProductsPage() {
                     return (
                       <tr key={product.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3">
-                          <p className="font-semibold text-slate-900">
+                          <p className="max-w-[260px] truncate font-semibold text-slate-900">
                             {product.name}
                           </p>
                           <p className="text-xs text-slate-500">{product.sku}</p>

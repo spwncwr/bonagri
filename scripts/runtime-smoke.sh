@@ -13,6 +13,28 @@ API_URL="${API_URL:-http://localhost:3000}"
 WEB_URL="${WEB_URL:-http://localhost:3001}"
 API_PREFIX="${API_PREFIX:-/api}"
 
+# This suite writes to whatever it points at: it registers accounts, re-roles the
+# smoke buyer, places orders and publishes promotions. Refuse anything that is
+# not a local development server so a stray API_URL cannot hit a deployment.
+local_url() {
+  local authority host
+  authority="$(printf '%s' "$1" | sed -E 's#^[a-zA-Z][a-zA-Z0-9+.-]*://##; s#^[^/@]*@##; s#[/?].*$##')"
+
+  # Strip a trailing :port; a bare IPv6 authority such as ::1 keeps its colons.
+  host="$(printf '%s' "$authority" | sed -E 's#:[0-9]+$##')"
+
+  case "$host" in
+    localhost | 127.0.0.1 | ::1 | 0.0.0.0 | \[::1\]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+if ! local_url "$API_URL" || ! local_url "$WEB_URL"; then
+  echo "ERROR: runtime smoke only targets a local development server." >&2
+  echo "       got API_URL=$API_URL WEB_URL=$WEB_URL" >&2
+  exit 1
+fi
+
 TEST_EMAIL="e2e_buyer_$(date +%s)@bonagri.local"
 TEST_PASSWORD='BonAgri-E2E-2026!'
 LOG_DIR="$ROOT/.runtime-test"

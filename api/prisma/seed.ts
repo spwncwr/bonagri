@@ -3,6 +3,7 @@ import "dotenv/config";
 import * as bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { assertSeedTargetAllowed } from "./local-database";
 
 // -----------------------------------------------------------------------------
 // Development-only seed configuration
@@ -28,6 +29,12 @@ if (process.env.SEED_DEVELOPMENT_DATA !== "true") {
 if (process.env.NODE_ENV === "production") {
   throw new Error("Development seed is disabled in production.");
 }
+
+// Refuse a non-local database unless the caller names it explicitly.
+assertSeedTargetAllowed(
+  connectionString,
+  process.env.SEED_ALLOW_REMOTE === "true",
+);
 
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });

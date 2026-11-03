@@ -1,26 +1,228 @@
 @import "tailwindcss";
+@import "./theme-compat.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * BonAgri theme architecture — one centralised source of truth for colour.
+ *
+ * Light mode keeps the appearance the application already shipped with.
+ * Dark mode reuses the palette established by the Admin Dashboard.
+ * The same tokens drive both scopes:
+ *   [data-theme="dark"]  app-wide dark mode (set by ThemeProvider + boot script)
+ *   .admin-dark          the admin area, which is always on the dark palette
+ *
+ * theme-compat.css (generated) maps the legacy light utility classes onto these
+ * tokens; new code should use the semantic utilities (bg-surface, text-ink,
+ * border-line, bg-field, text-danger…) instead of one-off hex values.
+ *
+ * .theme-light pins a subtree to the light palette (invoice paper, prints) and
+ * wins over both dark scopes because it is declared on the element itself.
+ */
+
+:root,
+.theme-light {
+  color-scheme: light;
+
+  --theme-primary-background: #ffffff;
+  --theme-secondary-background: #f7f8f4;
+  --theme-surface: #ffffff;
+  --theme-elevated-surface: #f2f4ef;
+  --theme-input-background: #ffffff;
+
+  --theme-primary-text: #17251b;
+  --theme-secondary-text: #243229;
+  --theme-tertiary-text: #344238;
+  --theme-muted-text: #69756c;
+  --theme-faint-text: #7b867d;
+  --theme-disabled-text: #98a199;
+
+  --theme-border: #dce2d9;
+  --theme-border-strong: #ccd5ca;
+
+  --theme-primary-color: #17633a;
+  --theme-primary-color-ink: #ffffff;
+  --theme-accent-color: #2d9d5e;
+
+  --theme-success: #17633a;
+  --theme-success-soft: #e5f1e4;
+  --theme-success-border: #cfe0cf;
+  --theme-success-bright: #17633a;
+
+  --theme-warning: #d8a521;
+  --theme-warning-soft: #fdf1d9;
+  --theme-warning-border: #e5d9c5;
+  --theme-warning-bright: #8c6d1f;
+
+  --theme-error: #dc2626;
+  --theme-error-soft: #fee2e2;
+  --theme-error-border: #fecaca;
+  --theme-error-bright: #b91c1c;
+
+  --theme-info: #2563eb;
+  --theme-info-soft: #dbeafe;
+  --theme-info-border: #bfdbfe;
+  --theme-info-bright: #1d4ed8;
+
+  --theme-overlay: rgba(15, 23, 18, 0.5);
+  --theme-shimmer: rgba(255, 255, 255, 0.6);
+
+  --background: var(--theme-primary-background);
+  --foreground: var(--theme-primary-text);
+}
+
+[data-theme="dark"]:not(.theme-light),
+.admin-dark:not(.theme-light) {
+  color-scheme: dark;
+
+  --theme-primary-background: #0b0b12;
+  --theme-secondary-background: #101017;
+  --theme-surface: #14141d;
+  --theme-elevated-surface: #1b1b26;
+  --theme-input-background: #23232f;
+
+  --theme-primary-text: #f2f4f7;
+  --theme-secondary-text: #e2e5ea;
+  --theme-tertiary-text: #c3c9d4;
+  --theme-muted-text: #a4abba;
+  --theme-faint-text: #8b93a3;
+  --theme-disabled-text: #6c7382;
+
+  --theme-border: rgba(255, 255, 255, 0.08);
+  --theme-border-strong: rgba(255, 255, 255, 0.16);
+
+  --theme-primary-color: #17633a;
+  --theme-primary-color-ink: #f2f4f7;
+  --theme-accent-color: #2d9d5e;
+
+  --theme-success: #2d9d5e;
+  --theme-success-soft: rgba(45, 157, 94, 0.14);
+  --theme-success-border: rgba(52, 211, 153, 0.3);
+  --theme-success-bright: #6ee7b7;
+
+  --theme-warning: #d8a521;
+  --theme-warning-soft: rgba(245, 158, 11, 0.14);
+  --theme-warning-border: rgba(245, 158, 11, 0.35);
+  --theme-warning-bright: #fcd34d;
+
+  --theme-error: #dc2626;
+  --theme-error-soft: rgba(240, 68, 68, 0.14);
+  --theme-error-border: rgba(248, 113, 113, 0.35);
+  --theme-error-bright: #fca5a5;
+
+  --theme-info: #3b82f6;
+  --theme-info-soft: rgba(59, 130, 246, 0.14);
+  --theme-info-border: rgba(59, 130, 246, 0.3);
+  --theme-info-bright: #93c5fd;
+
+  --theme-overlay: rgba(0, 0, 0, 0.7);
+  --theme-shimmer: rgba(255, 255, 255, 0.09);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--theme-primary-background);
+  --color-foreground: var(--theme-primary-text);
+
+  --color-canvas: var(--theme-primary-background);
+  --color-page: var(--theme-secondary-background);
+  --color-surface: var(--theme-surface);
+  --color-surface-raised: var(--theme-elevated-surface);
+  --color-field: var(--theme-input-background);
+
+  --color-ink: var(--theme-primary-text);
+  --color-ink-soft: var(--theme-secondary-text);
+  --color-ink-muted: var(--theme-muted-text);
+  --color-ink-faint: var(--theme-faint-text);
+  --color-ink-disabled: var(--theme-disabled-text);
+
+  --color-line: var(--theme-border);
+  --color-line-strong: var(--theme-border-strong);
+
+  --color-brand: var(--theme-primary-color);
+  --color-brand-ink: var(--theme-primary-color-ink);
+  --color-brand-accent: var(--theme-accent-color);
+
+  --color-success: var(--theme-success);
+  --color-success-soft: var(--theme-success-soft);
+  --color-success-bright: var(--theme-success-bright);
+  --color-warning: var(--theme-warning);
+  --color-warning-soft: var(--theme-warning-soft);
+  --color-warning-bright: var(--theme-warning-bright);
+  --color-danger: var(--theme-error);
+  --color-danger-soft: var(--theme-error-soft);
+  --color-danger-bright: var(--theme-error-bright);
+  --color-info: var(--theme-info);
+  --color-info-soft: var(--theme-info-soft);
+  --color-info-bright: var(--theme-info-bright);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background-color: var(--theme-primary-background);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--theme-primary-background);
+  color: var(--theme-primary-text);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+[data-theme="dark"] {
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+/* Shimmer sweep for skeleton loaders */
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--theme-shimmer), transparent);
+  animation: shimmer-sweep 1.6s infinite;
+}
+
+@keyframes shimmer-sweep {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Hide the scrollbar on sideways product rails */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Dark-scope details the generated layer cannot express: native form controls
+ * must paint their own popups and cursors dark.
+ */
+:where([data-theme="dark"], .admin-dark) input,
+:where([data-theme="dark"], .admin-dark) select,
+:where([data-theme="dark"], .admin-dark) textarea {
+  color-scheme: dark;
+}
+
+/*
+ * Leaflet chrome (zoom buttons, attribution bar) ships as fixed white boxes.
+ * Map tiles themselves are imagery and keep their own colours.
+ */
+[data-theme="dark"] .leaflet-container {
+  background-color: var(--theme-input-background);
+}
+[data-theme="dark"] .leaflet-bar a,
+[data-theme="dark"] .leaflet-control-attribution {
+  background-color: var(--theme-surface);
+  color: var(--theme-muted-text);
+  border-color: var(--theme-border-strong);
+}
+[data-theme="dark"] .leaflet-bar a:hover {
+  background-color: var(--theme-elevated-surface);
+  color: var(--theme-primary-text);
+}
+[data-theme="dark"] .leaflet-control-attribution a {
+  color: var(--theme-success-bright);
 }

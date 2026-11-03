@@ -1,3 +1,5 @@
+import { setThemeScope } from "./theme";
+
 const ACCESS_TOKEN_KEY = "bonagri_access_token";
 const REMEMBER_ME_KEY = "bonagri_remember_me";
 
@@ -26,7 +28,11 @@ export type StoredAuth = {
   rememberMe: boolean;
 };
 
-export function saveAuth(accessToken: string, rememberMe: boolean) {
+export function saveAuth(
+  accessToken: string,
+  rememberMe: boolean,
+  userId?: string,
+) {
   if (typeof window === "undefined") return;
 
   localStorage.removeItem(ACCESS_TOKEN_KEY);
@@ -36,6 +42,10 @@ export function saveAuth(accessToken: string, rememberMe: boolean) {
 
   storage.setItem(ACCESS_TOKEN_KEY, accessToken);
   localStorage.setItem(REMEMBER_ME_KEY, String(rememberMe));
+
+  // Bind before the first guarded screen renders so the new account never
+  // paints with the previous account's saved theme.
+  if (userId) setThemeScope(userId);
 }
 
 export function getAccessToken(): string | null {
@@ -64,6 +74,7 @@ export function clearAuth() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REMEMBER_ME_KEY);
   sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  setThemeScope(null);
 }
 
 export function authHeaders(): Record<string, string> {
@@ -96,7 +107,10 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
       return null;
     }
 
-    return (await response.json()) as AuthUser;
+    const user = (await response.json()) as AuthUser;
+    setThemeScope(user.id);
+
+    return user;
   } catch {
     return null;
   }

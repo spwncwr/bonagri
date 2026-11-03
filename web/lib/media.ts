@@ -23,7 +23,12 @@ export const ACCEPTED_IMAGE_TYPES = [
   "image/avif",
 ];
 
-export type UploadKind = "product" | "supplier_logo";
+export type UploadKind =
+  | "product"
+  | "supplier_logo"
+  | "category"
+  | "banner"
+  | "promotion";
 
 type UploadSignature = {
   cloudName: string;

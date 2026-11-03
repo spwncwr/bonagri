@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthGuard from "../../components/auth/auth-guard";
+import { BrandLogo } from "../../components/brand/logo";
+import { ArrowLeftIcon, ArrowRightIcon } from "../../components/mobile/icons";
 import { authHeaders, fetchCurrentUser, type UserRole } from "../../lib/auth";
 
 const API_BASE_URL =
@@ -130,9 +132,7 @@ export default function ApplyToSellPage() {
         <header className="border-b border-[#dce2d9] bg-white">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#17633a]">
-                BonAgri
-              </p>
+              <BrandLogo height={24} />
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">
                 Sell on BonAgri
               </h1>
@@ -140,9 +140,10 @@ export default function ApplyToSellPage() {
 
             <Link
               href="/"
-              className="rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
             >
-              ← Marketplace
+              <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
+              Marketplace
             </Link>
           </div>
         </header>
@@ -166,9 +167,10 @@ export default function ApplyToSellPage() {
 
               <Link
                 href="/supplier"
-                className="mt-5 inline-block rounded-xl bg-[#17633a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#12512f]"
+                className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-[#17633a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#12512f]"
               >
-                Open my vendor hub →
+                Open my vendor hub
+                <ArrowRightIcon className="h-4 w-4" strokeWidth={2.2} />
               </Link>
             </section>
           ) : (
@@ -244,9 +246,10 @@ export default function ApplyToSellPage() {
 
               <Link
                 href="/supplier"
-                className="mt-5 inline-block rounded-xl bg-[#17633a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#12512f]"
+                className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-[#17633a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#12512f]"
               >
-                Open my vendor hub →
+                Open my vendor hub
+                <ArrowRightIcon className="h-4 w-4" strokeWidth={2.2} />
               </Link>
             </section>
           ) : null}

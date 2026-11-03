@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
+import {
+  AuthThemeToggle,
+  authDisplay,
+  DISPLAY,
+  FormPanel,
+  PillField,
+  WelcomePanel,
+} from "../../components/auth/auth-screens";
+import { CheckIcon } from "../../components/mobile/icons";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -23,6 +32,10 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [registered, setRegistered] = useState(false);
+  /* Mobile lands straight on the form (same as /login) — the welcome screen
+     stays reachable through the form's back arrow. */
+  const [showForm, setShowForm] = useState(true);
+  const firstNameRef = useRef<HTMLInputElement | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,236 +88,174 @@ export default function RegisterPage() {
     }
   }
 
-  if (registered) {
-    return (
-      <main className="min-h-screen bg-slate-50 px-6 py-12">
-        <div className="mx-auto max-w-md">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-xl text-emerald-700">
-              ✓
-            </div>
-
-            <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-900">
-              Check your email
-            </h1>
-
-            <p className="mt-3 text-sm text-slate-600">
-              We sent a verification link to{" "}
-              <span className="font-medium text-slate-900">{email}</span>. Click
-              it to activate your account — the link expires in 24 hours.
-            </p>
-
-            <p className="mt-2 text-xs text-slate-500">
-              Nothing after a few minutes? Look in your spam folder.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => router.push("/login")}
-              className="mt-6 w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
-            >
-              Go to sign in
-            </button>
-          </div>
-
-          <p className="mt-6 text-center text-xs text-slate-500">
-            <Link
-              href="/"
-              className="font-medium text-emerald-700 hover:text-emerald-800"
-            >
-              ← Back to BonAgri
-            </Link>
-          </p>
-        </div>
-      </main>
-    );
+  function openForm() {
+    setShowForm(true);
+    window.requestAnimationFrame(() => firstNameRef.current?.focus());
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12">
-      <div className="mx-auto max-w-md">
-        <div className="mb-8">
-          <Link
-            href="/"
-            className="text-sm font-medium text-emerald-700 hover:text-emerald-800"
-          >
-            ← Back to BonAgri
-          </Link>
+    <main
+      className={`${authDisplay.variable} min-h-screen overflow-x-hidden bg-white`}
+    >
+      {/* Two panels side-by-side on wide screens; swipeable screens on phones. */}
+      <div
+        className={`flex min-h-screen w-full transition-transform duration-500 ease-in-out lg:translate-x-0 ${
+          showForm ? "-translate-x-full" : "translate-x-0"
+        }`}
+      >
+        <WelcomePanel
+          headline="Welcome!"
+          sublines={[
+            "To create your account",
+            "please fill in your personal info",
+          ]}
+          ctaLabel="SIGN UP"
+          onCta={openForm}
+        />
 
-          <h1 className="mt-6 text-3xl font-bold tracking-tight text-slate-900">
-            Create your account
-          </h1>
-
-          <p className="mt-2 text-sm text-slate-600">
-            Join BonAgri as a buyer and start sourcing agricultural products
-            from suppliers across Limpopo.
-          </p>
-        </div>
-
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-        >
-          {error ? (
-            <div
-              role="alert"
-              className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-            >
-              {error}
-            </div>
-          ) : null}
-
-          <div className="space-y-5">
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="firstName"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  First name
-                </label>
-
-                <input
-                  id="firstName"
-                  name="firstName"
-                  type="text"
-                  autoComplete="given-name"
-                  required
-                  value={firstName}
-                  onChange={(event) => setFirstName(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                  placeholder="Thabo"
+        <FormPanel onBack={() => setShowForm(false)}>
+          {registered ? (
+            <div className="text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#e7f5ec]">
+                <CheckIcon
+                  className="h-7 w-7 text-[#17633a]"
+                  strokeWidth={3}
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="lastName"
-                  className="mb-2 block text-sm font-medium text-slate-700"
+              <h2
+                className={`${DISPLAY} mt-5 text-3xl font-extrabold text-[#17633a]`}
+              >
+                Check your email
+              </h2>
+
+              <p className="mt-3 text-sm text-slate-600">
+                We sent a verification link to{" "}
+                <span className="font-semibold text-slate-900">{email}</span>.
+                Click it to activate your account — the link expires in 24
+                hours.
+              </p>
+
+              <p className="mt-2 text-xs text-slate-500">
+                Nothing after a few minutes? Look in your spam folder.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => router.push("/login")}
+                className={`${DISPLAY} mx-auto mt-7 block w-[62%] max-w-[240px] rounded-full bg-[#2d9d5e] py-3 text-sm font-bold tracking-[0.2em] text-white shadow-lg shadow-[#2d9d5e]/30 transition hover:bg-[#248a50] active:scale-[0.98]`}
+              >
+                GO TO SIGN IN
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="text-center">
+                <h2
+                  className={`${DISPLAY} text-4xl font-extrabold text-[#17633a]`}
                 >
-                  Last name
-                </label>
-
-                <input
-                  id="lastName"
-                  name="lastName"
-                  type="text"
-                  autoComplete="family-name"
-                  required
-                  value={lastName}
-                  onChange={(event) => setLastName(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                  placeholder="Nkosi"
-                />
+                  sign up
+                </h2>
+                <p className="mt-1 text-[13px] text-[#5b7a68]">
+                  Create your account to continue
+                </p>
               </div>
-            </div>
 
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Email address
-              </label>
+              <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+                {error ? (
+                  <div
+                    role="alert"
+                    className="mx-auto w-fit max-w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-center text-xs font-medium text-red-700"
+                  >
+                    {error}
+                  </div>
+                ) : null}
 
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                placeholder="you@example.com"
-              />
-            </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <PillField
+                    id="firstName"
+                    type="text"
+                    autoComplete="given-name"
+                    label="First name"
+                    value={firstName}
+                    onChange={setFirstName}
+                    inputRef={firstNameRef}
+                  />
 
-            <div>
-              <label
-                htmlFor="phone"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Phone number{" "}
-                <span className="font-normal text-slate-400">(optional)</span>
-              </label>
+                  <PillField
+                    id="lastName"
+                    type="text"
+                    autoComplete="family-name"
+                    label="Last name"
+                    value={lastName}
+                    onChange={setLastName}
+                  />
+                </div>
 
-              <input
-                id="phone"
-                name="phone"
-                type="tel"
-                autoComplete="tel"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                placeholder="+27 82 000 0000"
-              />
-            </div>
+                <PillField
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  label="Email"
+                  value={email}
+                  onChange={setEmail}
+                />
 
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Password
-              </label>
+                <PillField
+                  id="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  label="Phone (optional)"
+                  value={phone}
+                  onChange={setPhone}
+                  required={false}
+                />
 
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                placeholder="At least 8 characters"
-              />
-            </div>
+                <PillField
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  label="Password"
+                  value={password}
+                  onChange={setPassword}
+                  minLength={8}
+                />
 
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Confirm password
-              </label>
+                <PillField
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  label="Confirm password"
+                  value={confirmPassword}
+                  onChange={setConfirmPassword}
+                  minLength={8}
+                />
 
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                required
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                placeholder="Re-enter your password"
-              />
-            </div>
+                <div className="pt-2 text-center">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={`${DISPLAY} mx-auto block w-[72%] max-w-[280px] rounded-full bg-[#2d9d5e] py-3 text-sm font-bold tracking-[0.16em] text-white shadow-lg shadow-[#2d9d5e]/30 transition hover:bg-[#248a50] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60`}
+                  >
+                    {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
+                  </button>
+                </div>
+              </form>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? "Creating account..." : "Create account"}
-            </button>
-          </div>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-slate-600">
-          Already have an account?{" "}
-          <Link
-            href="/login"
-            className="font-medium text-emerald-700 hover:text-emerald-800"
-          >
-            Sign in
-          </Link>
-        </p>
+              <p className="mt-8 text-center text-sm text-slate-600">
+                Already have an account?{" "}
+                <Link
+                  href="/login"
+                  className="font-bold text-[#17633a] transition hover:text-[#2d9d5e]"
+                >
+                  sign in
+                </Link>
+              </p>
+            </>
+          )}
+        </FormPanel>
       </div>
+      <AuthThemeToggle />
     </main>
   );
 }

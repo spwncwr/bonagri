@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthGuard from "../../../components/auth/auth-guard";
+import { BrandLogo } from "../../../components/brand/logo";
+import { ArrowLeftIcon, ArrowRightIcon } from "../../../components/mobile/icons";
 import {
   authHeaders,
   fetchCurrentUser,
@@ -418,9 +420,7 @@ export default function OrderDetailPage() {
         <header className="border-b border-[#dce2d9] bg-white">
           <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#17633a]">
-                BonAgri
-              </p>
+              <BrandLogo height={24} />
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">
                 Order details
               </h1>
@@ -437,10 +437,11 @@ export default function OrderDetailPage() {
             </div>
 
             <Link
-              href="/#orders"
-              className="rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+              href="/orders"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
             >
-              ← My Orders
+              <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
+              My Orders
             </Link>
           </div>
         </header>
@@ -906,10 +907,11 @@ export default function OrderDetailPage() {
                     <div className="mt-4 border-t border-[#e3e8e0] pt-4">
                       <Link
                         href={`/orders/${order.id}/invoice`}
-                        className="text-sm font-medium text-[#17633a] transition hover:text-[#12512f]"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-[#17633a] transition hover:text-[#12512f]"
                       >
                         Invoice {order.invoice.invoiceNumber} — open printable
-                        view →
+                        view
+                        <ArrowRightIcon className="h-4 w-4" strokeWidth={2.2} />
                       </Link>
                     </div>
                   ) : null}
@@ -1075,9 +1077,10 @@ export default function OrderDetailPage() {
                 <div className="mt-4">
                   <Link
                     href="/addresses"
-                    className="text-sm font-medium text-[#17633a] hover:text-[#12512f]"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-[#17633a] hover:text-[#12512f]"
                   >
-                    Manage your addresses →
+                    Manage your addresses
+                    <ArrowRightIcon className="h-4 w-4" strokeWidth={2.2} />
                   </Link>
                 </div>
               </section>

@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
+import { BottomSplash } from "../../components/auth/auth-screens";
+import { BrandLogo } from "../../components/brand/logo";
+import { ArrowLeftIcon } from "../../components/mobile/icons";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -114,17 +117,25 @@ function VerifyEmailContent() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12">
-      <div className="mx-auto max-w-md">
+    <main className="relative min-h-screen overflow-hidden bg-slate-50 px-6 py-12">
+      {/* Mobile: soft mint splash along the bottom edge (auth design accent). */}
+      <BottomSplash tone="mint" />
+
+      <div className="relative z-10 mx-auto max-w-md">
         <div className="mb-8">
           <Link
             href="/"
-            className="text-sm font-medium text-emerald-700 hover:text-emerald-800"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800"
           >
-            ← Back to BonAgri
+            <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
+            Back to BonAgri
           </Link>
 
-          <h1 className="mt-6 text-3xl font-bold tracking-tight text-slate-900">
+          <div className="mt-6">
+            <BrandLogo height={28} />
+          </div>
+
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900">
             Email verification
           </h1>
         </div>

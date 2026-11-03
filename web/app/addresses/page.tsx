@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import AuthGuard from "../../components/auth/auth-guard";
+import { BrandLogo } from "../../components/brand/logo";
+import { ArrowLeftIcon } from "../../components/mobile/icons";
 import { authHeaders } from "../../lib/auth";
 
 const API_BASE_URL =
@@ -251,9 +253,7 @@ export default function AddressesPage() {
         <header className="border-b border-[#dce2d9] bg-white">
           <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#17633a]">
-                BonAgri
-              </p>
+              <BrandLogo height={24} />
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">
                 Delivery addresses
               </h1>
@@ -272,10 +272,11 @@ export default function AddressesPage() {
               </button>
 
               <Link
-                href="/#orders"
-                className="rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+                href="/orders"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
               >
-                ← My Orders
+                <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
+                My Orders
               </Link>
             </div>
           </div>

@@ -14,12 +14,15 @@ type AuthGuardProps = {
   allowedRoles?: UserRole[];
   /** Restrict to exactly one role. */
   requiredRole?: UserRole;
+  /** Shown while the session is being checked (defaults to the light spinner). */
+  fallback?: ReactNode;
 };
 
 export default function AuthGuard({
   children,
   allowedRoles,
   requiredRole,
+  fallback,
 }: AuthGuardProps) {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -59,6 +62,8 @@ export default function AuthGuard({
   }, [allowedRoles, requiredRole, router]);
 
   if (checking || !user) {
+    if (fallback) return <>{fallback}</>;
+
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
         <div className="text-center">

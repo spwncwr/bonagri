@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AuthGuard from "../../components/auth/auth-guard";
+import { BrandLogo } from "../../components/brand/logo";
+import { CHECKOUT_NOTES_KEY } from "../../components/mobile/cart-screen";
+import { ArrowLeftIcon, CheckIcon } from "../../components/mobile/icons";
 import { authHeaders } from "../../lib/auth";
 
 const API_BASE_URL =
@@ -98,6 +101,16 @@ export default function CheckoutPage() {
           : undefined;
 
         setSelectedAddressId(defaultAddress?.id ?? "");
+
+        // Delivery instructions typed on the mobile cart screen carry over
+        // into the existing notes field (then clear, so a later checkout
+        // starts fresh).
+        const storedNotes = window.sessionStorage.getItem(CHECKOUT_NOTES_KEY);
+
+        if (storedNotes) {
+          setNotes(storedNotes);
+          window.sessionStorage.removeItem(CHECKOUT_NOTES_KEY);
+        }
       } catch (requestError) {
         if (!cancelled) {
           setError(
@@ -202,8 +215,8 @@ export default function CheckoutPage() {
         <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
           <div className="mx-auto max-w-2xl px-6 py-16">
             <div className="rounded-2xl border border-[#cfe0cf] bg-white p-8 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#e5f1e4] text-xl font-black text-[#17633a]">
-                ✓
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#e5f1e4] text-[#17633a]">
+                <CheckIcon className="h-6 w-6" strokeWidth={3} />
               </div>
 
               <h1 className="mt-4 text-2xl font-semibold tracking-tight">
@@ -241,7 +254,7 @@ export default function CheckoutPage() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
                 <button
                   type="button"
-                  onClick={() => router.push("/#orders")}
+                  onClick={() => router.push("/orders")}
                   className="rounded-xl bg-[#17633a] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#12512f]"
                 >
                   View my orders
@@ -267,9 +280,7 @@ export default function CheckoutPage() {
         <header className="border-b border-[#dce2d9] bg-white">
           <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#17633a]">
-                BonAgri
-              </p>
+              <BrandLogo height={24} />
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">
                 Checkout
               </h1>
@@ -279,10 +290,11 @@ export default function CheckoutPage() {
             </div>
 
             <Link
-              href="/#orders"
-              className="rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+              href="/orders"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
             >
-              ← My Orders
+              <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
+              My Orders
             </Link>
           </div>
         </header>

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthGuard from "../../../../components/auth/auth-guard";
+import { BrandLogo } from "../../../../components/brand/logo";
+import { ArrowLeftIcon } from "../../../../components/mobile/icons";
 import { authHeaders } from "../../../../lib/auth";
 
 const API_BASE_URL =
@@ -122,9 +124,7 @@ export default function InvoicePage() {
         <header className="border-b border-[#dce2d9] bg-white print:hidden">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#17633a]">
-                BonAgri
-              </p>
+              <BrandLogo height={24} />
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">
                 Invoice
               </h1>
@@ -133,9 +133,10 @@ export default function InvoicePage() {
             <div className="flex gap-2">
               <Link
                 href={`/orders/${orderId}`}
-                className="rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
               >
-                ← Order details
+                <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
+                Order details
               </Link>
               <button
                 type="button"
@@ -190,12 +191,11 @@ export default function InvoicePage() {
               </Link>
             </div>
           ) : (
-            <article className="rounded-2xl border border-[#dce2d9] bg-white p-8 shadow-sm print:border-0 print:p-0 print:shadow-none sm:p-10">
+            /* Paper stays light in both themes so prints and PDFs match. */
+            <article className="theme-light rounded-2xl border border-[#dce2d9] bg-white p-8 shadow-sm print:border-0 print:p-0 print:shadow-none sm:p-10">
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#e3e8e0] pb-6">
                 <div>
-                  <p className="text-lg font-black tracking-tight text-[#17633a]">
-                    BonAgri
-                  </p>
+                  <BrandLogo height={40} />
                   <p className="mt-1 text-xs text-[#69756c]">
                     Agricultural marketplace · South Africa
                   </p>

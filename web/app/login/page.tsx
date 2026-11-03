@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
+import {
+  AuthThemeToggle,
+  authDisplay,
+  DISPLAY,
+  FormPanel,
+  PillField,
+  WelcomePanel,
+} from "../../components/auth/auth-screens";
 import { saveAuth } from "../../lib/auth";
 
 const API_BASE_URL =
@@ -28,6 +36,13 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  /*
+   * Mobile only: start on the form so tapping "Sign in" from the guest screen
+   * goes straight to the real login. The welcome panel stays reachable via
+   * the form's back arrow.
+   */
+  const [showForm, setShowForm] = useState(true);
+  const emailRef = useRef<HTMLInputElement | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,7 +79,7 @@ export default function LoginPage() {
         throw new Error("Login succeeded but no access token was returned");
       }
 
-      saveAuth(data.accessToken, rememberMe);
+      saveAuth(data.accessToken, rememberMe, data.user.id);
 
       if (data.user.role === "SUPPLIER" || data.user.role === "AGRO_DEALER") {
         router.push("/supplier");
@@ -91,116 +106,109 @@ export default function LoginPage() {
     }
   }
 
+  function openForm() {
+    setShowForm(true);
+    window.requestAnimationFrame(() => emailRef.current?.focus());
+  }
+
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12">
-      <div className="mx-auto max-w-md">
-        <div className="mb-8">
-          <Link
-            href="/"
-            className="text-sm font-medium text-emerald-700 hover:text-emerald-800"
-          >
-            ← Back to BonAgri
-          </Link>
+    <main
+      className={`${authDisplay.variable} min-h-screen overflow-x-hidden bg-white`}
+    >
+      {/* Two panels side-by-side on wide screens; swipeable screens on phones. */}
+      <div
+        className={`flex min-h-screen w-full transition-transform duration-500 ease-in-out lg:translate-x-0 ${
+          showForm ? "-translate-x-full" : "translate-x-0"
+        }`}
+      >
+        <WelcomePanel
+          headline="Welcome Back!"
+          sublines={[
+            "To stay connected with us",
+            "please login with your personal info",
+          ]}
+          ctaLabel="SIGN IN"
+          onCta={openForm}
+        />
 
-          <h1 className="mt-6 text-3xl font-bold tracking-tight text-slate-900">
-            Sign in to BonAgri
-          </h1>
+        <FormPanel onBack={() => setShowForm(false)}>
+          <div className="text-center">
+            <h2 className={`${DISPLAY} text-4xl font-extrabold text-[#17633a]`}>
+              welcome
+            </h2>
+            <p className="mt-1 text-[13px] text-[#5b7a68]">
+              Log in to your account to continue
+            </p>
+          </div>
 
-          <p className="mt-2 text-sm text-slate-600">
-            Access your BonAgri marketplace account.
-          </p>
-        </div>
-
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-        >
-          {error ? (
-            <div
-              role="alert"
-              className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-            >
-              {error}
-            </div>
-          ) : null}
-
-          <div className="space-y-5">
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-medium text-slate-700"
+          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+            {error ? (
+              <div
+                role="alert"
+                className="mx-auto w-fit max-w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-center text-xs font-medium text-red-700"
               >
-                Email address
-              </label>
+                {error}
+              </div>
+            ) : null}
 
+            <PillField
+              id="email"
+              type="email"
+              autoComplete="email"
+              label="Email"
+              value={email}
+              onChange={setEmail}
+              inputRef={emailRef}
+            />
+
+            <PillField
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              label="Password"
+              value={password}
+              onChange={setPassword}
+            />
+
+            <div className="flex items-center justify-center gap-2 pt-1">
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Password
-              </label>
-
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                placeholder="Enter your password"
-              />
-            </div>
-
-            <label className="flex items-center gap-3 text-sm text-slate-700">
-              <input
+                id="remember-me"
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(event) => setRememberMe(event.target.checked)}
-                className="h-4 w-4 rounded border-slate-300"
+                className="h-3.5 w-3.5 rounded border-[#17633a]/40 accent-[#2d9d5e]"
               />
-              Remember me
-            </label>
+              <label
+                htmlFor="remember-me"
+                className="cursor-pointer text-[11px] font-medium text-[#17633a]/70"
+              >
+                Remember me
+              </label>
+            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+            <div className="pt-2 text-center">
+              <button
+                type="submit"
+                disabled={loading}
+                className={`${DISPLAY} mx-auto block w-[62%] max-w-[240px] rounded-full bg-[#2d9d5e] py-3 text-sm font-bold tracking-[0.2em] text-white shadow-lg shadow-[#2d9d5e]/30 transition hover:bg-[#248a50] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                {loading ? "SIGNING IN..." : "LOG IN"}
+              </button>
+            </div>
+          </form>
+
+          <p className="mt-8 text-center text-sm text-slate-600">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/register"
+              className="font-bold text-[#17633a] transition hover:text-[#2d9d5e]"
             >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-          </div>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-slate-600">
-          New to BonAgri?{" "}
-          <Link
-            href="/register"
-            className="font-medium text-emerald-700 hover:text-emerald-800"
-          >
-            Create an account
-          </Link>
-        </p>
-
-        <p className="mt-4 text-center text-xs text-slate-500">
-          Your account permissions are enforced by the BonAgri API.
-        </p>
+              sign up
+            </Link>
+          </p>
+        </FormPanel>
       </div>
+      <AuthThemeToggle />
     </main>
   );
 }

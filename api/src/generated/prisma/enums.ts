@@ -149,3 +149,64 @@ export const ReceiptStatus = {
 } as const
 
 export type ReceiptStatus = (typeof ReceiptStatus)[keyof typeof ReceiptStatus]
+
+
+export const PromoCampaignType = {
+  FEATURED_PRODUCTS: 'FEATURED_PRODUCTS',
+  NEAR_YOU: 'NEAR_YOU',
+  SPECIAL_OFFERS: 'SPECIAL_OFFERS',
+  DISCOVER_CATEGORIES: 'DISCOVER_CATEGORIES',
+  FEATURED_SHOPS: 'FEATURED_SHOPS'
+} as const
+
+export type PromoCampaignType = (typeof PromoCampaignType)[keyof typeof PromoCampaignType]
+
+
+export const PromoCampaignStatus = {
+  DRAFT: 'DRAFT',
+  SCHEDULED: 'SCHEDULED',
+  ACTIVE: 'ACTIVE',
+  PAUSED: 'PAUSED',
+  EXPIRED: 'EXPIRED'
+} as const
+
+export type PromoCampaignStatus = (typeof PromoCampaignStatus)[keyof typeof PromoCampaignStatus]
+
+
+export const PromoCampaignPlacement = {
+  HOME_TOP: 'HOME_TOP',
+  HOME_MID: 'HOME_MID',
+  EXPLORE_TOP: 'EXPLORE_TOP',
+  EXPLORE_MID: 'EXPLORE_MID'
+} as const
+
+export type PromoCampaignPlacement = (typeof PromoCampaignPlacement)[keyof typeof PromoCampaignPlacement]
+
+
+export const PromoCardLayout = {
+  BANNER: 'BANNER',
+  SPLIT: 'SPLIT',
+  COMPACT: 'COMPACT',
+  EDITORIAL: 'EDITORIAL',
+  CAROUSEL: 'CAROUSEL'
+} as const
+
+export type PromoCardLayout = (typeof PromoCardLayout)[keyof typeof PromoCardLayout]
+
+
+export const PromoDestinationType = {
+  PRODUCT: 'PRODUCT',
+  CATEGORY: 'CATEGORY',
+  SHOP: 'SHOP',
+  NONE: 'NONE'
+} as const
+
+export type PromoDestinationType = (typeof PromoDestinationType)[keyof typeof PromoDestinationType]
+
+
+export const PromoEventType = {
+  IMPRESSION: 'IMPRESSION',
+  CLICK: 'CLICK'
+} as const
+
+export type PromoEventType = (typeof PromoEventType)[keyof typeof PromoEventType]

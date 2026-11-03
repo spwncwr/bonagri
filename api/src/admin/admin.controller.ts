@@ -1,13 +1,16 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from "@nestjs/common";
+import type { Request } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
@@ -19,6 +22,17 @@ import { PromoteTransporterDto } from "./dto/promote-transporter.dto";
 import { UpdateSupplierVerifyDto } from "./dto/update-supplier-verify.dto";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
+import { BroadcastNotificationDto } from "./dto/broadcast-notification.dto";
+import { CreateBannerDto } from "./dto/create-banner.dto";
+import { UpdateBannerDto } from "./dto/update-banner.dto";
+
+type AuthenticatedRequest = Request & {
+  user: {
+    id: string;
+    email: string;
+    role: string;
+  };
+};
 
 @Controller("admin")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -100,5 +114,48 @@ export class AdminController {
     @Body() dto: UpdateCategoryDto,
   ) {
     return this.adminService.updateCategory(id, dto);
+  }
+
+  // Broadcast Notifications
+  @Get("notifications/audience-counts")
+  getAudienceCounts() {
+    return this.adminService.getAudienceCounts();
+  }
+
+  @Get("notifications/broadcasts")
+  listBroadcasts() {
+    return this.adminService.listBroadcasts();
+  }
+
+  @Post("notifications/broadcast")
+  broadcastNotification(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: BroadcastNotificationDto,
+  ) {
+    return this.adminService.broadcastNotification(request.user.id, dto);
+  }
+
+  // Promo Banners
+  @Get("banners")
+  getBanners() {
+    return this.adminService.listBanners();
+  }
+
+  @Post("banners")
+  createBanner(@Body() dto: CreateBannerDto) {
+    return this.adminService.createBanner(dto);
+  }
+
+  @Patch("banners/:id")
+  updateBanner(
+    @Param("id") id: string,
+    @Body() dto: UpdateBannerDto,
+  ) {
+    return this.adminService.updateBanner(id, dto);
+  }
+
+  @Delete("banners/:id")
+  deleteBanner(@Param("id") id: string) {
+    return this.adminService.deleteBanner(id);
   }
 }

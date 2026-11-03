@@ -545,6 +545,108 @@ export type BytesWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedBytesFilter<$PrismaModel>
 }
 
+export type EnumPromoCampaignTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignType | Prisma.EnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignType[] | Prisma.ListEnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignType[] | Prisma.ListEnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignTypeFilter<$PrismaModel> | $Enums.PromoCampaignType
+}
+
+export type EnumPromoCampaignStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignStatus | Prisma.EnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignStatus[] | Prisma.ListEnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignStatus[] | Prisma.ListEnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignStatusFilter<$PrismaModel> | $Enums.PromoCampaignStatus
+}
+
+export type EnumPromoCardLayoutFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCardLayout | Prisma.EnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCardLayout[] | Prisma.ListEnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCardLayout[] | Prisma.ListEnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCardLayoutFilter<$PrismaModel> | $Enums.PromoCardLayout
+}
+
+export type EnumPromoCampaignPlacementFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignPlacement | Prisma.EnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignPlacement[] | Prisma.ListEnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignPlacement[] | Prisma.ListEnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignPlacementFilter<$PrismaModel> | $Enums.PromoCampaignPlacement
+}
+
+export type EnumPromoDestinationTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoDestinationType | Prisma.EnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoDestinationType[] | Prisma.ListEnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoDestinationType[] | Prisma.ListEnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoDestinationTypeFilter<$PrismaModel> | $Enums.PromoDestinationType
+}
+
+export type EnumPromoCampaignTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignType | Prisma.EnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignType[] | Prisma.ListEnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignType[] | Prisma.ListEnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignTypeWithAggregatesFilter<$PrismaModel> | $Enums.PromoCampaignType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoCampaignTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoCampaignTypeFilter<$PrismaModel>
+}
+
+export type EnumPromoCampaignStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignStatus | Prisma.EnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignStatus[] | Prisma.ListEnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignStatus[] | Prisma.ListEnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignStatusWithAggregatesFilter<$PrismaModel> | $Enums.PromoCampaignStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoCampaignStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoCampaignStatusFilter<$PrismaModel>
+}
+
+export type EnumPromoCardLayoutWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCardLayout | Prisma.EnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCardLayout[] | Prisma.ListEnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCardLayout[] | Prisma.ListEnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCardLayoutWithAggregatesFilter<$PrismaModel> | $Enums.PromoCardLayout
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoCardLayoutFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoCardLayoutFilter<$PrismaModel>
+}
+
+export type EnumPromoCampaignPlacementWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignPlacement | Prisma.EnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignPlacement[] | Prisma.ListEnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignPlacement[] | Prisma.ListEnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignPlacementWithAggregatesFilter<$PrismaModel> | $Enums.PromoCampaignPlacement
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoCampaignPlacementFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoCampaignPlacementFilter<$PrismaModel>
+}
+
+export type EnumPromoDestinationTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoDestinationType | Prisma.EnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoDestinationType[] | Prisma.ListEnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoDestinationType[] | Prisma.ListEnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoDestinationTypeWithAggregatesFilter<$PrismaModel> | $Enums.PromoDestinationType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoDestinationTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoDestinationTypeFilter<$PrismaModel>
+}
+
+export type EnumPromoEventTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoEventType | Prisma.EnumPromoEventTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoEventType[] | Prisma.ListEnumPromoEventTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoEventType[] | Prisma.ListEnumPromoEventTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoEventTypeFilter<$PrismaModel> | $Enums.PromoEventType
+}
+
+export type EnumPromoEventTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoEventType | Prisma.EnumPromoEventTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoEventType[] | Prisma.ListEnumPromoEventTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoEventType[] | Prisma.ListEnumPromoEventTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoEventTypeWithAggregatesFilter<$PrismaModel> | $Enums.PromoEventType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoEventTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoEventTypeFilter<$PrismaModel>
+}
+
 export type NestedStringFilter<$PrismaModel = never> = {
   equals?: string | Prisma.StringFieldRefInput<$PrismaModel>
   in?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
@@ -1087,6 +1189,108 @@ export type NestedBytesWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedBytesFilter<$PrismaModel>
   _max?: Prisma.NestedBytesFilter<$PrismaModel>
+}
+
+export type NestedEnumPromoCampaignTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignType | Prisma.EnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignType[] | Prisma.ListEnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignType[] | Prisma.ListEnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignTypeFilter<$PrismaModel> | $Enums.PromoCampaignType
+}
+
+export type NestedEnumPromoCampaignStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignStatus | Prisma.EnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignStatus[] | Prisma.ListEnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignStatus[] | Prisma.ListEnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignStatusFilter<$PrismaModel> | $Enums.PromoCampaignStatus
+}
+
+export type NestedEnumPromoCardLayoutFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCardLayout | Prisma.EnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCardLayout[] | Prisma.ListEnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCardLayout[] | Prisma.ListEnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCardLayoutFilter<$PrismaModel> | $Enums.PromoCardLayout
+}
+
+export type NestedEnumPromoCampaignPlacementFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignPlacement | Prisma.EnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignPlacement[] | Prisma.ListEnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignPlacement[] | Prisma.ListEnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignPlacementFilter<$PrismaModel> | $Enums.PromoCampaignPlacement
+}
+
+export type NestedEnumPromoDestinationTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoDestinationType | Prisma.EnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoDestinationType[] | Prisma.ListEnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoDestinationType[] | Prisma.ListEnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoDestinationTypeFilter<$PrismaModel> | $Enums.PromoDestinationType
+}
+
+export type NestedEnumPromoCampaignTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignType | Prisma.EnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignType[] | Prisma.ListEnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignType[] | Prisma.ListEnumPromoCampaignTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignTypeWithAggregatesFilter<$PrismaModel> | $Enums.PromoCampaignType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoCampaignTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoCampaignTypeFilter<$PrismaModel>
+}
+
+export type NestedEnumPromoCampaignStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignStatus | Prisma.EnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignStatus[] | Prisma.ListEnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignStatus[] | Prisma.ListEnumPromoCampaignStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignStatusWithAggregatesFilter<$PrismaModel> | $Enums.PromoCampaignStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoCampaignStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoCampaignStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumPromoCardLayoutWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCardLayout | Prisma.EnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCardLayout[] | Prisma.ListEnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCardLayout[] | Prisma.ListEnumPromoCardLayoutFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCardLayoutWithAggregatesFilter<$PrismaModel> | $Enums.PromoCardLayout
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoCardLayoutFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoCardLayoutFilter<$PrismaModel>
+}
+
+export type NestedEnumPromoCampaignPlacementWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoCampaignPlacement | Prisma.EnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoCampaignPlacement[] | Prisma.ListEnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoCampaignPlacement[] | Prisma.ListEnumPromoCampaignPlacementFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoCampaignPlacementWithAggregatesFilter<$PrismaModel> | $Enums.PromoCampaignPlacement
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoCampaignPlacementFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoCampaignPlacementFilter<$PrismaModel>
+}
+
+export type NestedEnumPromoDestinationTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoDestinationType | Prisma.EnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoDestinationType[] | Prisma.ListEnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoDestinationType[] | Prisma.ListEnumPromoDestinationTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoDestinationTypeWithAggregatesFilter<$PrismaModel> | $Enums.PromoDestinationType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoDestinationTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoDestinationTypeFilter<$PrismaModel>
+}
+
+export type NestedEnumPromoEventTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoEventType | Prisma.EnumPromoEventTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoEventType[] | Prisma.ListEnumPromoEventTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoEventType[] | Prisma.ListEnumPromoEventTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoEventTypeFilter<$PrismaModel> | $Enums.PromoEventType
+}
+
+export type NestedEnumPromoEventTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PromoEventType | Prisma.EnumPromoEventTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.PromoEventType[] | Prisma.ListEnumPromoEventTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PromoEventType[] | Prisma.ListEnumPromoEventTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPromoEventTypeWithAggregatesFilter<$PrismaModel> | $Enums.PromoEventType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPromoEventTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPromoEventTypeFilter<$PrismaModel>
 }
 
 

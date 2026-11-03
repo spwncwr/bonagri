@@ -403,6 +403,7 @@ export const ModelName = {
   Address: 'Address',
   Category: 'Category',
   Product: 'Product',
+  ProductReview: 'ProductReview',
   Inventory: 'Inventory',
   Order: 'Order',
   OrderStatusHistory: 'OrderStatusHistory',
@@ -418,7 +419,13 @@ export const ModelName = {
   DeliveryPhoto: 'DeliveryPhoto',
   TransporterProfile: 'TransporterProfile',
   Notification: 'Notification',
-  Invoice: 'Invoice'
+  Invoice: 'Invoice',
+  NotificationBroadcast: 'NotificationBroadcast',
+  PromoBanner: 'PromoBanner',
+  PromoCampaign: 'PromoCampaign',
+  PromoCampaignImage: 'PromoCampaignImage',
+  PromoCampaignProduct: 'PromoCampaignProduct',
+  PromoCampaignEvent: 'PromoCampaignEvent'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -434,7 +441,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "sellerApplication" | "productRequest" | "requestResponse" | "cartItem" | "orderItem" | "payment" | "delivery" | "deliveryCheckpoint" | "deliveryPhoto" | "transporterProfile" | "notification" | "invoice"
+    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "productReview" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "sellerApplication" | "productRequest" | "requestResponse" | "cartItem" | "orderItem" | "payment" | "delivery" | "deliveryCheckpoint" | "deliveryPhoto" | "transporterProfile" | "notification" | "invoice" | "notificationBroadcast" | "promoBanner" | "promoCampaign" | "promoCampaignImage" | "promoCampaignProduct" | "promoCampaignEvent"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -879,6 +886,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ProductCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ProductCountAggregateOutputType> | number
+        }
+      }
+    }
+    ProductReview: {
+      payload: Prisma.$ProductReviewPayload<ExtArgs>
+      fields: Prisma.ProductReviewFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProductReviewFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductReviewPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProductReviewFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductReviewPayload>
+        }
+        findFirst: {
+          args: Prisma.ProductReviewFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductReviewPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProductReviewFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductReviewPayload>
+        }
+        findMany: {
+          args: Prisma.ProductReviewFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductReviewPayload>[]
+        }
+        create: {
+          args: Prisma.ProductReviewCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductReviewPayload>
+        }
+        createMany: {
+          args: Prisma.ProductReviewCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProductReviewCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductReviewPayload>[]
+        }
+        delete: {
+          args: Prisma.ProductReviewDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductReviewPayload>
+        }
+        update: {
+          args: Prisma.ProductReviewUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductReviewPayload>
+        }
+        deleteMany: {
+          args: Prisma.ProductReviewDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProductReviewUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProductReviewUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductReviewPayload>[]
+        }
+        upsert: {
+          args: Prisma.ProductReviewUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductReviewPayload>
+        }
+        aggregate: {
+          args: Prisma.ProductReviewAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProductReview>
+        }
+        groupBy: {
+          args: Prisma.ProductReviewGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProductReviewGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProductReviewCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProductReviewCountAggregateOutputType> | number
         }
       }
     }
@@ -2066,6 +2147,450 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    NotificationBroadcast: {
+      payload: Prisma.$NotificationBroadcastPayload<ExtArgs>
+      fields: Prisma.NotificationBroadcastFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.NotificationBroadcastFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationBroadcastPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.NotificationBroadcastFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationBroadcastPayload>
+        }
+        findFirst: {
+          args: Prisma.NotificationBroadcastFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationBroadcastPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.NotificationBroadcastFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationBroadcastPayload>
+        }
+        findMany: {
+          args: Prisma.NotificationBroadcastFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationBroadcastPayload>[]
+        }
+        create: {
+          args: Prisma.NotificationBroadcastCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationBroadcastPayload>
+        }
+        createMany: {
+          args: Prisma.NotificationBroadcastCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.NotificationBroadcastCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationBroadcastPayload>[]
+        }
+        delete: {
+          args: Prisma.NotificationBroadcastDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationBroadcastPayload>
+        }
+        update: {
+          args: Prisma.NotificationBroadcastUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationBroadcastPayload>
+        }
+        deleteMany: {
+          args: Prisma.NotificationBroadcastDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.NotificationBroadcastUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.NotificationBroadcastUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationBroadcastPayload>[]
+        }
+        upsert: {
+          args: Prisma.NotificationBroadcastUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationBroadcastPayload>
+        }
+        aggregate: {
+          args: Prisma.NotificationBroadcastAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateNotificationBroadcast>
+        }
+        groupBy: {
+          args: Prisma.NotificationBroadcastGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.NotificationBroadcastGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.NotificationBroadcastCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.NotificationBroadcastCountAggregateOutputType> | number
+        }
+      }
+    }
+    PromoBanner: {
+      payload: Prisma.$PromoBannerPayload<ExtArgs>
+      fields: Prisma.PromoBannerFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PromoBannerFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoBannerPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PromoBannerFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoBannerPayload>
+        }
+        findFirst: {
+          args: Prisma.PromoBannerFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoBannerPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PromoBannerFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoBannerPayload>
+        }
+        findMany: {
+          args: Prisma.PromoBannerFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoBannerPayload>[]
+        }
+        create: {
+          args: Prisma.PromoBannerCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoBannerPayload>
+        }
+        createMany: {
+          args: Prisma.PromoBannerCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PromoBannerCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoBannerPayload>[]
+        }
+        delete: {
+          args: Prisma.PromoBannerDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoBannerPayload>
+        }
+        update: {
+          args: Prisma.PromoBannerUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoBannerPayload>
+        }
+        deleteMany: {
+          args: Prisma.PromoBannerDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PromoBannerUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PromoBannerUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoBannerPayload>[]
+        }
+        upsert: {
+          args: Prisma.PromoBannerUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoBannerPayload>
+        }
+        aggregate: {
+          args: Prisma.PromoBannerAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePromoBanner>
+        }
+        groupBy: {
+          args: Prisma.PromoBannerGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PromoBannerGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PromoBannerCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PromoBannerCountAggregateOutputType> | number
+        }
+      }
+    }
+    PromoCampaign: {
+      payload: Prisma.$PromoCampaignPayload<ExtArgs>
+      fields: Prisma.PromoCampaignFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PromoCampaignFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PromoCampaignFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignPayload>
+        }
+        findFirst: {
+          args: Prisma.PromoCampaignFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PromoCampaignFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignPayload>
+        }
+        findMany: {
+          args: Prisma.PromoCampaignFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignPayload>[]
+        }
+        create: {
+          args: Prisma.PromoCampaignCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignPayload>
+        }
+        createMany: {
+          args: Prisma.PromoCampaignCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PromoCampaignCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignPayload>[]
+        }
+        delete: {
+          args: Prisma.PromoCampaignDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignPayload>
+        }
+        update: {
+          args: Prisma.PromoCampaignUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignPayload>
+        }
+        deleteMany: {
+          args: Prisma.PromoCampaignDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PromoCampaignUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PromoCampaignUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignPayload>[]
+        }
+        upsert: {
+          args: Prisma.PromoCampaignUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignPayload>
+        }
+        aggregate: {
+          args: Prisma.PromoCampaignAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePromoCampaign>
+        }
+        groupBy: {
+          args: Prisma.PromoCampaignGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PromoCampaignGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PromoCampaignCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PromoCampaignCountAggregateOutputType> | number
+        }
+      }
+    }
+    PromoCampaignImage: {
+      payload: Prisma.$PromoCampaignImagePayload<ExtArgs>
+      fields: Prisma.PromoCampaignImageFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PromoCampaignImageFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignImagePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PromoCampaignImageFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignImagePayload>
+        }
+        findFirst: {
+          args: Prisma.PromoCampaignImageFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignImagePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PromoCampaignImageFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignImagePayload>
+        }
+        findMany: {
+          args: Prisma.PromoCampaignImageFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignImagePayload>[]
+        }
+        create: {
+          args: Prisma.PromoCampaignImageCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignImagePayload>
+        }
+        createMany: {
+          args: Prisma.PromoCampaignImageCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PromoCampaignImageCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignImagePayload>[]
+        }
+        delete: {
+          args: Prisma.PromoCampaignImageDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignImagePayload>
+        }
+        update: {
+          args: Prisma.PromoCampaignImageUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignImagePayload>
+        }
+        deleteMany: {
+          args: Prisma.PromoCampaignImageDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PromoCampaignImageUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PromoCampaignImageUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignImagePayload>[]
+        }
+        upsert: {
+          args: Prisma.PromoCampaignImageUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignImagePayload>
+        }
+        aggregate: {
+          args: Prisma.PromoCampaignImageAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePromoCampaignImage>
+        }
+        groupBy: {
+          args: Prisma.PromoCampaignImageGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PromoCampaignImageGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PromoCampaignImageCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PromoCampaignImageCountAggregateOutputType> | number
+        }
+      }
+    }
+    PromoCampaignProduct: {
+      payload: Prisma.$PromoCampaignProductPayload<ExtArgs>
+      fields: Prisma.PromoCampaignProductFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PromoCampaignProductFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignProductPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PromoCampaignProductFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignProductPayload>
+        }
+        findFirst: {
+          args: Prisma.PromoCampaignProductFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignProductPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PromoCampaignProductFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignProductPayload>
+        }
+        findMany: {
+          args: Prisma.PromoCampaignProductFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignProductPayload>[]
+        }
+        create: {
+          args: Prisma.PromoCampaignProductCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignProductPayload>
+        }
+        createMany: {
+          args: Prisma.PromoCampaignProductCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PromoCampaignProductCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignProductPayload>[]
+        }
+        delete: {
+          args: Prisma.PromoCampaignProductDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignProductPayload>
+        }
+        update: {
+          args: Prisma.PromoCampaignProductUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignProductPayload>
+        }
+        deleteMany: {
+          args: Prisma.PromoCampaignProductDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PromoCampaignProductUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PromoCampaignProductUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignProductPayload>[]
+        }
+        upsert: {
+          args: Prisma.PromoCampaignProductUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignProductPayload>
+        }
+        aggregate: {
+          args: Prisma.PromoCampaignProductAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePromoCampaignProduct>
+        }
+        groupBy: {
+          args: Prisma.PromoCampaignProductGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PromoCampaignProductGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PromoCampaignProductCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PromoCampaignProductCountAggregateOutputType> | number
+        }
+      }
+    }
+    PromoCampaignEvent: {
+      payload: Prisma.$PromoCampaignEventPayload<ExtArgs>
+      fields: Prisma.PromoCampaignEventFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PromoCampaignEventFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignEventPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PromoCampaignEventFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignEventPayload>
+        }
+        findFirst: {
+          args: Prisma.PromoCampaignEventFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignEventPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PromoCampaignEventFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignEventPayload>
+        }
+        findMany: {
+          args: Prisma.PromoCampaignEventFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignEventPayload>[]
+        }
+        create: {
+          args: Prisma.PromoCampaignEventCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignEventPayload>
+        }
+        createMany: {
+          args: Prisma.PromoCampaignEventCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PromoCampaignEventCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignEventPayload>[]
+        }
+        delete: {
+          args: Prisma.PromoCampaignEventDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignEventPayload>
+        }
+        update: {
+          args: Prisma.PromoCampaignEventUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignEventPayload>
+        }
+        deleteMany: {
+          args: Prisma.PromoCampaignEventDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PromoCampaignEventUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PromoCampaignEventUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignEventPayload>[]
+        }
+        upsert: {
+          args: Prisma.PromoCampaignEventUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PromoCampaignEventPayload>
+        }
+        aggregate: {
+          args: Prisma.PromoCampaignEventAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePromoCampaignEvent>
+        }
+        groupBy: {
+          args: Prisma.PromoCampaignEventGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PromoCampaignEventGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PromoCampaignEventCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PromoCampaignEventCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2184,6 +2709,8 @@ export const CategoryScalarFieldEnum = {
   name: 'name',
   slug: 'slug',
   description: 'description',
+  imageUrl: 'imageUrl',
+  imagePublicId: 'imagePublicId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -2209,6 +2736,19 @@ export const ProductScalarFieldEnum = {
 } as const
 
 export type ProductScalarFieldEnum = (typeof ProductScalarFieldEnum)[keyof typeof ProductScalarFieldEnum]
+
+
+export const ProductReviewScalarFieldEnum = {
+  id: 'id',
+  productId: 'productId',
+  buyerId: 'buyerId',
+  rating: 'rating',
+  comment: 'comment',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProductReviewScalarFieldEnum = (typeof ProductReviewScalarFieldEnum)[keyof typeof ProductReviewScalarFieldEnum]
 
 
 export const InventoryScalarFieldEnum = {
@@ -2461,6 +3001,102 @@ export const InvoiceScalarFieldEnum = {
 } as const
 
 export type InvoiceScalarFieldEnum = (typeof InvoiceScalarFieldEnum)[keyof typeof InvoiceScalarFieldEnum]
+
+
+export const NotificationBroadcastScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  message: 'message',
+  targetRole: 'targetRole',
+  recipientCount: 'recipientCount',
+  sentEmail: 'sentEmail',
+  createdById: 'createdById',
+  createdAt: 'createdAt'
+} as const
+
+export type NotificationBroadcastScalarFieldEnum = (typeof NotificationBroadcastScalarFieldEnum)[keyof typeof NotificationBroadcastScalarFieldEnum]
+
+
+export const PromoBannerScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  subtitle: 'subtitle',
+  eyebrow: 'eyebrow',
+  ctaText: 'ctaText',
+  ctaLink: 'ctaLink',
+  imageUrl: 'imageUrl',
+  imagePublicId: 'imagePublicId',
+  tone: 'tone',
+  targetRole: 'targetRole',
+  sortOrder: 'sortOrder',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PromoBannerScalarFieldEnum = (typeof PromoBannerScalarFieldEnum)[keyof typeof PromoBannerScalarFieldEnum]
+
+
+export const PromoCampaignScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  headline: 'headline',
+  description: 'description',
+  type: 'type',
+  status: 'status',
+  layout: 'layout',
+  placement: 'placement',
+  priority: 'priority',
+  ctaText: 'ctaText',
+  tone: 'tone',
+  isSponsored: 'isSponsored',
+  startAt: 'startAt',
+  expiresAt: 'expiresAt',
+  destinationType: 'destinationType',
+  destinationProductId: 'destinationProductId',
+  destinationCategoryId: 'destinationCategoryId',
+  destinationSupplierId: 'destinationSupplierId',
+  impressions: 'impressions',
+  clicks: 'clicks',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PromoCampaignScalarFieldEnum = (typeof PromoCampaignScalarFieldEnum)[keyof typeof PromoCampaignScalarFieldEnum]
+
+
+export const PromoCampaignImageScalarFieldEnum = {
+  id: 'id',
+  campaignId: 'campaignId',
+  url: 'url',
+  publicId: 'publicId',
+  alt: 'alt',
+  sortOrder: 'sortOrder'
+} as const
+
+export type PromoCampaignImageScalarFieldEnum = (typeof PromoCampaignImageScalarFieldEnum)[keyof typeof PromoCampaignImageScalarFieldEnum]
+
+
+export const PromoCampaignProductScalarFieldEnum = {
+  id: 'id',
+  campaignId: 'campaignId',
+  productId: 'productId',
+  sortOrder: 'sortOrder',
+  promoPrice: 'promoPrice'
+} as const
+
+export type PromoCampaignProductScalarFieldEnum = (typeof PromoCampaignProductScalarFieldEnum)[keyof typeof PromoCampaignProductScalarFieldEnum]
+
+
+export const PromoCampaignEventScalarFieldEnum = {
+  id: 'id',
+  campaignId: 'campaignId',
+  type: 'type',
+  eventKey: 'eventKey',
+  createdAt: 'createdAt'
+} as const
+
+export type PromoCampaignEventScalarFieldEnum = (typeof PromoCampaignEventScalarFieldEnum)[keyof typeof PromoCampaignEventScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -2779,6 +3415,90 @@ export type BytesFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, '
 export type ListBytesFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Bytes[]'>
     
 
+
+/**
+ * Reference to a field of type 'PromoCampaignType'
+ */
+export type EnumPromoCampaignTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoCampaignType'>
+    
+
+
+/**
+ * Reference to a field of type 'PromoCampaignType[]'
+ */
+export type ListEnumPromoCampaignTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoCampaignType[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PromoCampaignStatus'
+ */
+export type EnumPromoCampaignStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoCampaignStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'PromoCampaignStatus[]'
+ */
+export type ListEnumPromoCampaignStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoCampaignStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PromoCardLayout'
+ */
+export type EnumPromoCardLayoutFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoCardLayout'>
+    
+
+
+/**
+ * Reference to a field of type 'PromoCardLayout[]'
+ */
+export type ListEnumPromoCardLayoutFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoCardLayout[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PromoCampaignPlacement'
+ */
+export type EnumPromoCampaignPlacementFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoCampaignPlacement'>
+    
+
+
+/**
+ * Reference to a field of type 'PromoCampaignPlacement[]'
+ */
+export type ListEnumPromoCampaignPlacementFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoCampaignPlacement[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PromoDestinationType'
+ */
+export type EnumPromoDestinationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoDestinationType'>
+    
+
+
+/**
+ * Reference to a field of type 'PromoDestinationType[]'
+ */
+export type ListEnumPromoDestinationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoDestinationType[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PromoEventType'
+ */
+export type EnumPromoEventTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoEventType'>
+    
+
+
+/**
+ * Reference to a field of type 'PromoEventType[]'
+ */
+export type ListEnumPromoEventTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PromoEventType[]'>
+    
+
 /**
  * Batch Payload for updateMany & deleteMany & createMany
  */
@@ -2936,6 +3656,7 @@ export type GlobalOmitConfig = {
   address?: Prisma.AddressOmit
   category?: Prisma.CategoryOmit
   product?: Prisma.ProductOmit
+  productReview?: Prisma.ProductReviewOmit
   inventory?: Prisma.InventoryOmit
   order?: Prisma.OrderOmit
   orderStatusHistory?: Prisma.OrderStatusHistoryOmit
@@ -2952,6 +3673,12 @@ export type GlobalOmitConfig = {
   transporterProfile?: Prisma.TransporterProfileOmit
   notification?: Prisma.NotificationOmit
   invoice?: Prisma.InvoiceOmit
+  notificationBroadcast?: Prisma.NotificationBroadcastOmit
+  promoBanner?: Prisma.PromoBannerOmit
+  promoCampaign?: Prisma.PromoCampaignOmit
+  promoCampaignImage?: Prisma.PromoCampaignImageOmit
+  promoCampaignProduct?: Prisma.PromoCampaignProductOmit
+  promoCampaignEvent?: Prisma.PromoCampaignEventOmit
 }
 
 /* Types for Logging */

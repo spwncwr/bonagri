@@ -3,6 +3,7 @@ import { ThrottlerModule } from "@nestjs/throttler";
 import { AuthModule } from "./auth/auth.module";
 import { AdminModule } from "./admin/admin.module";
 import { CatalogModule } from "./catalog/catalog.module";
+import { ReviewsModule } from "./reviews/reviews.module";
 import { DisputesModule } from "./disputes/disputes.module";
 import { HealthModule } from "./health/health.module";
 import { NotificationsModule } from "./notifications/notifications.module";
@@ -15,6 +16,7 @@ import { CartModule } from "./cart/cart.module";
 import { TransportModule } from "./transport/transport.module";
 import { CheckpointsModule } from "./checkpoints/checkpoints.module";
 import { MediaModule } from "./media/media.module";
+import { PromotionsModule } from "./promotions/promotions.module";
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { MediaModule } from "./media/media.module";
     TransportModule,
     CheckpointsModule,
     MediaModule,
+    ReviewsModule,
+    PromotionsModule,
   ],
 })
 export class AppModule {}

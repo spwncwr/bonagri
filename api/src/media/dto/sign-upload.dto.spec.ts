@@ -5,7 +5,13 @@ import { SignUploadDto } from "./sign-upload.dto";
 
 describe("SignUploadDto (CP16a)", () => {
   it("accepts the known upload kinds", async () => {
-    for (const kind of ["product", "supplier_logo"]) {
+    for (const kind of [
+      "product",
+      "supplier_logo",
+      "category",
+      "banner",
+      "promotion",
+    ]) {
       const dto = plainToInstance(SignUploadDto, { kind });
       await expect(validate(dto)).resolves.toEqual([]);
     }

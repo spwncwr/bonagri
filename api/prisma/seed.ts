@@ -462,6 +462,138 @@ async function main(): Promise<void> {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // CP17: demo product reviews (development display data)
+  // ---------------------------------------------------------------------------
+  // The seed creates no orders, so demo reviews are inserted directly here;
+  // the API still enforces delivered-order eligibility on every real write.
+  // The dev buyer is deliberately NOT given seed reviews so the write-review
+  // flow stays testable with buyer@bonagri.co.za.
+  const reviewers = [
+    { email: "reviewer1@bonagri.co.za", firstName: "Thato", lastName: "Mokoena" },
+    { email: "reviewer2@bonagri.co.za", firstName: "Naledi", lastName: "Dlamini" },
+    { email: "reviewer3@bonagri.co.za", firstName: "Sipho", lastName: "Nkosi" },
+  ];
+
+  const reviewerIds: string[] = [];
+
+  for (const reviewer of reviewers) {
+    const record = await prisma.user.upsert({
+      where: { email: reviewer.email },
+      update: {
+        firstName: reviewer.firstName,
+        lastName: reviewer.lastName,
+        role: "BUYER",
+        status: "ACTIVE",
+        emailVerifiedAt: new Date(),
+      },
+      create: {
+        email: reviewer.email,
+        passwordHash: devPasswordHash,
+        firstName: reviewer.firstName,
+        lastName: reviewer.lastName,
+        phone: null,
+        role: "BUYER",
+        status: "ACTIVE",
+        emailVerifiedAt: new Date(),
+      },
+    });
+
+    reviewerIds.push(record.id);
+  }
+
+  const demoReviews = [
+    {
+      slug: "fresh-tomatoes",
+      reviewer: 0,
+      rating: 5,
+      comment: "Arrived fresh and neatly packed — will order again.",
+    },
+    {
+      slug: "fresh-tomatoes",
+      reviewer: 1,
+      rating: 4,
+      comment: "Good quality for the price, delivery was on time.",
+    },
+    {
+      slug: "fresh-tomatoes",
+      reviewer: 2,
+      rating: 4,
+      comment: "Portion size matched the listing exactly.",
+    },
+    {
+      slug: "fresh-bananas",
+      reviewer: 1,
+      rating: 5,
+      comment: "Ripe and sweet, nothing bruised in the box.",
+    },
+    {
+      slug: "fresh-bananas",
+      reviewer: 2,
+      rating: 4,
+      comment: "Solid bunch, would have liked a slightly bigger size.",
+    },
+    {
+      slug: "green-chilli",
+      reviewer: 0,
+      rating: 5,
+      comment: "Very fresh and properly hot — exactly what I wanted.",
+    },
+    {
+      slug: "green-chilli",
+      reviewer: 1,
+      rating: 3,
+      comment: "Fine quality, but the delivery arrived a day late.",
+    },
+    {
+      slug: "fresh-okra",
+      reviewer: 2,
+      rating: 4,
+      comment: "Tender pods, no fibrous ones in the batch.",
+    },
+    {
+      slug: "electric-fence-energizer-12j",
+      reviewer: 0,
+      rating: 5,
+      comment: "Installed easily and holds the fence without issues.",
+    },
+  ];
+
+  const reviewProductIds = new Map(
+    (
+      await prisma.product.findMany({
+        where: { slug: { in: [...new Set(demoReviews.map((r) => r.slug))] } },
+        select: { id: true, slug: true },
+      })
+    ).map((product) => [product.slug, product.id] as const),
+  );
+
+  for (const review of demoReviews) {
+    const productId = reviewProductIds.get(review.slug);
+    const buyerId = reviewerIds[review.reviewer];
+
+    if (!productId || !buyerId) {
+      throw new Error(
+        `Cannot seed demo review: missing product "${review.slug}" or reviewer ${review.reviewer}.`,
+      );
+    }
+
+    await prisma.productReview.upsert({
+      where: { productId_buyerId: { productId, buyerId } },
+      update: { rating: review.rating, comment: review.comment },
+      create: {
+        productId,
+        buyerId,
+        rating: review.rating,
+        comment: review.comment,
+      },
+    });
+  }
+
+  console.log(
+    `Demo product reviews ready: ${demoReviews.length} reviews from ${reviewers.length} dev buyers.`,
+  );
+
   console.log(
     "BonAgri development seed completed: categories, accounts, supplier/dealer profiles, products and inventory.",
   );

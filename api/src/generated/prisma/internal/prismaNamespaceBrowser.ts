@@ -57,6 +57,7 @@ export const ModelName = {
   Address: 'Address',
   Category: 'Category',
   Product: 'Product',
+  ProductReview: 'ProductReview',
   Inventory: 'Inventory',
   Order: 'Order',
   OrderStatusHistory: 'OrderStatusHistory',
@@ -72,7 +73,13 @@ export const ModelName = {
   DeliveryPhoto: 'DeliveryPhoto',
   TransporterProfile: 'TransporterProfile',
   Notification: 'Notification',
-  Invoice: 'Invoice'
+  Invoice: 'Invoice',
+  NotificationBroadcast: 'NotificationBroadcast',
+  PromoBanner: 'PromoBanner',
+  PromoCampaign: 'PromoCampaign',
+  PromoCampaignImage: 'PromoCampaignImage',
+  PromoCampaignProduct: 'PromoCampaignProduct',
+  PromoCampaignEvent: 'PromoCampaignEvent'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -170,6 +177,8 @@ export const CategoryScalarFieldEnum = {
   name: 'name',
   slug: 'slug',
   description: 'description',
+  imageUrl: 'imageUrl',
+  imagePublicId: 'imagePublicId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -195,6 +204,19 @@ export const ProductScalarFieldEnum = {
 } as const
 
 export type ProductScalarFieldEnum = (typeof ProductScalarFieldEnum)[keyof typeof ProductScalarFieldEnum]
+
+
+export const ProductReviewScalarFieldEnum = {
+  id: 'id',
+  productId: 'productId',
+  buyerId: 'buyerId',
+  rating: 'rating',
+  comment: 'comment',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProductReviewScalarFieldEnum = (typeof ProductReviewScalarFieldEnum)[keyof typeof ProductReviewScalarFieldEnum]
 
 
 export const InventoryScalarFieldEnum = {
@@ -447,6 +469,102 @@ export const InvoiceScalarFieldEnum = {
 } as const
 
 export type InvoiceScalarFieldEnum = (typeof InvoiceScalarFieldEnum)[keyof typeof InvoiceScalarFieldEnum]
+
+
+export const NotificationBroadcastScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  message: 'message',
+  targetRole: 'targetRole',
+  recipientCount: 'recipientCount',
+  sentEmail: 'sentEmail',
+  createdById: 'createdById',
+  createdAt: 'createdAt'
+} as const
+
+export type NotificationBroadcastScalarFieldEnum = (typeof NotificationBroadcastScalarFieldEnum)[keyof typeof NotificationBroadcastScalarFieldEnum]
+
+
+export const PromoBannerScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  subtitle: 'subtitle',
+  eyebrow: 'eyebrow',
+  ctaText: 'ctaText',
+  ctaLink: 'ctaLink',
+  imageUrl: 'imageUrl',
+  imagePublicId: 'imagePublicId',
+  tone: 'tone',
+  targetRole: 'targetRole',
+  sortOrder: 'sortOrder',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PromoBannerScalarFieldEnum = (typeof PromoBannerScalarFieldEnum)[keyof typeof PromoBannerScalarFieldEnum]
+
+
+export const PromoCampaignScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  headline: 'headline',
+  description: 'description',
+  type: 'type',
+  status: 'status',
+  layout: 'layout',
+  placement: 'placement',
+  priority: 'priority',
+  ctaText: 'ctaText',
+  tone: 'tone',
+  isSponsored: 'isSponsored',
+  startAt: 'startAt',
+  expiresAt: 'expiresAt',
+  destinationType: 'destinationType',
+  destinationProductId: 'destinationProductId',
+  destinationCategoryId: 'destinationCategoryId',
+  destinationSupplierId: 'destinationSupplierId',
+  impressions: 'impressions',
+  clicks: 'clicks',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PromoCampaignScalarFieldEnum = (typeof PromoCampaignScalarFieldEnum)[keyof typeof PromoCampaignScalarFieldEnum]
+
+
+export const PromoCampaignImageScalarFieldEnum = {
+  id: 'id',
+  campaignId: 'campaignId',
+  url: 'url',
+  publicId: 'publicId',
+  alt: 'alt',
+  sortOrder: 'sortOrder'
+} as const
+
+export type PromoCampaignImageScalarFieldEnum = (typeof PromoCampaignImageScalarFieldEnum)[keyof typeof PromoCampaignImageScalarFieldEnum]
+
+
+export const PromoCampaignProductScalarFieldEnum = {
+  id: 'id',
+  campaignId: 'campaignId',
+  productId: 'productId',
+  sortOrder: 'sortOrder',
+  promoPrice: 'promoPrice'
+} as const
+
+export type PromoCampaignProductScalarFieldEnum = (typeof PromoCampaignProductScalarFieldEnum)[keyof typeof PromoCampaignProductScalarFieldEnum]
+
+
+export const PromoCampaignEventScalarFieldEnum = {
+  id: 'id',
+  campaignId: 'campaignId',
+  type: 'type',
+  eventKey: 'eventKey',
+  createdAt: 'createdAt'
+} as const
+
+export type PromoCampaignEventScalarFieldEnum = (typeof PromoCampaignEventScalarFieldEnum)[keyof typeof PromoCampaignEventScalarFieldEnum]
 
 
 export const SortOrder = {

@@ -1,17 +1,30 @@
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { CatalogService } from "./catalog.service";
 
 function makeService() {
   const prisma = {
-    category: { findMany: jest.fn() },
+    // findUnique defaults to "this category exists" — the unknown-category
+    // guard test overrides it with mockResolvedValue(null).
+    category: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(
+        ({ where }: { where?: { id?: string } }) =>
+          Promise.resolve(where?.id ? { id: where.id } : null),
+      ),
+    },
     product: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
       findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      aggregate: jest.fn(),
     },
-    supplierProfile: { findUnique: jest.fn(), update: jest.fn() },
+    supplierProfile: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+    },
     inventory: { update: jest.fn() },
   };
 
@@ -22,10 +35,39 @@ function makeService() {
     destroyAsset: jest.fn().mockResolvedValue(undefined),
   };
 
+  // CP17: rating summaries are delegated to ReviewsService — passthrough mock
+  // so the existing payload assertions keep comparing the same objects.
+  const reviews = {
+    attachSummaries: jest.fn(
+      (products: unknown) => Promise.resolve(products),
+    ),
+  };
+
   return {
-    service: new CatalogService(prisma as never, media as never),
+    service: new CatalogService(
+      prisma as never,
+      media as never,
+      reviews as never,
+    ),
     prisma,
     media,
+    reviews,
+  };
+}
+
+function makeProduct(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "prod-1",
+    name: "Fresh Tomatoes",
+    sku: "SKU-1",
+    price: "20.00",
+    description: null,
+    status: "ACTIVE",
+    createdAt: new Date("2026-01-01"),
+    category: { name: "Vegetables" },
+    supplier: { businessName: "BonAgri Farm" },
+    inventory: { quantity: 1, reservedQuantity: 0 },
+    ...overrides,
   };
 }
 
@@ -81,6 +123,279 @@ describe("CatalogService (CP1 listings)", () => {
         }),
       );
     });
+
+    it("attaches CP17 rating summaries to every listed product", async () => {
+      const { service, prisma, reviews } = makeService();
+
+      const products = [makeProduct({ id: "p1" }), makeProduct({ id: "p2" })];
+      prisma.product.findMany.mockResolvedValue(products);
+
+      await service.getProducts();
+
+      expect(reviews.attachSummaries).toHaveBeenCalledWith(products);
+    });
+
+    it("searches names, skus, descriptions, categories and suppliers", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.product.findMany.mockResolvedValue([]);
+
+      await service.getProducts({ search: "tomato" });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: "ACTIVE",
+            OR: expect.arrayContaining([
+              { name: { contains: "tomato", mode: "insensitive" } },
+              { sku: { contains: "tomato", mode: "insensitive" } },
+              { description: { contains: "tomato", mode: "insensitive" } },
+              {
+                category: {
+                  name: { contains: "tomato", mode: "insensitive" },
+                },
+              },
+              {
+                supplier: {
+                  businessName: { contains: "tomato", mode: "insensitive" },
+                },
+              },
+            ]),
+          }),
+        }),
+      );
+    });
+
+    it("ranks exact and prefix name matches above description matches", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.product.findMany.mockResolvedValue([
+        makeProduct({ id: "p1", name: "Fresh Tomatoes" }),
+        makeProduct({ id: "p2", name: "Tomato" }),
+        makeProduct({ id: "p3", name: "Tomatoes" }),
+        makeProduct({ id: "p4", name: "Chilli Sauce" }),
+      ]);
+
+      const result = await service.getProducts({ search: "tomato" });
+
+      expect(result.map((product) => product.id)).toEqual([
+        "p2",
+        "p3",
+        "p1",
+        "p4",
+      ]);
+    });
+
+    it("filters by category slug, price range, seller and location", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.product.findMany.mockResolvedValue([]);
+
+      await service.getProducts({
+        category: "fruits",
+        minPrice: 10,
+        maxPrice: 50,
+        supplierId: "sup-1",
+        province: "Limpopo",
+        city: "Tzaneen",
+      });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: "ACTIVE",
+            category: { slug: "fruits" },
+            price: { gte: 10, lte: 50 },
+            supplierId: "sup-1",
+            supplier: {
+              province: { equals: "Limpopo", mode: "insensitive" },
+              city: { equals: "Tzaneen", mode: "insensitive" },
+            },
+          }),
+        }),
+      );
+    });
+
+    it("rejects a minimum price above the maximum", async () => {
+      const { service, prisma } = makeService();
+
+      await expect(
+        service.getProducts({ minPrice: 100, maxPrice: 10 }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.product.findMany).not.toHaveBeenCalled();
+    });
+
+    it("hides out-of-stock products from the marketplace by default", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.product.findMany.mockResolvedValue([
+        makeProduct({
+          id: "available",
+          inventory: { quantity: 5, reservedQuantity: 2 },
+        }),
+        makeProduct({
+          id: "reserved",
+          inventory: { quantity: 2, reservedQuantity: 2 },
+        }),
+        makeProduct({ id: "missing", inventory: null }),
+      ]);
+
+      const result = await service.getProducts();
+
+      expect(result.map((product) => product.id)).toEqual(["available"]);
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            inventory: { is: { quantity: { gt: 0 } } },
+          }),
+        }),
+      );
+    });
+
+    it("keeps out-of-stock rows only when inStock is explicitly false", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.product.findMany.mockResolvedValue([
+        makeProduct({
+          id: "available",
+          inventory: { quantity: 5, reservedQuantity: 2 },
+        }),
+        makeProduct({
+          id: "reserved",
+          inventory: { quantity: 2, reservedQuantity: 2 },
+        }),
+      ]);
+
+      const result = await service.getProducts({ inStock: false });
+
+      expect(result.map((product) => product.id)).toEqual([
+        "available",
+        "reserved",
+      ]);
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({
+            inventory: expect.anything(),
+          }),
+        }),
+      );
+    });
+
+    it("pages over sellable rows, not database rows", async () => {
+      const { service, prisma } = makeService();
+
+      // Page 2 (skip 2, take 2) must skip the unavailable row instead of
+      // letting the database offset swallow a sellable product.
+      prisma.product.findMany.mockResolvedValue([
+        makeProduct({ id: "a" }),
+        makeProduct({ id: "dead", inventory: { quantity: 1, reservedQuantity: 1 } }),
+        makeProduct({ id: "b" }),
+        makeProduct({ id: "c" }),
+        makeProduct({ id: "d" }),
+      ]);
+
+      const result = await service.getProducts({ take: 2, skip: 2 });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 10 }),
+      );
+      expect(result.map((product) => product.id)).toEqual(["c", "d"]);
+    });
+
+    it("sorts by price in both directions, by newest and by trending", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.product.findMany.mockResolvedValue([]);
+
+      await service.getProducts({ sort: "price_asc" });
+      await service.getProducts({ sort: "price_desc" });
+      await service.getProducts({ sort: "newest" });
+      await service.getProducts({ sort: "trending" });
+
+      expect(prisma.product.findMany).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          orderBy: [{ price: "asc" }, { id: "asc" }],
+        }),
+      );
+      expect(prisma.product.findMany).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          orderBy: [{ price: "desc" }, { id: "asc" }],
+        }),
+      );
+      expect(prisma.product.findMany).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({
+          orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+        }),
+      );
+      expect(prisma.product.findMany).toHaveBeenNthCalledWith(
+        4,
+        expect.objectContaining({
+          orderBy: [{ reviews: { _count: "desc" } }, { id: "asc" }],
+        }),
+      );
+    });
+
+    it("caps live-search suggestions after ranking", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.product.findMany.mockResolvedValue(
+        Array.from({ length: 10 }, (_, index) =>
+          makeProduct({ id: `p${index}`, name: `Tomato ${index}` }),
+        ),
+      );
+
+      const result = await service.getProducts({ search: "tomato", take: 6 });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 24 }),
+      );
+      expect(result).toHaveLength(6);
+    });
+  });
+
+  describe("getProductFacets (filter options)", () => {
+    it("derives unique locations and seller options from active listings", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.supplierProfile.findMany.mockResolvedValue([
+        { id: "s1", businessName: "A Farm", city: "Tzaneen", province: "Limpopo" },
+        { id: "s2", businessName: "B Farm", city: "Polokwane", province: "Limpopo" },
+        { id: "s3", businessName: "C Farm", city: null, province: null },
+      ]);
+      prisma.product.aggregate.mockResolvedValue({
+        _min: { price: 5 },
+        _max: { price: 1250.5 },
+      });
+
+      const facets = await service.getProductFacets();
+
+      expect(facets.provinces).toEqual(["Limpopo"]);
+      expect(facets.cities).toEqual(["Polokwane", "Tzaneen"]);
+      expect(facets.suppliers).toHaveLength(3);
+      expect(facets.priceRange).toEqual({ min: 5, max: 1250.5 });
+      expect(prisma.supplierProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { products: { some: { status: "ACTIVE" } } },
+        }),
+      );
+    });
+
+    it("returns null bounds when no active products exist", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.supplierProfile.findMany.mockResolvedValue([]);
+      prisma.product.aggregate.mockResolvedValue({
+        _min: { price: null },
+        _max: { price: null },
+      });
+
+      const facets = await service.getProductFacets();
+
+      expect(facets.priceRange).toEqual({ min: null, max: null });
+    });
   });
 
   describe("getSupplierProducts", () => {
@@ -127,6 +442,30 @@ describe("CatalogService (CP1 listings)", () => {
       await expect(
         service.createProduct("buyer-1", {} as never),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it("rejects a category that is not a platform category", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+      prisma.category.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.createProduct("supplier-user-1", {
+          categoryId: "11111111-2222-4333-8444-555555555555",
+          name: "Mystery crop",
+          slug: "mystery-crop",
+          sku: "BON-MYS-1",
+          price: 10,
+          unit: "kg",
+        } as never),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(prisma.category.findUnique).toHaveBeenCalledWith({
+        where: { id: "11111111-2222-4333-8444-555555555555" },
+        select: { id: true },
+      });
+      expect(prisma.product.create).not.toHaveBeenCalled();
     });
 
     it("rejects updates on products the supplier does not own", async () => {
@@ -474,6 +813,49 @@ describe("CatalogService (CP16a media foundation)", () => {
 
       await expect(
         service.updateSupplierProfile("buyer-user-1", { logoUrl: null }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("getSupplierStorefront (promoted shop destination)", () => {
+    it("returns only the public shop shape and its active products", async () => {
+      const { service, prisma, reviews } = makeService();
+      const product = makeProduct();
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-1",
+        businessName: "BonAgri Farm",
+        description: "Local produce",
+        logoUrl: null,
+        city: "Polokwane",
+        province: "Limpopo",
+        verified: true,
+        products: [product],
+      });
+
+      const storefront = await service.getSupplierStorefront("sup-1");
+
+      expect(prisma.supplierProfile.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "sup-1" },
+          select: expect.objectContaining({
+            businessName: true,
+            products: expect.objectContaining({
+              where: { status: "ACTIVE" },
+            }),
+          }),
+        }),
+      );
+      expect(reviews.attachSummaries).toHaveBeenCalledWith([product]);
+      expect(storefront.businessName).toBe("BonAgri Farm");
+      expect(storefront.products).toEqual([product]);
+    });
+
+    it("404s for an unknown shop", async () => {
+      const { service, prisma } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.getSupplierStorefront("missing"),
       ).rejects.toThrow(NotFoundException);
     });
   });

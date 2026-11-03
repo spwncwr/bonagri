@@ -48,6 +48,11 @@ export type Category = Prisma.CategoryModel
  */
 export type Product = Prisma.ProductModel
 /**
+ * Model ProductReview
+ * 
+ */
+export type ProductReview = Prisma.ProductReviewModel
+/**
  * Model Inventory
  * 
  */
@@ -127,3 +132,33 @@ export type Notification = Prisma.NotificationModel
  * 
  */
 export type Invoice = Prisma.InvoiceModel
+/**
+ * Model NotificationBroadcast
+ * 
+ */
+export type NotificationBroadcast = Prisma.NotificationBroadcastModel
+/**
+ * Model PromoBanner
+ * 
+ */
+export type PromoBanner = Prisma.PromoBannerModel
+/**
+ * Model PromoCampaign
+ * 
+ */
+export type PromoCampaign = Prisma.PromoCampaignModel
+/**
+ * Model PromoCampaignImage
+ * 
+ */
+export type PromoCampaignImage = Prisma.PromoCampaignImageModel
+/**
+ * Model PromoCampaignProduct
+ * 
+ */
+export type PromoCampaignProduct = Prisma.PromoCampaignProductModel
+/**
+ * Model PromoCampaignEvent
+ * 
+ */
+export type PromoCampaignEvent = Prisma.PromoCampaignEventModel

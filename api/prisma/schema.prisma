@@ -136,6 +136,7 @@ model User {
   transporterProfile TransporterProfile?
   productRequests   ProductRequest[]
   cartItems         CartItem[]
+  productReviews    ProductReview[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -215,6 +216,8 @@ model Category {
   name        String    @unique
   slug        String    @unique
   description String?
+  imageUrl    String?
+  imagePublicId String?
   products    Product[]
   productRequests ProductRequest[]
   createdAt   DateTime  @default(now())
@@ -239,8 +242,10 @@ model Product {
   supplier    SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   category    Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   inventory   Inventory?
+  reviews     ProductReview[]
   orderItems  OrderItem[]
   cartItems   CartItem[]
+  promotionLinks PromoCampaignProduct[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
@@ -248,6 +253,25 @@ model Product {
   @@index([categoryId])
   @@index([status])
   @@index([name])
+}
+
+// CP17: buyer ratings — one review per buyer per product. A buyer may only
+// review a product after an order containing it reached DELIVERED (checked
+// in the service, not by the schema).
+model ProductReview {
+  id        String   @id @default(uuid())
+  productId String
+  buyerId   String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  buyer     User     @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, buyerId])
+  @@index([buyerId])
+  @@index([productId, createdAt])
 }
 
 model Inventory {
@@ -552,3 +576,154 @@ model Invoice {
 
   @@index([issuedAt])
 }
+
+model NotificationBroadcast {
+  id             String   @id @default(uuid())
+  title          String
+  message        String
+  targetRole     String
+  recipientCount Int
+  sentEmail      Boolean  @default(false)
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model PromoBanner {
+  id            String   @id @default(uuid())
+  title         String
+  subtitle      String?
+  eyebrow       String?
+  ctaText       String?  @default("Learn more")
+  ctaLink       String   @default("/explore")
+  imageUrl      String?
+  imagePublicId String?
+  tone          String?  @default("from-[#17633a] to-[#0c3f23]")
+  targetRole    String?  @default("ALL")
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+// Marketplace promotions: admin-managed campaign cards placed inside the
+// product feed. Destinations are stored as plain ids (like checkpoint actors)
+// so a campaign row can never be deleted as a side effect of product/shop
+// cleanup — the public service drops destinations whose target is no longer
+// publicly valid instead.
+enum PromoCampaignType {
+  FEATURED_PRODUCTS
+  NEAR_YOU
+  SPECIAL_OFFERS
+  DISCOVER_CATEGORIES
+  FEATURED_SHOPS
+}
+
+enum PromoCampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  EXPIRED
+}
+
+enum PromoCampaignPlacement {
+  HOME_TOP
+  HOME_MID
+  EXPLORE_TOP
+  EXPLORE_MID
+}
+
+enum PromoCardLayout {
+  BANNER
+  SPLIT
+  COMPACT
+  EDITORIAL
+  CAROUSEL
+}
+
+enum PromoDestinationType {
+  PRODUCT
+  CATEGORY
+  SHOP
+  NONE
+}
+
+enum PromoEventType {
+  IMPRESSION
+  CLICK
+}
+
+model PromoCampaign {
+  id                    String              @id @default(uuid())
+  name                  String
+  headline              String
+  description           String?
+  type                  PromoCampaignType
+  status                PromoCampaignStatus @default(DRAFT)
+  layout                PromoCardLayout     @default(BANNER)
+  placement             PromoCampaignPlacement @default(HOME_TOP)
+  priority              Int                 @default(0)
+  ctaText               String              @default("View offer")
+  tone                  String?             @default("from-[#17633a] to-[#0c3f23]")
+  isSponsored           Boolean             @default(false)
+  startAt               DateTime?
+  expiresAt             DateTime?
+  destinationType       PromoDestinationType @default(NONE)
+  destinationProductId  String?
+  destinationCategoryId String?
+  destinationSupplierId String?
+  impressions           Int                 @default(0)
+  clicks                Int                 @default(0)
+  images                PromoCampaignImage[]
+  products              PromoCampaignProduct[]
+  events                PromoCampaignEvent[]
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([status, placement, priority])
+  @@index([startAt, expiresAt])
+}
+
+model PromoCampaignImage {
+  id         String        @id @default(uuid())
+  campaignId String
+  url        String
+  publicId   String?
+  alt        String?
+  sortOrder  Int           @default(0)
+  campaign   PromoCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, sortOrder])
+}
+
+model PromoCampaignProduct {
+  id         String        @id @default(uuid())
+  campaignId String
+  productId  String
+  sortOrder  Int           @default(0)
+  // Genuine promotional price only; null means "use the product's price".
+  promoPrice Decimal?      @db.Decimal(12, 2)
+  campaign   PromoCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product    Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, productId])
+  @@index([productId])
+}
+
+model PromoCampaignEvent {
+  id         String         @id @default(uuid())
+  campaignId String
+  type       PromoEventType
+  // Client-generated idempotency key: one impression per campaign/session,
+  // one row per genuine click.
+  eventKey   String         @unique
+  campaign   PromoCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  createdAt  DateTime       @default(now())
+
+  @@index([campaignId, type, createdAt])
+}
+

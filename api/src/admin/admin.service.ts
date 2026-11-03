@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { MailService } from "../mail/mail.service";
+import { MediaService } from "../media/media.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { ListUsersQueryDto } from "./dto/list-users-query.dto";
 import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
@@ -13,6 +15,9 @@ import { PromoteTransporterDto } from "./dto/promote-transporter.dto";
 import { UpdateSupplierVerifyDto } from "./dto/update-supplier-verify.dto";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
+import { BroadcastNotificationDto } from "./dto/broadcast-notification.dto";
+import { CreateBannerDto } from "./dto/create-banner.dto";
+import { UpdateBannerDto } from "./dto/update-banner.dto";
 
 function isUniqueViolation(error: unknown): boolean {
   if (typeof error !== "object" || error === null) {
@@ -46,6 +51,8 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly mediaService: MediaService,
+    private readonly mailService: MailService,
   ) {}
 
   async getUsers(query: ListUsersQueryDto) {
@@ -272,6 +279,8 @@ export class AdminService {
 
   async createCategory(dto: CreateCategoryDto) {
     const slug = dto.slug?.trim() || slugify(dto.name);
+    const imageUrl = dto.imageUrl?.trim() || null;
+    const imagePublicId = this.mediaService.derivePublicId(imageUrl);
 
     try {
       return await this.prisma.category.create({
@@ -279,6 +288,8 @@ export class AdminService {
           name: dto.name.trim(),
           slug,
           description: dto.description?.trim(),
+          imageUrl,
+          imagePublicId,
         },
       });
     } catch (error) {
@@ -295,15 +306,20 @@ export class AdminService {
   async updateCategory(categoryId: string, dto: UpdateCategoryDto) {
     const existing = await this.prisma.category.findUnique({
       where: { id: categoryId },
-      select: { id: true },
+      select: { id: true, imagePublicId: true },
     });
 
     if (!existing) {
       throw new NotFoundException("Category not found");
     }
 
+    const nextImagePublicId =
+      dto.imageUrl !== undefined
+        ? this.mediaService.derivePublicId(dto.imageUrl)
+        : undefined;
+
     try {
-      return await this.prisma.category.update({
+      const updated = await this.prisma.category.update({
         where: { id: categoryId },
         data: {
           ...(dto.name !== undefined
@@ -315,8 +331,24 @@ export class AdminService {
           ...(dto.description !== undefined
             ? { description: dto.description.trim() }
             : {}),
+          ...(dto.imageUrl !== undefined
+            ? {
+                imageUrl: dto.imageUrl?.trim() || null,
+                imagePublicId: nextImagePublicId,
+              }
+            : {}),
         },
       });
+
+      if (
+        dto.imageUrl !== undefined &&
+        existing.imagePublicId &&
+        nextImagePublicId !== existing.imagePublicId
+      ) {
+        await this.mediaService.destroyAsset(existing.imagePublicId);
+      }
+
+      return updated;
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new ConflictException(
@@ -554,5 +586,200 @@ export class AdminService {
     }
 
     return updated;
+  }
+
+  // Broadcast notifications
+  async getAudienceCounts() {
+    const counts = await this.prisma.user.groupBy({
+      by: ["role"],
+      where: { status: "ACTIVE" },
+      _count: { _all: true },
+    });
+
+    const get = (role: string) =>
+      counts.find((c) => c.role === role)?._count._all ?? 0;
+
+    const buyer = get("BUYER");
+    const supplier = get("SUPPLIER");
+    const agroDealer = get("AGRO_DEALER");
+    const transporter = get("TRANSPORTER");
+    const admin = get("ADMIN");
+
+    return {
+      all: buyer + supplier + agroDealer + transporter + admin,
+      buyer,
+      supplier,
+      agroDealer,
+      transporter,
+      admin,
+    };
+  }
+
+  async broadcastNotification(
+    adminUserId: string,
+    dto: BroadcastNotificationDto,
+  ) {
+    const roleFilter =
+      dto.targetRole === "ALL"
+        ? {}
+        : { role: dto.targetRole as "BUYER" | "SUPPLIER" | "AGRO_DEALER" | "TRANSPORTER" };
+
+    const recipients = await this.prisma.user.findMany({
+      where: {
+        status: "ACTIVE",
+        ...roleFilter,
+      },
+      select: { id: true, email: true, firstName: true },
+    });
+
+    if (recipients.length > 0) {
+      await this.prisma.notification.createMany({
+        data: recipients.map((r) => ({
+          userId: r.id,
+          title: dto.title.trim(),
+          message: dto.message.trim(),
+        })),
+      });
+
+      if (dto.sendEmail) {
+        for (const recipient of recipients) {
+          try {
+            await this.mailService.sendNotificationEmail(
+              recipient.email,
+              recipient.firstName,
+              dto.title.trim(),
+              dto.message.trim(),
+            );
+          } catch (error) {
+            console.error("Broadcast email delivery error:", recipient.email, error);
+          }
+        }
+      }
+    }
+
+    return this.prisma.notificationBroadcast.create({
+      data: {
+        title: dto.title.trim(),
+        message: dto.message.trim(),
+        targetRole: dto.targetRole,
+        recipientCount: recipients.length,
+        sentEmail: Boolean(dto.sendEmail),
+        createdById: adminUserId,
+      },
+    });
+  }
+
+  async listBroadcasts() {
+    return this.prisma.notificationBroadcast.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+  }
+
+  // Promo Banners
+  async listBanners(onlyActive = false) {
+    return this.prisma.promoBanner.findMany({
+      where: onlyActive ? { isActive: true } : {},
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+    });
+  }
+
+  async createBanner(dto: CreateBannerDto) {
+    const imageUrl = dto.imageUrl?.trim() || null;
+    const imagePublicId = this.mediaService.derivePublicId(imageUrl);
+
+    return this.prisma.promoBanner.create({
+      data: {
+        title: dto.title.trim(),
+        subtitle: dto.subtitle?.trim() || null,
+        eyebrow: dto.eyebrow?.trim() || null,
+        ctaText: dto.ctaText?.trim() || "Learn more",
+        ctaLink: dto.ctaLink?.trim() || "/explore",
+        imageUrl,
+        imagePublicId,
+        tone: dto.tone?.trim() || "from-[#17633a] to-[#0c3f23]",
+        targetRole: dto.targetRole?.trim() || "ALL",
+        sortOrder: dto.sortOrder ?? 0,
+        isActive: dto.isActive ?? true,
+      },
+    });
+  }
+
+  async updateBanner(bannerId: string, dto: UpdateBannerDto) {
+    const existing = await this.prisma.promoBanner.findUnique({
+      where: { id: bannerId },
+      select: { id: true, imagePublicId: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Banner not found");
+    }
+
+    const nextImagePublicId =
+      dto.imageUrl !== undefined
+        ? this.mediaService.derivePublicId(dto.imageUrl)
+        : undefined;
+
+    const updated = await this.prisma.promoBanner.update({
+      where: { id: bannerId },
+      data: {
+        ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
+        ...(dto.subtitle !== undefined
+          ? { subtitle: dto.subtitle.trim() || null }
+          : {}),
+        ...(dto.eyebrow !== undefined
+          ? { eyebrow: dto.eyebrow.trim() || null }
+          : {}),
+        ...(dto.ctaText !== undefined
+          ? { ctaText: dto.ctaText.trim() || "Learn more" }
+          : {}),
+        ...(dto.ctaLink !== undefined
+          ? { ctaLink: dto.ctaLink.trim() || "/explore" }
+          : {}),
+        ...(dto.imageUrl !== undefined
+          ? {
+              imageUrl: dto.imageUrl?.trim() || null,
+              imagePublicId: nextImagePublicId,
+            }
+          : {}),
+        ...(dto.tone !== undefined ? { tone: dto.tone.trim() } : {}),
+        ...(dto.targetRole !== undefined
+          ? { targetRole: dto.targetRole.trim() }
+          : {}),
+        ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+      },
+    });
+
+    if (
+      dto.imageUrl !== undefined &&
+      existing.imagePublicId &&
+      nextImagePublicId !== existing.imagePublicId
+    ) {
+      await this.mediaService.destroyAsset(existing.imagePublicId);
+    }
+
+    return updated;
+  }
+
+  async deleteBanner(bannerId: string) {
+    const existing = await this.prisma.promoBanner.findUnique({
+      where: { id: bannerId },
+      select: { id: true, imagePublicId: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Banner not found");
+    }
+
+    await this.prisma.promoBanner.delete({
+      where: { id: bannerId },
+    });
+
+    if (existing.imagePublicId) {
+      await this.mediaService.destroyAsset(existing.imagePublicId);
+    }
+
+    return { success: true };
   }
 }

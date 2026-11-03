@@ -182,10 +182,24 @@ export class TransportService {
             orderNumber: true,
             status: true,
             createdAt: true,
+            total: true,
             items: {
               select: {
                 quantity: true,
-                product: { select: { name: true } },
+                product: {
+                  select: {
+                    name: true,
+                    supplier: {
+                      select: {
+                        businessName: true,
+                        city: true,
+                        province: true,
+                        lat: true,
+                        lng: true,
+                      },
+                    },
+                  },
+                },
               },
             },
             deliveryAddress: true,

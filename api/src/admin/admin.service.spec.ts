@@ -36,6 +36,15 @@ function makeService() {
     product: { groupBy: jest.fn() },
     order: { groupBy: jest.fn(), aggregate: jest.fn() },
     category: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+    notification: { createMany: jest.fn() },
+    notificationBroadcast: { create: jest.fn(), findMany: jest.fn() },
+    promoBanner: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
   };
 
   const notifications = {
@@ -43,11 +52,32 @@ function makeService() {
     onTransporterVerified: jest.fn(),
   };
 
+  const media = {
+    derivePublicId: jest.fn((url?: string | null) => {
+      if (!url) return null;
+      if (url.includes("bonagri/category")) return "bonagri/category/derived-id";
+      if (url.includes("bonagri/banner")) return "bonagri/banner/derived-id";
+      return "bonagri/derived-id";
+    }),
+    destroyAsset: jest.fn(),
+  };
+
+  const mail = {
+    sendNotificationEmail: jest.fn(),
+  };
+
   return {
-    service: new AdminService(prisma as never, notifications as never),
+    service: new AdminService(
+      prisma as never,
+      notifications as never,
+      media as never,
+      mail as never,
+    ),
     prisma,
     tx,
     notifications,
+    media,
+    mail,
   };
 }
 
@@ -504,6 +534,39 @@ describe("AdminService (CP3 management)", () => {
         service.updateCategory("ghost", { name: "X" }),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it("saves imageUrl and derives imagePublicId on create", async () => {
+      const { service, prisma } = makeService();
+      prisma.category.create.mockResolvedValue({ id: "cat-1" });
+
+      await service.createCategory({
+        name: "Dairy",
+        imageUrl: "https://res.cloudinary.com/bonagri/category/dairy.jpg",
+      });
+
+      expect(prisma.category.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          name: "Dairy",
+          imageUrl: "https://res.cloudinary.com/bonagri/category/dairy.jpg",
+          imagePublicId: "bonagri/category/derived-id",
+        }),
+      });
+    });
+
+    it("destroys previous asset when imageUrl changes", async () => {
+      const { service, prisma, media } = makeService();
+      prisma.category.findUnique.mockResolvedValue({
+        id: "cat-1",
+        imagePublicId: "bonagri/category/old-id",
+      });
+      prisma.category.update.mockResolvedValue({ id: "cat-1" });
+
+      await service.updateCategory("cat-1", {
+        imageUrl: "https://res.cloudinary.com/bonagri/category/new.jpg",
+      });
+
+      expect(media.destroyAsset).toHaveBeenCalledWith("bonagri/category/old-id");
+    });
   });
 
   describe("getUsers", () => {
@@ -574,6 +637,108 @@ describe("AdminService (CP3 management)", () => {
       expect(stats.orders.delivered).toBe(2);
       expect(stats.revenue.net).toBe(100);
       expect(stats.revenue.gross).toBe(120);
+    });
+  });
+
+  describe("broadcast notifications", () => {
+    it("delivers in-app notification to all users matching targetRole and logs broadcast", async () => {
+      const { service, prisma, mail } = makeService();
+
+      prisma.user.findMany.mockResolvedValue([
+        { id: "u-1", email: "supp1@test.local", firstName: "Alice" },
+        { id: "u-2", email: "supp2@test.local", firstName: "Bob" },
+      ]);
+      prisma.notification.createMany.mockResolvedValue({ count: 2 });
+      prisma.notificationBroadcast.create.mockResolvedValue({
+        id: "bcast-1",
+        title: "Supplier update",
+        recipientCount: 2,
+      });
+
+      const res = await service.broadcastNotification("admin-1", {
+        title: "Supplier update",
+        message: "New packing rules apply starting Monday.",
+        targetRole: "SUPPLIER",
+        sendEmail: true,
+      });
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith({
+        where: { status: "ACTIVE", role: "SUPPLIER" },
+        select: { id: true, email: true, firstName: true },
+      });
+      expect(prisma.notification.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            userId: "u-1",
+            title: "Supplier update",
+            message: "New packing rules apply starting Monday.",
+          },
+          {
+            userId: "u-2",
+            title: "Supplier update",
+            message: "New packing rules apply starting Monday.",
+          },
+        ],
+      });
+      expect(mail.sendNotificationEmail).toHaveBeenCalledTimes(2);
+      expect(res.recipientCount).toBe(2);
+    });
+
+    it("filters no roles when targetRole is ALL", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.user.findMany.mockResolvedValue([]);
+      prisma.notificationBroadcast.create.mockResolvedValue({ id: "bcast-2" });
+
+      await service.broadcastNotification("admin-1", {
+        title: "Holiday announcement",
+        message: "Happy holidays to all users!",
+        targetRole: "ALL",
+      });
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith({
+        where: { status: "ACTIVE" },
+        select: { id: true, email: true, firstName: true },
+      });
+    });
+  });
+
+  describe("promo banners", () => {
+    it("creates a banner with derived image public ID", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.promoBanner.create.mockResolvedValue({ id: "banner-1" });
+
+      await service.createBanner({
+        title: "Summer Citrus Harvest",
+        subtitle: "Fresh oranges direct from Tzaneen",
+        imageUrl: "https://res.cloudinary.com/bonagri/banner/summer.jpg",
+      });
+
+      expect(prisma.promoBanner.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          title: "Summer Citrus Harvest",
+          imageUrl: "https://res.cloudinary.com/bonagri/banner/summer.jpg",
+          imagePublicId: "bonagri/banner/derived-id",
+        }),
+      });
+    });
+
+    it("deletes a banner and cleans up Cloudinary asset", async () => {
+      const { service, prisma, media } = makeService();
+
+      prisma.promoBanner.findUnique.mockResolvedValue({
+        id: "banner-1",
+        imagePublicId: "bonagri/banner/old-asset",
+      });
+      prisma.promoBanner.delete.mockResolvedValue({ id: "banner-1" });
+
+      await service.deleteBanner("banner-1");
+
+      expect(prisma.promoBanner.delete).toHaveBeenCalledWith({
+        where: { id: "banner-1" },
+      });
+      expect(media.destroyAsset).toHaveBeenCalledWith("bonagri/banner/old-asset");
     });
   });
 });

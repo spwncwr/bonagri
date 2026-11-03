@@ -17,6 +17,7 @@ import { RolesGuard } from "../auth/guards/roles.guard";
 import { UserRole } from "../common/types";
 import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
+import { ListProductsDto } from "./dto/list-products.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { UpdateInventoryDto } from "./dto/update-inventory.dto";
 import { UpdateSupplierPinDto } from "./dto/update-supplier-pin.dto";
@@ -47,12 +48,27 @@ export class CatalogController {
     return this.catalogService.getCategories();
   }
 
+  @Get("banners")
+  getBanners() {
+    return this.catalogService.getActiveBanners();
+  }
+
   @Get("products")
-  getProducts(
-    @Query("search") search?: string,
-    @Query("category") categorySlug?: string,
-  ) {
-    return this.catalogService.getProducts(search, categorySlug);
+  getProducts(@Query() query: ListProductsDto) {
+    return this.catalogService.getProducts(query);
+  }
+
+  // Declared before products/:id so "facets" is never parsed as a product id.
+  @Get("products/facets")
+  getProductFacets() {
+    return this.catalogService.getProductFacets();
+  }
+
+  // Promoted shop destination: public, unguarded, and deliberately limited to
+  // the public storefront shape.
+  @Get("suppliers/:id/storefront")
+  getSupplierStorefront(@Param("id") id: string) {
+    return this.catalogService.getSupplierStorefront(id);
   }
 
   @Get("supplier/inventory")

@@ -1,11 +1,13 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
+import { MailModule } from "../mail/mail.module";
+import { MediaModule } from "../media/media.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { AdminController } from "./admin.controller";
 import { AdminService } from "./admin.service";
 
 @Module({
-  imports: [AuthModule, NotificationsModule],
+  imports: [AuthModule, MailModule, MediaModule, NotificationsModule],
   controllers: [AdminController],
   providers: [AdminService],
 })

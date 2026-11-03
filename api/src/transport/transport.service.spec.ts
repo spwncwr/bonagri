@@ -249,6 +249,47 @@ describe("TransportService (CP14)", () => {
       );
     });
 
+    it("selects pickup pins and order totals for live tracking", async () => {
+      const prisma = makePrisma();
+      const { service } = makeService(prisma);
+
+      primeVerifiedProfile(prisma);
+      prisma.delivery.findMany.mockResolvedValue([]);
+
+      await service.getMyDeliveries("tp-user-1");
+
+      expect(prisma.delivery.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            order: expect.objectContaining({
+              select: expect.objectContaining({
+                total: true,
+                items: {
+                  select: {
+                    quantity: true,
+                    product: {
+                      select: expect.objectContaining({
+                        name: true,
+                        supplier: {
+                          select: {
+                            businessName: true,
+                            city: true,
+                            province: true,
+                            lat: true,
+                            lng: true,
+                          },
+                        },
+                      }),
+                    },
+                  },
+                },
+              }),
+            }),
+          }),
+        }),
+      );
+    });
+
     it("lets an unverified transporter see (an empty) history", async () => {
       const prisma = makePrisma();
       const { service } = makeService(prisma);

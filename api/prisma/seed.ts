@@ -121,6 +121,10 @@ async function main(): Promise<void> {
       status: "ACTIVE",
       // Seeded accounts are pre-verified so they can sign in immediately.
       emailVerifiedAt: new Date(),
+      // CP17: the dev supplier mirrors its pre-verified profile badge so the
+      // marketplace gates (publish / accept order) pass out of the box.
+      businessStatus: "VERIFIED",
+      businessVerifiedAt: new Date(),
     },
     create: {
       email: "dev@bonagri.co.za",
@@ -131,6 +135,8 @@ async function main(): Promise<void> {
       role: "SUPPLIER",
       status: "ACTIVE",
       emailVerifiedAt: new Date(),
+      businessStatus: "VERIFIED",
+      businessVerifiedAt: new Date(),
     },
   });
 
@@ -149,6 +155,9 @@ async function main(): Promise<void> {
       status: "ACTIVE",
       // Seeded accounts are pre-verified so they can sign in immediately.
       emailVerifiedAt: new Date(),
+      // CP17: dev buyer arrives phone-verified so checkout works without an
+      // OTP round-trip; the OTP flow itself is exercised via E2E capture.
+      phoneVerifiedAt: new Date(),
     },
     create: {
       email: "buyer@bonagri.co.za",
@@ -159,6 +168,7 @@ async function main(): Promise<void> {
       role: "BUYER",
       status: "ACTIVE",
       emailVerifiedAt: new Date(),
+      phoneVerifiedAt: new Date(),
     },
   });
 
@@ -276,6 +286,10 @@ async function main(): Promise<void> {
       status: "ACTIVE",
       // Seeded accounts are pre-verified so they can sign in immediately.
       emailVerifiedAt: new Date(),
+      // CP17: dev dealer mirrors its profile badge so publish/accept gates
+      // pass out of the box.
+      businessStatus: "VERIFIED",
+      businessVerifiedAt: new Date(),
     },
     create: {
       email: "dealer@bonagri.co.za",
@@ -286,6 +300,8 @@ async function main(): Promise<void> {
       role: "AGRO_DEALER",
       status: "ACTIVE",
       emailVerifiedAt: new Date(),
+      businessStatus: "VERIFIED",
+      businessVerifiedAt: new Date(),
     },
   });
 
@@ -298,7 +314,7 @@ async function main(): Promise<void> {
       email: "dealer@bonagri.co.za",
       city: "Polokwane",
       province: "Limpopo",
-      verified: false,
+      verified: true,
     },
     create: {
       userId: dealerUser.id,
@@ -308,7 +324,7 @@ async function main(): Promise<void> {
       email: "dealer@bonagri.co.za",
       city: "Polokwane",
       province: "Limpopo",
-      verified: false,
+      verified: true,
     },
   });
 

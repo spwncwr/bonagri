@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 import { CartService } from "./cart.service";
 
 function makeService() {
@@ -240,7 +245,13 @@ describe("CartService (CP10 cart + multi-item checkout)", () => {
   });
 
   describe("checkout", () => {
-    const buyerOk = { id: "buyer-1", role: "BUYER", status: "ACTIVE" };
+    const buyerOk = {
+      id: "buyer-1",
+      role: "BUYER",
+      status: "ACTIVE",
+      // CP17: the happy-path buyer has completed phone verification.
+      phoneVerifiedAt: new Date("2026-01-05T08:00:00Z"),
+    };
 
     const twoSupplierCart = [
       cartItem(),
@@ -454,6 +465,31 @@ describe("CartService (CP10 cart + multi-item checkout)", () => {
       await expect(
         service.checkout("u1", { deliveryAddressId: "addr-1" }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    // CP17: browsing/carting stay open to unverified buyers — only placing
+    // the order is gated, with a machine-readable code the UI can route on.
+    it("blocks checkout until the buyer's phone is verified", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: "buyer-1",
+        role: "BUYER",
+        status: "ACTIVE",
+        phoneVerifiedAt: null,
+      });
+
+      const error = await service
+        .checkout("buyer-1", { deliveryAddressId: "addr-1" })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect((error as ForbiddenException).getResponse()).toMatchObject({
+        code: "PHONE_VERIFICATION_REQUIRED",
+      });
+      // The gate runs before any checkout writes or lookups.
+      expect(prisma.address.findFirst).not.toHaveBeenCalled();
+      expect(prisma.order.create).not.toHaveBeenCalled();
     });
 
     it("404s a delivery address that is not the buyer's", async () => {

@@ -12,6 +12,7 @@ import {
 } from "../common/delivery-snapshot";
 import { UserRole } from "../common/types";
 import { NotificationsService } from "../notifications/notifications.service";
+import { assertBusinessVerified } from "../verification/verification.permissions";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { FailDeliveryDto } from "./dto/fail-delivery.dto";
 import { RecordPaymentDto } from "./dto/record-payment.dto";
@@ -470,6 +471,22 @@ export class OrdersService {
           throw new ForbiddenException(
             "This delivery is assigned to a transporter",
           );
+        }
+
+        // CP17: accepting a buyer order requires an approved business
+        // verification (admins bypass — override path above/below). Fails
+        // closed: no summary row, no accept.
+        if (next === "CONFIRMED") {
+          const vendor = await tx.user.findUnique({
+            where: { id: actorUserId },
+            select: { businessStatus: true },
+          });
+
+          if (!vendor) {
+            throw new ForbiddenException("Seller account not found");
+          }
+
+          assertBusinessVerified(vendor.businessStatus);
         }
       } else if (actorRole !== "ADMIN") {
         throw new BadRequestException("Unsupported user role");

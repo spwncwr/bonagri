@@ -3,6 +3,7 @@ import type { Prisma } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { MediaService } from "../media/media.service";
 import { ReviewsService } from "../reviews/reviews.service";
+import { assertBusinessVerified } from "../verification/verification.permissions";
 import { CreateProductDto } from "./dto/create-product.dto";
 import type { ListProductsDto, ProductSort } from "./dto/list-products.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
@@ -326,11 +327,18 @@ export class CatalogService {
   async createProduct(userId: string, dto: CreateProductDto) {
     const supplier = await this.prisma.supplierProfile.findUnique({
       where: { userId },
-      select: { id: true },
+      select: { id: true, user: { select: { businessStatus: true } } },
     });
 
     if (!supplier) {
       throw new NotFoundException("Supplier profile not found");
+    }
+
+    // CP17: drafts are free, publishing is not — going live (or creating a
+    // listing that starts live) requires an admin-approved business
+    // verification. Central helper: same error code as every other gate.
+    if ((dto.status ?? "DRAFT") === "ACTIVE") {
+      assertBusinessVerified(supplier.user.businessStatus);
     }
 
     // The category drives every marketplace filter, so a listing may only
@@ -510,11 +518,23 @@ export class CatalogService {
           userId,
         },
       },
-      select: { id: true, imagePublicId: true },
+      select: {
+        id: true,
+        imagePublicId: true,
+        status: true,
+        supplier: { select: { user: { select: { businessStatus: true } } } },
+      },
     });
 
     if (!product) {
       throw new NotFoundException("Supplier product not found");
+    }
+
+    // CP17: flipping an inactive/draft listing live is a publish — require
+    // approved business verification. Editing an already-ACTIVE product
+    // (price, stock, description) stays open so live sellers are not blocked.
+    if (dto.status === "ACTIVE" && product.status !== "ACTIVE") {
+      assertBusinessVerified(product.supplier.user.businessStatus);
     }
 
     // CP16a: null clears the image; a changed URL swaps it. Only when the

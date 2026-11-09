@@ -227,6 +227,7 @@ describe("OrdersService (CP0 foundations)", () => {
       primePendingOrder(tx);
       tx.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
       tx.inventory.update.mockResolvedValue({});
+      tx.user.findUnique.mockResolvedValue({ businessStatus: "VERIFIED" });
 
       await service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
         status: "CONFIRMED",
@@ -242,6 +243,45 @@ describe("OrdersService (CP0 foundations)", () => {
           note: null,
         },
       });
+    });
+
+    // CP17: order acceptance is gated on business verification.
+    it("blocks an unverified supplier from accepting an order", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primePendingOrder(tx);
+      tx.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+      tx.user.findUnique.mockResolvedValue({ businessStatus: "PENDING" });
+
+      const error = await service
+        .updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
+          status: "CONFIRMED",
+        } as never)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect((error as ForbiddenException).getResponse()).toMatchObject({
+        code: "BUSINESS_VERIFICATION_REQUIRED",
+      });
+      expect(tx.order.update).not.toHaveBeenCalled();
+      expect(tx.orderStatusHistory.create).not.toHaveBeenCalled();
+    });
+
+    it("fails closed when the seller summary row cannot be read", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      primePendingOrder(tx);
+      tx.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+      tx.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {
+          status: "CONFIRMED",
+        } as never),
+      ).rejects.toThrow(ForbiddenException);
+      expect(tx.order.update).not.toHaveBeenCalled();
     });
 
     it("lets an admin drive transitions and records their role", async () => {
@@ -494,6 +534,7 @@ describe("OrdersService (CP4 agro dealers)", () => {
     primePendingOrder(tx);
     tx.supplierProfile.findUnique.mockResolvedValue({ id: "sup-dealer" });
     tx.inventory.update.mockResolvedValue({});
+    tx.user.findUnique.mockResolvedValue({ businessStatus: "VERIFIED" });
 
     await service.updateOrderStatus(
       "order-1",
@@ -978,6 +1019,7 @@ describe("OrdersService (CP11 manual EFT payments)", () => {
       );
       tx.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
       tx.inventory.update.mockResolvedValue({});
+      tx.user.findUnique.mockResolvedValue({ businessStatus: "VERIFIED" });
     }
 
     it("issues INV-<orderNumber> atomically with the transition", async () => {
@@ -1145,6 +1187,7 @@ describe("OrdersService (CP12 delivery tracking)", () => {
       const { service } = makeService(tx);
 
       primeTransitionOrder(tx, "PENDING");
+      tx.user.findUnique.mockResolvedValue({ businessStatus: "VERIFIED" });
 
       await expect(
         service.updateOrderStatus("order-1", "supplier-user-1", "SUPPLIER", {

@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { assertPhoneVerified } from "../verification/verification.permissions";
 import {
   buildDeliverySnapshot,
   materializeDeliveryAddress,
@@ -183,7 +184,7 @@ export class CartService {
     return this.prisma.$transaction(async (tx) => {
       const buyer = await tx.user.findUnique({
         where: { id: userId },
-        select: { id: true, role: true, status: true },
+        select: { id: true, role: true, status: true, phoneVerifiedAt: true },
       });
 
       if (!buyer) {
@@ -197,6 +198,10 @@ export class CartService {
       if (buyer.status !== "ACTIVE") {
         throw new BadRequestException("Buyer account is not active");
       }
+
+      // CP17: browsing and carting stay open to everyone — only moving the
+      // order requires a phone number confirmed through the OTP flow.
+      assertPhoneVerified(buyer);
 
       const address = await tx.address.findFirst({
         where: {

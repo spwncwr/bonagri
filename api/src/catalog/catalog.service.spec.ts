@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 import { CatalogService } from "./catalog.service";
 
 function makeService() {
@@ -468,6 +472,88 @@ describe("CatalogService (CP1 listings)", () => {
       expect(prisma.product.create).not.toHaveBeenCalled();
     });
 
+    // CP17: drafts are free, publishing is not.
+    it("lets an unverified supplier save a DRAFT but blocks ACTIVE", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-1",
+        user: { businessStatus: "NOT_STARTED" },
+      });
+      prisma.product.create.mockResolvedValue({ id: "prod-draft" });
+
+      const draft = await service.createProduct("supplier-user-1", {
+        categoryId: "cat-1",
+        name: "Tomatoes 1kg",
+        slug: "tomatoes-1kg",
+        sku: "BON-TOM-1",
+        price: 25,
+        unit: "kg",
+      } as never);
+
+      expect(draft).toEqual({ id: "prod-draft" });
+
+      const error = await service
+        .createProduct("supplier-user-1", {
+          categoryId: "cat-1",
+          name: "Tomatoes 1kg",
+          slug: "tomatoes-1kg",
+          sku: "BON-TOM-2",
+          price: 25,
+          unit: "kg",
+          status: "ACTIVE",
+        } as never)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect((error as ForbiddenException).getResponse()).toMatchObject({
+        code: "BUSINESS_VERIFICATION_REQUIRED",
+        businessStatus: "NOT_STARTED",
+      });
+      expect(prisma.product.create).toHaveBeenCalledTimes(1);
+    });
+
+    it("blocks activating a listing while verification is rejected", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.product.findFirst.mockResolvedValue({
+        id: "prod-1",
+        imagePublicId: null,
+        status: "DRAFT",
+        supplier: { user: { businessStatus: "REJECTED" } },
+      });
+
+      const error = await service
+        .updateProduct("prod-1", "supplier-user-1", { status: "ACTIVE" } as never)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect((error as ForbiddenException).getResponse()).toMatchObject({
+        code: "BUSINESS_VERIFICATION_REQUIRED",
+      });
+      expect(prisma.product.update).not.toHaveBeenCalled();
+    });
+
+    it("keeps an already-ACTIVE listing editable without re-verification", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.product.findFirst.mockResolvedValue({
+        id: "prod-1",
+        imagePublicId: null,
+        status: "ACTIVE",
+        supplier: { user: { businessStatus: "NOT_STARTED" } },
+      });
+      prisma.product.update.mockResolvedValue({ id: "prod-1" });
+
+      await expect(
+        service.updateProduct("prod-1", "supplier-user-1", {
+          price: 26,
+          status: "ACTIVE",
+        } as never),
+      ).resolves.toEqual({ id: "prod-1" });
+      expect(prisma.product.update).toHaveBeenCalled();
+    });
+
     it("rejects updates on products the supplier does not own", async () => {
       const { service, prisma } = makeService();
 
@@ -494,6 +580,7 @@ describe("CatalogService (CP4 agro dealers)", () => {
 
     prisma.supplierProfile.findUnique.mockResolvedValue({
       id: "sup-dealer",
+      user: { businessStatus: "VERIFIED" },
     });
     prisma.product.create.mockResolvedValue({ id: "prod-tool-1" });
 

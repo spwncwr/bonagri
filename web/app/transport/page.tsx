@@ -7,6 +7,7 @@ import AuthGuard from "../../components/auth/auth-guard";
 import { AppearanceSection } from "../../components/theme/theme-switch";
 import { BrandIcon } from "../../components/brand/logo";
 import LocationTracking from "../../components/transport/location-tracking";
+import TransporterSettings from "../../components/transport/transporter-settings";
 import {
   ArrowRightIcon,
   BellIcon,
@@ -331,6 +332,24 @@ function DetailSheet({
             {addr.recipientName} — {addr.addressLine1}, {addr.city}
           </div>
         </div>
+
+        {/* Keyless hand-off to the device's navigation app — the confirmed
+            pin when the address has one, the readable address otherwise. */}
+        <a
+          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+            addr.lat != null && addr.lng != null
+              ? `${addr.lat},${addr.lng}`
+              : [addr.addressLine1, addr.city, addr.province]
+                  .filter(Boolean)
+                  .join(", "),
+          )}`}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-600 px-4 py-2.5 text-xs font-bold text-slate-200 transition hover:bg-slate-800"
+        >
+          <MapPinIcon className="h-4 w-4" />
+          Open in Maps
+        </a>
 
         {/* Goods list */}
         <div className="mt-4 text-xs">
@@ -1333,19 +1352,9 @@ function TransportHub() {
               </h1>
             </header>
 
-            {/* Avatar / identity card */}
-            <div className="mt-5 flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#17633a]/10">
-                <UserIcon className="h-8 w-8 text-[#17633a]" />
-              </div>
-              <div>
-                <div className="text-lg font-black text-[#2c3a2f]">
-                  Transporter
-                </div>
-                <div className="text-xs font-semibold text-[#637067]">
-                  BonAgri Transport Hub
-                </div>
-              </div>
+            {/* Account + business details — the real account, editable here. */}
+            <div className="mt-5">
+              <TransporterSettings idPrefix="tp" />
             </div>
 
             {/* Stats row */}
@@ -1425,15 +1434,29 @@ function TransportHub() {
               Loading your transport desk...
             </div>
           ) : unverified ? (
-            <div className="rounded-3xl border border-warning/40 bg-warning-soft p-6">
-              <h2 className="text-sm font-black text-warning-bright">
-                Profile being verified
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-warning-bright">
-                The BonAgri team verifies transporter profiles before delivery
-                jobs become visible. You will be notified once verified.
-              </p>
-            </div>
+            <>
+              <div className="rounded-3xl border border-warning/40 bg-warning-soft p-6">
+                <h2 className="text-sm font-black text-warning-bright">
+                  Profile being verified
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-warning-bright">
+                  The BonAgri team verifies transporter profiles before delivery
+                  jobs become visible. You will be notified once verified.
+                </p>
+              </div>
+
+              {/* A pending transporter still needs somewhere to fill in the
+                  details verification looks at, so the settings section stays
+                  reachable on this tab. */}
+              {tab === "profile" ? (
+                <div className="mt-4 space-y-4">
+                  <h2 className="text-sm font-black uppercase tracking-wide text-ink-muted">
+                    Settings
+                  </h2>
+                  <TransporterSettings idPrefix="tp-desk-pending" />
+                </div>
+              ) : null}
+            </>
           ) : tab === "home" ? (
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1733,6 +1756,13 @@ function TransportHub() {
               <DeskSection title="Appearance">
                 <AppearanceSection className="mt-0" />
               </DeskSection>
+
+              <div className="space-y-4 lg:col-span-2">
+                <h2 className="text-sm font-black uppercase tracking-wide text-ink-muted">
+                  Settings
+                </h2>
+                <TransporterSettings idPrefix="tp-desk" />
+              </div>
             </div>
           )}
         </div>

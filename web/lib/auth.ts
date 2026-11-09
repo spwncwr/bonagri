@@ -13,14 +13,47 @@ export type UserRole =
   | "TRANSPORTER"
   | "ADMIN";
 
+// SupplierProfile as /api/auth/me returns it — what the vendor edits on
+// /supplier/settings. registrationNo and verified are display-only.
+export type SupplierAccount = {
+  businessName: string;
+  description: string | null;
+  registrationNo: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  city: string | null;
+  province: string | null;
+  logoUrl: string | null;
+  verified: boolean;
+};
+
+// TransporterProfile as /api/auth/me returns it — what a transporter edits
+// from the Profile tab.
+export type TransporterAccount = {
+  businessName: string;
+  vehicleType: string | null;
+  phone: string | null;
+  email: string | null;
+  city: string | null;
+  province: string | null;
+  serviceProvinces: string[];
+  verified: boolean;
+};
+
 export type AuthUser = {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
   phone: string | null;
+  avatarUrl: string | null;
   role: UserRole;
   status: "ACTIVE" | "SUSPENDED" | "PENDING";
+  // Only a supplier/agro dealer carries the first, only a transporter the
+  // second; both are null for a buyer.
+  supplierProfile?: SupplierAccount | null;
+  transporterProfile?: TransporterAccount | null;
 };
 
 export type StoredAuth = {

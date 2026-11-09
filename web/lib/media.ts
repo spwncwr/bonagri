@@ -28,7 +28,9 @@ export type UploadKind =
   | "supplier_logo"
   | "category"
   | "banner"
-  | "promotion";
+  | "promotion"
+  // Account settings: the display picture any signed-in account may upload.
+  | "avatar";
 
 type UploadSignature = {
   cloudName: string;

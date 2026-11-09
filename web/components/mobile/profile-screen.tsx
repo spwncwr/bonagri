@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
-import { useState } from "react";
-import type { AuthUser } from "../../lib/auth";
+import { useRef, useState } from "react";
+import { authHeaders, type AuthUser } from "../../lib/auth";
+import { MediaNotConfiguredError, uploadImage } from "../../lib/media";
 import { ThemeSwitch } from "../theme/theme-switch";
 import type { MobileView } from "./tab-bar";
 import {
@@ -40,7 +41,12 @@ type ProfileScreenProps = {
   onNavigate: (view: MobileView) => void;
   onViewOrders: () => void;
   onSignOut: () => void;
+  /** Hands the saved account back so the shell (header greeting etc.) refreshes. */
+  onUserUpdated?: (user: AuthUser) => void;
 };
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
 
 // Toggle switch matching the iOS/modern mobile switch in the reference design
 function ToggleSwitch({
@@ -168,6 +174,7 @@ export default function ProfileScreen({
   onNavigate,
   onViewOrders,
   onSignOut,
+  onUserUpdated,
 }: ProfileScreenProps) {
   const [screen, setScreen] = useState<"overview" | "settings" | "edit-profile">(
     initialScreen,
@@ -181,7 +188,12 @@ export default function ProfileScreen({
   const [firstName, setFirstName] = useState(user.firstName ?? "");
   const [lastName, setLastName] = useState(user.lastName ?? "");
   const [phone, setPhone] = useState(user.phone ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? "");
+  const [saving, setSaving] = useState(false);
+  const [savingPhoto, setSavingPhoto] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [savedMessage, setSavedMessage] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Modal / panel states
   const [activeModal, setActiveModal] = useState<string | null>(null);
@@ -189,10 +201,86 @@ export default function ProfileScreen({
   const initials = `${firstName.charAt(0) ?? ""}${lastName.charAt(0) ?? ""}`.toUpperCase() ||
     user.email.charAt(0).toUpperCase();
 
-  const handleSaveProfile = (event: React.FormEvent) => {
-    event.preventDefault();
+  function announceSaved(next: AuthUser) {
+    onUserUpdated?.(next);
     setSavedMessage(true);
     setTimeout(() => setSavedMessage(false), 2500);
+  }
+
+  // The settings screen's Save button used to only flip the toast — it now
+  // PATCHes the account row (name, contact number, display picture).
+  const handleSaveProfile = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    setSaveError("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
+        method: "PATCH",
+        headers: {
+          ...authHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          phone: phone.trim() || null,
+          avatarUrl: avatarUrl.trim() || null,
+        }),
+      });
+
+      const data = (await response.json().catch(() => null)) as {
+        message?: string | string[];
+      } | null;
+
+      if (!response.ok) {
+        const message = Array.isArray(data?.message)
+          ? data.message.join(", ")
+          : data?.message;
+        throw new Error(message || "Could not save your profile — try again.");
+      }
+
+      announceSaved({
+        ...user,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim() || null,
+        avatarUrl: avatarUrl.trim() || null,
+      });
+    } catch (saveError) {
+      setSaveError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Could not save your profile — try again.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Camera badge → Cloudinary ("avatar" kind) → the edit form carries the
+  // URL into the same PATCH on Save.
+  const handlePhotoPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setSavingPhoto(true);
+    setSaveError("");
+
+    try {
+      setAvatarUrl(await uploadImage(file, "avatar"));
+    } catch (uploadError) {
+      setSaveError(
+        uploadError instanceof MediaNotConfiguredError
+          ? "Image uploads are not configured on this server."
+          : uploadError instanceof Error
+            ? uploadError.message
+            : "Could not upload that photo — try again.",
+      );
+    } finally {
+      setSavingPhoto(false);
+    }
   };
 
   // -------------------------------------------------------------
@@ -220,16 +308,36 @@ export default function ProfileScreen({
         {/* Hero Avatar with camera badge */}
         <div className="py-2 text-center">
           <div className="relative mx-auto inline-block">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#17633a] text-3xl font-black text-white shadow-md ring-4 ring-white">
-              {initials}
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#17633a] text-3xl font-black text-white shadow-md ring-4 ring-white">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                initials
+              )}
             </div>
             <button
               type="button"
               aria-label="Change photo"
-              className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[#17633a] text-white shadow-md transition hover:bg-[#0f4d2b] active:scale-95"
+              disabled={savingPhoto}
+              onClick={() => photoInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[#17633a] text-white shadow-md transition hover:bg-[#0f4d2b] active:scale-95 disabled:opacity-60"
             >
               <CameraIcon className="h-4 w-4" />
             </button>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              onChange={(event) => void handlePhotoPick(event)}
+              className="hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
           </div>
           <div className="mt-2 text-xs font-bold text-[#17251b]">
             {firstName} {lastName}
@@ -299,18 +407,31 @@ export default function ProfileScreen({
 
           {/* Feedback Toast */}
           {savedMessage ? (
-            <div className="flex items-center justify-center gap-1.5 rounded-xl bg-[#eaf3ec] px-4 py-2.5 text-xs font-bold text-[#17633a]">
+            <div
+              role="status"
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-[#eaf3ec] px-4 py-2.5 text-xs font-bold text-[#17633a]"
+            >
               <CheckIcon className="h-4 w-4" />
               Changes saved successfully
+            </div>
+          ) : null}
+
+          {saveError ? (
+            <div
+              role="alert"
+              className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-center text-xs font-bold text-rose-700"
+            >
+              {saveError}
             </div>
           ) : null}
 
           {/* Save Changes Button */}
           <button
             type="submit"
-            className="w-full rounded-full bg-[#17633a] py-3.5 text-center text-sm font-black text-white shadow-md transition hover:bg-[#0f4d2b] active:scale-[0.99]"
+            disabled={saving || savingPhoto}
+            className="w-full rounded-full bg-[#17633a] py-3.5 text-center text-sm font-black text-white shadow-md transition hover:bg-[#0f4d2b] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save Changes
+            {saving ? "Saving..." : "Save Changes"}
           </button>
 
           {/* Secondary Action */}
@@ -355,8 +476,17 @@ export default function ProfileScreen({
           className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[#dce2d9] bg-white p-3.5 text-left shadow-sm transition hover:bg-[#fafbf9] active:scale-[0.99]"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#17633a] text-base font-black text-white shadow-sm">
-              {initials}
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#17633a] text-base font-black text-white shadow-sm">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                initials
+              )}
             </div>
             <div className="min-w-0">
               <div className="truncate text-sm font-black text-[#17251b]">
@@ -569,8 +699,17 @@ export default function ProfileScreen({
         className="flex w-full items-center justify-between gap-3.5 rounded-2xl border border-[#dce2d9] bg-white p-3.5 text-left shadow-sm transition hover:bg-[#fafbf9] active:scale-[0.99]"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-[#17633a] text-lg font-black text-white shadow-sm">
-            {initials}
+          <div className="flex h-13 w-13 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#17633a] text-lg font-black text-white shadow-sm">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              initials
+            )}
           </div>
 
           <div className="min-w-0">
@@ -628,12 +767,14 @@ export default function ProfileScreen({
           href="/addresses"
         />
 
-        <MenuRowItem
-          Icon={MegaphoneIcon}
-          label="Product requests"
-          hint="Post what you need and get supplier responses"
-          href="/requests"
-        />
+        {user.role === "BUYER" ? (
+          <MenuRowItem
+            Icon={MegaphoneIcon}
+            label="Product requests"
+            hint="Post what you need and get supplier responses"
+            href="/requests"
+          />
+        ) : null}
       </GroupCard>
 
       {/* Group 2: Preferences & Settings (Grouped Card) */}

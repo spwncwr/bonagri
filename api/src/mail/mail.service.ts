@@ -46,6 +46,9 @@ export class MailService {
 
       await mkdir(dirname(captureFile), { recursive: true });
       await writeFile(captureFile, verificationUrl, "utf8");
+
+      // Capture mode short-circuits: E2E runs must never hit real SMTP.
+      return;
     }
 
 

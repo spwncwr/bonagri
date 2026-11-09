@@ -21,6 +21,7 @@
 :where([data-theme="dark"], .admin-dark) .bg-\[\#b9c9bb\]\/70 { background-color: var(--theme-input-background); }
 :where([data-theme="dark"], .admin-dark) .bg-\[\#c9d0c6\] { background-color: var(--theme-input-background); }
 :where([data-theme="dark"], .admin-dark) .bg-\[\#c9d2c7\] { background-color: var(--theme-input-background); }
+:where([data-theme="dark"], .admin-dark) .bg-\[\#cbd5ca\] { background-color: var(--theme-input-background); }
 :where([data-theme="dark"], .admin-dark) .bg-\[\#cbe8d8\] { background-color: var(--theme-success-soft); }
 :where([data-theme="dark"], .admin-dark) .bg-\[\#d3e4cd\] { background-color: var(--theme-input-background); }
 :where([data-theme="dark"], .admin-dark) .bg-\[\#d5ddd3\] { background-color: var(--theme-input-background); }
@@ -47,6 +48,7 @@
 :where([data-theme="dark"], .admin-dark) .bg-\[\#e9eee4\] { background-color: var(--theme-elevated-surface); }
 :where([data-theme="dark"], .admin-dark) .bg-\[\#eaf3ec\] { background-color: var(--theme-elevated-surface); }
 :where([data-theme="dark"], .admin-dark) .bg-\[\#eee8c9\] { background-color: var(--theme-warning-soft); }
+:where([data-theme="dark"], .admin-dark) .bg-\[\#eef1ec\] { background-color: var(--theme-elevated-surface); }
 :where([data-theme="dark"], .admin-dark) .bg-\[\#eef2ea\] { background-color: var(--theme-elevated-surface); }
 :where([data-theme="dark"], .admin-dark) .bg-\[\#eef2ec\] { background-color: var(--theme-elevated-surface); }
 :where([data-theme="dark"], .admin-dark) .bg-\[\#eef3ea\] { background-color: var(--theme-secondary-background); }
@@ -159,6 +161,7 @@
 :where([data-theme="dark"], .admin-dark) .disabled\:bg-\[\#c3ccc2\]:disabled { background-color: var(--theme-input-background); }
 :where([data-theme="dark"], .admin-dark) .disabled\:bg-\[\#f6f8f4\]:disabled { background-color: var(--theme-secondary-background); }
 :where([data-theme="dark"], .admin-dark) .disabled\:text-\[\#98a199\]:disabled { color: var(--theme-disabled-text); }
+:where([data-theme="dark"], .admin-dark) .divide-\[\#e9ede7\] > :not(:last-child) { border-color: var(--theme-border); }
 :where([data-theme="dark"], .admin-dark) .divide-\[\#edf1ec\] > :not(:last-child) { border-color: var(--theme-border); }
 :where([data-theme="dark"], .admin-dark) .divide-\[\#f0f3ee\] > :not(:last-child) { border-color: var(--theme-border); }
 :where([data-theme="dark"], .admin-dark) .divide-slate-100 > :not(:last-child) { border-color: var(--theme-border); }
@@ -279,6 +282,7 @@
 :where([data-theme="dark"], .admin-dark) .text-\[\#7b857c\] { color: var(--theme-primary-text); }
 :where([data-theme="dark"], .admin-dark) .text-\[\#7b867d\] { color: var(--theme-primary-text); }
 :where([data-theme="dark"], .admin-dark) .text-\[\#7c877e\] { color: var(--theme-primary-text); }
+:where([data-theme="dark"], .admin-dark) .text-\[\#8a6d12\] { color: var(--theme-warning-bright); }
 :where([data-theme="dark"], .admin-dark) .text-\[\#8a948b\] { color: var(--theme-secondary-text); }
 :where([data-theme="dark"], .admin-dark) .text-\[\#8b958d\] { color: var(--theme-secondary-text); }
 :where([data-theme="dark"], .admin-dark) .text-\[\#8fe0a8\] { color: var(--theme-success-bright); }

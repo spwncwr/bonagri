@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthGuard from "../../components/auth/auth-guard";
 import { BrandLogo } from "../../components/brand/logo";
 import { ArrowLeftIcon } from "../../components/mobile/icons";
 import { authHeaders } from "../../lib/auth";
+import { goBackOr } from "../../lib/navigation";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -65,6 +67,7 @@ function formatDate(value: string) {
 }
 
 export default function RequestsPage() {
+  const router = useRouter();
   const [requests, setRequests] = useState<ProductRequest[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +89,13 @@ export default function RequestsPage() {
   const [responses, setResponses] = useState<RequestResponse[]>([]);
   const [responsesLoading, setResponsesLoading] = useState(false);
   const [respondingId, setRespondingId] = useState<string | null>(null);
+
+  // True back: return to the screen the buyer came from (profile or the
+  // orders view). Fresh deep links fall back to the profile hub — see
+  // lib/navigation.ts.
+  function goBack() {
+    goBackOr(router, "/profile");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -333,25 +343,37 @@ export default function RequestsPage() {
     <AuthGuard allowedRoles={["BUYER"]}>
       <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
         <header className="border-b border-[#dce2d9] bg-white">
-          <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
-            <div>
-              <BrandLogo height={24} />
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <div className="min-w-0">
+              <BrandLogo height={22} />
+              <h1 className="mt-2 text-xl font-black tracking-tight text-[#17251b]">
                 Product requests
               </h1>
             </div>
 
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
-            >
-              <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
-              Marketplace
-            </Link>
+            {/* Own action row so the title never squeezes on thin phones. */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={goBack}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#dce2d9] bg-white px-4 py-2.5 text-xs font-bold text-[#344238] shadow-sm transition hover:bg-[#f7f8f4] active:scale-[0.99]"
+              >
+                <ArrowLeftIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                Back
+              </button>
+
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#dce2d9] bg-white px-4 py-2.5 text-xs font-bold text-[#344238] shadow-sm transition hover:bg-[#f7f8f4] active:scale-[0.99]"
+              >
+                <ArrowLeftIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                Marketplace
+              </Link>
+            </div>
           </div>
         </header>
 
-        <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+        <div className="mx-auto max-w-2xl space-y-4 px-4 py-6">
           {error ? (
             <div
               role="alert"
@@ -370,15 +392,17 @@ export default function RequestsPage() {
             </div>
           ) : null}
 
-          <section className="rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold">Post a product request</h2>
-            <p className="mt-1 text-sm text-[#69756c]">
+          <section className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5">
+            <h2 className="text-base font-black tracking-tight text-[#17251b]">
+              Post a product request
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-[#69756c]">
               Can&apos;t find what you need? Tell suppliers what you are looking
               for — quantity, destination and timing. Open requests appear on
               the public demand board.
             </p>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3.5 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label
                   htmlFor="request-title"
@@ -392,7 +416,7 @@ export default function RequestsPage() {
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="e.g. Grade 1 tomatoes"
-                  className="mt-1 w-full rounded-xl border border-[#dce2d9] bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#17633a] focus:outline-none"
+                  className="mt-1.5 w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-2.5 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                 />
               </div>
 
@@ -407,7 +431,7 @@ export default function RequestsPage() {
                   id="request-category"
                   value={categoryId}
                   onChange={(event) => setCategoryId(event.target.value)}
-                  className="mt-1 w-full rounded-xl border border-[#dce2d9] bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#17633a] focus:outline-none"
+                  className="mt-1.5 w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-2.5 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                 >
                   <option value="">Any category</option>
                   {categories.map((category) => (
@@ -431,7 +455,7 @@ export default function RequestsPage() {
                   value={destinationCity}
                   onChange={(event) => setDestinationCity(event.target.value)}
                   placeholder="e.g. Polokwane"
-                  className="mt-1 w-full rounded-xl border border-[#dce2d9] bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#17633a] focus:outline-none"
+                  className="mt-1.5 w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-2.5 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                 />
               </div>
 
@@ -449,7 +473,7 @@ export default function RequestsPage() {
                   value={quantity}
                   onChange={(event) => setQuantity(event.target.value)}
                   placeholder="e.g. 3000"
-                  className="mt-1 w-full rounded-xl border border-[#dce2d9] bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#17633a] focus:outline-none"
+                  className="mt-1.5 w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-2.5 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                 />
               </div>
 
@@ -466,7 +490,7 @@ export default function RequestsPage() {
                   value={unit}
                   onChange={(event) => setUnit(event.target.value)}
                   placeholder="e.g. kg, crates, tons"
-                  className="mt-1 w-full rounded-xl border border-[#dce2d9] bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#17633a] focus:outline-none"
+                  className="mt-1.5 w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-2.5 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                 />
               </div>
 
@@ -482,7 +506,7 @@ export default function RequestsPage() {
                   type="date"
                   value={requiredBy}
                   onChange={(event) => setRequiredBy(event.target.value)}
-                  className="mt-1 w-full rounded-xl border border-[#dce2d9] bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#17633a] focus:outline-none"
+                  className="mt-1.5 w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-2.5 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                 />
               </div>
 
@@ -499,7 +523,7 @@ export default function RequestsPage() {
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
                   placeholder="e.g. Grade 1, delivery to our Polokwane warehouse every Monday."
-                  className="mt-1 w-full rounded-xl border border-[#dce2d9] bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#17633a] focus:outline-none"
+                  className="mt-1.5 w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-2.5 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                 />
               </div>
             </div>
@@ -508,32 +532,36 @@ export default function RequestsPage() {
               type="button"
               disabled={submitting || !canSubmit}
               onClick={() => void submitRequest()}
-              className="mt-5 rounded-xl bg-[#17633a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#12512f] disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-5 w-full rounded-full bg-[#17633a] py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? "Posting..." : "Post request"}
             </button>
           </section>
 
-          <section className="rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold">My requests</h2>
+          <section className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5">
+            <h2 className="text-base font-black tracking-tight text-[#17251b]">
+              My requests
+            </h2>
 
             {loading ? (
-              <p className="mt-4 text-sm text-[#69756c]">Loading requests...</p>
+              <p className="mt-3 text-sm text-[#69756c]">Loading requests...</p>
             ) : requests.length === 0 ? (
-              <p className="mt-4 text-sm text-[#69756c]">
+              <p className="mt-3 text-sm text-[#69756c]">
                 You have not posted any requests yet.
               </p>
             ) : (
-              <ul className="mt-4 space-y-3">
+              <ul className="mt-3 space-y-3">
                 {requests.map((request) => (
                   <li
                     key={request.id}
-                    className="rounded-xl border border-[#e3e8e1] bg-[#fafbf8] p-4 text-sm"
+                    className="rounded-xl border border-[#e3e8e1] bg-[#fafbf8] p-3.5 text-sm"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold">{request.title}</p>
+                          <p className="font-bold text-[#17251b]">
+                            {request.title}
+                          </p>
                           <span
                             className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${STATUS_STYLES[request.status]}`}
                           >
@@ -541,7 +569,7 @@ export default function RequestsPage() {
                           </span>
                         </div>
 
-                        <p className="mt-1 text-xs text-[#69756c]">
+                        <p className="mt-1 text-xs leading-5 text-[#69756c]">
                           {request.quantity.toLocaleString("en-ZA")}{" "}
                           {request.unit}
                           {request.category
@@ -556,18 +584,18 @@ export default function RequestsPage() {
                         </p>
 
                         {request.notes ? (
-                          <p className="mt-1 text-xs text-[#7a857d]">
+                          <p className="mt-1 text-xs leading-5 text-[#7a857d]">
                             {request.notes}
                           </p>
                         ) : null}
                       </div>
 
                       {request.status === "OPEN" ? (
-                        <div className="flex shrink-0 gap-2">
+                        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
                           <button
                             type="button"
                             onClick={() => void toggleResponses(request.id)}
-                            className="rounded-lg border border-[#dce2d9] bg-white px-3 py-1.5 text-xs font-semibold text-[#344238] transition hover:bg-[#f7f8f4]"
+                            className="rounded-full border border-[#dce2d9] bg-white px-3.5 py-1.5 text-xs font-bold text-[#344238] transition hover:bg-[#f7f8f4] active:scale-[0.98]"
                           >
                             {expandedId === request.id
                               ? "Hide responses"
@@ -580,7 +608,7 @@ export default function RequestsPage() {
                             onClick={() =>
                               void updateRequest(request.id, "FULFILLED")
                             }
-                            className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-full border border-emerald-200 bg-white px-3.5 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {actingId === request.id
                               ? "Working..."
@@ -593,7 +621,7 @@ export default function RequestsPage() {
                             onClick={() =>
                               void updateRequest(request.id, "WITHDRAWN")
                             }
-                            className="rounded-lg border border-[#e5d9c5] bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-full border border-[#e5d9c5] bg-white px-3.5 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             Withdraw
                           </button>
@@ -618,9 +646,9 @@ export default function RequestsPage() {
                               className="rounded-lg border border-[#e3e8e1] bg-white p-3 text-xs"
                             >
                               <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div>
+                                <div className="min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <p className="font-semibold">
+                                    <p className="font-semibold text-[#17251b]">
                                       {response.supplier.businessName}
                                     </p>
                                     {response.supplier.verified ? (
@@ -635,7 +663,7 @@ export default function RequestsPage() {
                                     </span>
                                   </div>
 
-                                  <p className="mt-1 text-[#7a857d]">
+                                  <p className="mt-1 leading-5 text-[#7a857d]">
                                     {response.message}
                                   </p>
 
@@ -656,7 +684,7 @@ export default function RequestsPage() {
 
                                 {response.status === "OPEN" &&
                                 request.status === "OPEN" ? (
-                                  <div className="flex shrink-0 gap-2">
+                                  <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
                                     <button
                                       type="button"
                                       disabled={respondingId === response.id}
@@ -666,7 +694,7 @@ export default function RequestsPage() {
                                           "ACCEPTED",
                                         )
                                       }
-                                      className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="rounded-full border border-emerald-200 bg-white px-3.5 py-1.5 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       {respondingId === response.id
                                         ? "Working..."
@@ -682,7 +710,7 @@ export default function RequestsPage() {
                                           "DECLINED",
                                         )
                                       }
-                                      className="rounded-lg border border-[#e5d9c5] bg-white px-3 py-1.5 text-[11px] font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="rounded-full border border-[#e5d9c5] bg-white px-3.5 py-1.5 text-[11px] font-bold text-amber-700 transition hover:bg-amber-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       Decline
                                     </button>

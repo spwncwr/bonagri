@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import AuthGuard from "../../components/auth/auth-guard";
 import { BrandLogo } from "../../components/brand/logo";
+import LocationPicker, {
+  type GeocodedPlace,
+} from "../../components/addresses/location-picker";
 import { ArrowLeftIcon } from "../../components/mobile/icons";
 import { authHeaders } from "../../lib/auth";
+import { goBackOr } from "../../lib/navigation";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -22,6 +27,8 @@ type Address = {
   postalCode: string | null;
   country: string;
   isDefault: boolean;
+  lat: number | null;
+  lng: number | null;
 };
 
 const emptyForm = {
@@ -34,11 +41,14 @@ const emptyForm = {
   province: "",
   postalCode: "",
   country: "South Africa",
+  lat: null as number | null,
+  lng: null as number | null,
 };
 
 type AddressForm = typeof emptyForm;
 
 export default function AddressesPage() {
+  const router = useRouter();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -48,6 +58,19 @@ export default function AddressesPage() {
   const [form, setForm] = useState<AddressForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  // Latest reverse-geocode of the pin in the form — applied to the text
+  // fields only when the buyer presses "Fill address from pin" (never
+  // silently). Cleared on every pin change so a stale place can't linger.
+  const [resolvedPlace, setResolvedPlace] = useState<GeocodedPlace | null>(
+    null,
+  );
+
+  // True back: return to the screen the buyer came from (checkout, cart or
+  // profile). Fresh deep links fall back to the profile hub — see
+  // lib/navigation.ts.
+  function goBack() {
+    goBackOr(router, "/profile");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +125,7 @@ export default function AddressesPage() {
   function startCreate() {
     setEditingId(null);
     setForm(emptyForm);
+    setResolvedPlace(null);
     setFormError("");
     setShowForm(true);
   }
@@ -118,7 +142,10 @@ export default function AddressesPage() {
       province: address.province ?? "",
       postalCode: address.postalCode ?? "",
       country: address.country,
+      lat: address.lat,
+      lng: address.lng,
     });
+    setResolvedPlace(null);
     setFormError("");
     setShowForm(true);
   }
@@ -126,11 +153,31 @@ export default function AddressesPage() {
   function cancelForm() {
     setShowForm(false);
     setEditingId(null);
+    setResolvedPlace(null);
     setFormError("");
   }
 
   function setField(field: keyof AddressForm, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function setPin(point: { lat: number; lng: number } | null) {
+    setForm((current) => ({ ...current, lat: point?.lat ?? null, lng: point?.lng ?? null }));
+  }
+
+  // Explicit, buyer-initiated: copy the geocoded street/city/province/postcode
+  // into the manual fields. Recipient, phone and label are never touched.
+  function fillFromPin() {
+    if (!resolvedPlace) return;
+
+    setForm((current) => ({
+      ...current,
+      addressLine1: resolvedPlace.addressLine1 || current.addressLine1,
+      city: resolvedPlace.city || current.city,
+      province: resolvedPlace.province || current.province,
+      postalCode: resolvedPlace.postalCode || current.postalCode,
+      country: resolvedPlace.country || current.country,
+    }));
   }
 
   async function submitForm(event: FormEvent<HTMLFormElement>) {
@@ -251,42 +298,53 @@ export default function AddressesPage() {
     <AuthGuard requiredRole="BUYER">
       <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
         <header className="border-b border-[#dce2d9] bg-white">
-          <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
-            <div>
-              <BrandLogo height={24} />
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <div className="min-w-0">
+              <BrandLogo height={22} />
+              <h1 className="mt-2 text-xl font-black tracking-tight text-[#17251b]">
                 Delivery addresses
               </h1>
-              <p className="mt-1 text-sm text-[#69756c]">
+              <p className="mt-1 text-xs leading-5 text-[#7c877e]">
                 Manage where your orders get delivered.
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Actions get their own wrapping row so the title never gets
+                squeezed against the buttons on thin phones. */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={goBack}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#dce2d9] bg-white px-4 py-2.5 text-xs font-bold text-[#344238] shadow-sm transition hover:bg-[#f7f8f4] active:scale-[0.99]"
+              >
+                <ArrowLeftIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                Back
+              </button>
+
               <button
                 type="button"
                 onClick={startCreate}
-                className="rounded-xl bg-[#17633a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#12512f]"
+                className="rounded-full bg-[#17633a] px-4 py-2.5 text-xs font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.99]"
               >
                 Add address
               </button>
 
               <Link
                 href="/orders"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#dce2d9] bg-white px-4 py-2.5 text-xs font-bold text-[#344238] shadow-sm transition hover:bg-[#f7f8f4] active:scale-[0.99]"
               >
-                <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
+                <ArrowLeftIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
                 My Orders
               </Link>
             </div>
           </div>
         </header>
 
-        <div className="mx-auto max-w-4xl px-6 py-8">
+        <div className="mx-auto max-w-2xl space-y-4 px-4 py-6">
           {error ? (
             <div
               role="alert"
-              className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
             >
               {error}
             </div>
@@ -295,26 +353,26 @@ export default function AddressesPage() {
           {showForm ? (
             <form
               onSubmit={(event) => void submitForm(event)}
-              className="mb-8 rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm"
+              className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5"
             >
-              <h2 className="text-base font-bold text-[#17251b]">
+              <h2 className="text-sm font-black tracking-tight text-[#17251b]">
                 {editingId ? "Edit address" : "New address"}
               </h2>
 
               {formError ? (
                 <div
                   role="alert"
-                  className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                  className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
                 >
                   {formError}
                 </div>
               ) : null}
 
-              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                 <div>
                   <label
                     htmlFor="label"
-                    className="mb-1.5 block text-sm font-medium text-[#344238]"
+                    className="mb-1.5 block text-xs font-semibold text-[#69756c]"
                   >
                     Label
                   </label>
@@ -325,7 +383,7 @@ export default function AddressesPage() {
                     maxLength={50}
                     value={form.label}
                     onChange={(event) => setField("label", event.target.value)}
-                    className="w-full rounded-lg border border-[#dce2d9] px-3 py-2.5 outline-none transition focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
+                    className="w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-3 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                     placeholder="Home"
                   />
                 </div>
@@ -333,7 +391,7 @@ export default function AddressesPage() {
                 <div>
                   <label
                     htmlFor="recipientName"
-                    className="mb-1.5 block text-sm font-medium text-[#344238]"
+                    className="mb-1.5 block text-xs font-semibold text-[#69756c]"
                   >
                     Recipient name
                   </label>
@@ -346,14 +404,14 @@ export default function AddressesPage() {
                     onChange={(event) =>
                       setField("recipientName", event.target.value)
                     }
-                    className="w-full rounded-lg border border-[#dce2d9] px-3 py-2.5 outline-none transition focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
+                    className="w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-3 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="phone"
-                    className="mb-1.5 block text-sm font-medium text-[#344238]"
+                    className="mb-1.5 block text-xs font-semibold text-[#69756c]"
                   >
                     Phone{" "}
                     <span className="font-normal text-[#7b867d]">
@@ -366,14 +424,14 @@ export default function AddressesPage() {
                     maxLength={30}
                     value={form.phone}
                     onChange={(event) => setField("phone", event.target.value)}
-                    className="w-full rounded-lg border border-[#dce2d9] px-3 py-2.5 outline-none transition focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
+                    className="w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-3 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="city"
-                    className="mb-1.5 block text-sm font-medium text-[#344238]"
+                    className="mb-1.5 block text-xs font-semibold text-[#69756c]"
                   >
                     City
                   </label>
@@ -384,14 +442,14 @@ export default function AddressesPage() {
                     maxLength={100}
                     value={form.city}
                     onChange={(event) => setField("city", event.target.value)}
-                    className="w-full rounded-lg border border-[#dce2d9] px-3 py-2.5 outline-none transition focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
+                    className="w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-3 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
                   <label
                     htmlFor="addressLine1"
-                    className="mb-1.5 block text-sm font-medium text-[#344238]"
+                    className="mb-1.5 block text-xs font-semibold text-[#69756c]"
                   >
                     Street address
                   </label>
@@ -404,14 +462,14 @@ export default function AddressesPage() {
                     onChange={(event) =>
                       setField("addressLine1", event.target.value)
                     }
-                    className="w-full rounded-lg border border-[#dce2d9] px-3 py-2.5 outline-none transition focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
+                    className="w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-3 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
                   <label
                     htmlFor="addressLine2"
-                    className="mb-1.5 block text-sm font-medium text-[#344238]"
+                    className="mb-1.5 block text-xs font-semibold text-[#69756c]"
                   >
                     Suite / complex{" "}
                     <span className="font-normal text-[#7b867d]">
@@ -426,14 +484,14 @@ export default function AddressesPage() {
                     onChange={(event) =>
                       setField("addressLine2", event.target.value)
                     }
-                    className="w-full rounded-lg border border-[#dce2d9] px-3 py-2.5 outline-none transition focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
+                    className="w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-3 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="province"
-                    className="mb-1.5 block text-sm font-medium text-[#344238]"
+                    className="mb-1.5 block text-xs font-semibold text-[#69756c]"
                   >
                     Province
                   </label>
@@ -445,14 +503,14 @@ export default function AddressesPage() {
                     onChange={(event) =>
                       setField("province", event.target.value)
                     }
-                    className="w-full rounded-lg border border-[#dce2d9] px-3 py-2.5 outline-none transition focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
+                    className="w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-3 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="postalCode"
-                    className="mb-1.5 block text-sm font-medium text-[#344238]"
+                    className="mb-1.5 block text-xs font-semibold text-[#69756c]"
                   >
                     Postal code
                   </label>
@@ -464,16 +522,78 @@ export default function AddressesPage() {
                     onChange={(event) =>
                       setField("postalCode", event.target.value)
                     }
-                    className="w-full rounded-lg border border-[#dce2d9] px-3 py-2.5 outline-none transition focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
+                    className="w-full rounded-xl border border-[#dce2d9] bg-white px-3.5 py-3 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                   />
                 </div>
               </div>
 
-              <div className="mt-6 flex gap-3">
+              {/* Delivery destination pin — optional, saved alongside the
+                  manual fields. Checkout works either way; a missing pin is
+                  flagged as "needs location confirmation" in the list. */}
+              <div className="mt-5 border-t border-[#e9ede7] pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-black text-[#17251b]">
+                      Delivery location
+                    </h3>
+                    <p className="mt-0.5 text-xs leading-5 text-[#7c877e]">
+                      Drop a pin or use GPS so the courier gets your exact
+                      destination. Optional — you can keep typing the address
+                      manually.
+                    </p>
+                  </div>
+
+                  {form.lat != null && form.lng != null ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPin(null);
+                        setResolvedPlace(null);
+                      }}
+                      className="shrink-0 rounded-full border border-[#dce2d9] bg-white px-3 py-1.5 text-xs font-bold text-[#344238] transition hover:bg-[#f7f8f4]"
+                    >
+                      Clear pin
+                    </button>
+                  ) : null}
+                </div>
+
+                <LocationPicker
+                  className="mt-3"
+                  lat={form.lat}
+                  lng={form.lng}
+                  onChange={(point) => {
+                    setPin(point);
+                    setResolvedPlace(null);
+                  }}
+                  onResolved={setResolvedPlace}
+                />
+
+                {resolvedPlace ? (
+                  <div className="mt-3 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[#dce2d9] bg-[#fbfcf9] px-3.5 py-3">
+                    <div className="min-w-0 text-xs leading-5 text-[#344238]">
+                      <div className="font-black text-[#17251b]">
+                        Location found
+                      </div>
+                      <div className="line-clamp-2">
+                        {resolvedPlace.displayName}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fillFromPin}
+                      className="shrink-0 rounded-full border border-[#17633a] bg-white px-3 py-1.5 text-xs font-black text-[#17633a] transition hover:bg-[#eaf2e8]"
+                    >
+                      Fill address from pin
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2.5">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-lg bg-[#17633a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#12512f] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full bg-[#17633a] px-6 py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving
                     ? "Saving..."
@@ -485,7 +605,7 @@ export default function AddressesPage() {
                 <button
                   type="button"
                   onClick={cancelForm}
-                  className="rounded-lg border border-[#dce2d9] px-5 py-2.5 text-sm font-semibold text-[#344238] transition hover:bg-[#f7f8f4]"
+                  className="rounded-full border border-[#dce2d9] bg-white px-6 py-3 text-sm font-bold text-[#344238] shadow-sm transition hover:bg-[#f7f8f4] active:scale-[0.99]"
                 >
                   Cancel
                 </button>
@@ -496,15 +616,17 @@ export default function AddressesPage() {
           {loading ? (
             <p className="text-sm text-[#69756c]">Loading addresses...</p>
           ) : addresses.length === 0 && !showForm ? (
-            <div className="rounded-2xl border border-dashed border-[#dce2d9] bg-white p-12 text-center">
-              <h2 className="text-lg font-semibold">No addresses yet</h2>
+            <div className="rounded-2xl border border-dashed border-[#dce2d9] bg-white p-8 text-center">
+              <h2 className="text-base font-black text-[#17251b]">
+                No addresses yet
+              </h2>
               <p className="mt-2 text-sm text-[#69756c]">
                 Add a delivery address to place your first order.
               </p>
               <button
                 type="button"
                 onClick={startCreate}
-                className="mt-6 rounded-xl bg-[#17633a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#12512f]"
+                className="mt-5 rounded-full bg-[#17633a] px-6 py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.99]"
               >
                 Add address
               </button>
@@ -514,10 +636,13 @@ export default function AddressesPage() {
               {addresses.map((address) => (
                 <article
                   key={address.id}
-                  className="rounded-2xl border border-[#dce2d9] bg-white p-5 shadow-sm"
+                  className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
+                  {/* Text stacks above the actions on phones (so long
+                      addresses never crush the buttons), side by side on
+                      wider screens. */}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-black text-[#17251b]">
                           {address.label}
@@ -528,9 +653,19 @@ export default function AddressesPage() {
                             Default
                           </span>
                         ) : null}
+
+                        {address.lat != null && address.lng != null ? (
+                          <span className="rounded-full bg-[#e5f1e4] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#17633a]">
+                            Location confirmed
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-[#eee8c9] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#8a6d12]">
+                            Needs location confirmation
+                          </span>
+                        )}
                       </div>
 
-                      <div className="mt-2 text-sm text-[#344238]">
+                      <div className="mt-2 text-sm leading-6 text-[#344238]">
                         <p className="font-bold">{address.recipientName}</p>
                         <p>{address.addressLine1}</p>
                         {address.addressLine2 ? (
@@ -550,11 +685,11 @@ export default function AddressesPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
                       <button
                         type="button"
                         onClick={() => startEdit(address)}
-                        className="rounded-lg border border-[#dce2d9] px-3 py-1.5 text-xs font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+                        className="rounded-full border border-[#dce2d9] bg-white px-3.5 py-1.5 text-xs font-bold text-[#344238] transition hover:bg-[#f7f8f4] active:scale-[0.98]"
                       >
                         Edit
                       </button>
@@ -564,7 +699,7 @@ export default function AddressesPage() {
                           type="button"
                           disabled={updatingId === address.id}
                           onClick={() => void makeDefault(address)}
-                          className="rounded-lg border border-[#dce2d9] px-3 py-1.5 text-xs font-medium text-[#344238] transition hover:bg-[#f7f8f4] disabled:cursor-not-allowed disabled:opacity-50"
+                          className="rounded-full border border-[#dce2d9] bg-white px-3.5 py-1.5 text-xs font-bold text-[#344238] transition hover:bg-[#f7f8f4] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Make default
                         </button>
@@ -574,7 +709,7 @@ export default function AddressesPage() {
                         type="button"
                         disabled={updatingId === address.id}
                         onClick={() => void removeAddress(address)}
-                        className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-full border border-red-200 bg-white px-3.5 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Delete
                       </button>

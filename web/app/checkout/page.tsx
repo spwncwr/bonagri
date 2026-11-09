@@ -8,6 +8,7 @@ import { BrandLogo } from "../../components/brand/logo";
 import { CHECKOUT_NOTES_KEY } from "../../components/mobile/cart-screen";
 import { ArrowLeftIcon, CheckIcon } from "../../components/mobile/icons";
 import { authHeaders } from "../../lib/auth";
+import { goBackOr } from "../../lib/navigation";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -35,6 +36,8 @@ type Address = {
   city: string;
   province: string | null;
   isDefault: boolean;
+  lat: number | null;
+  lng: number | null;
 };
 
 type PlacedOrder = {
@@ -54,6 +57,12 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [placing, setPlacing] = useState(false);
   const [placedOrders, setPlacedOrders] = useState<PlacedOrder[] | null>(null);
+
+  // True back: return to the screen the buyer came from (usually the cart).
+  // Fresh deep links fall back to the cart — see lib/navigation.ts.
+  function goBack() {
+    goBackOr(router, "/cart");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -213,19 +222,19 @@ export default function CheckoutPage() {
     return (
       <AuthGuard requiredRole="BUYER">
         <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
-          <div className="mx-auto max-w-2xl px-6 py-16">
-            <div className="rounded-2xl border border-[#cfe0cf] bg-white p-8 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#e5f1e4] text-[#17633a]">
-                <CheckIcon className="h-6 w-6" strokeWidth={3} />
+          <div className="mx-auto max-w-2xl px-4 py-10">
+            <div className="rounded-2xl border border-[#cfe0cf] bg-white p-5 text-center shadow-sm sm:p-8">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#e5f1e4] text-[#17633a]">
+                <CheckIcon className="h-7 w-7" strokeWidth={3} />
               </div>
 
-              <h1 className="mt-4 text-2xl font-semibold tracking-tight">
+              <h1 className="mt-4 text-xl font-black tracking-tight text-[#17251b] sm:text-2xl">
                 {placedOrders.length === 1
                   ? "Order placed"
                   : `${placedOrders.length} orders placed`}
               </h1>
 
-              <p className="mt-2 text-sm text-[#69756c]">
+              <p className="mt-2 text-sm leading-6 text-[#69756c]">
                 Each supplier received their order. Track every one of them
                 from your orders list.
               </p>
@@ -234,17 +243,17 @@ export default function CheckoutPage() {
                 {placedOrders.map((order) => (
                   <div
                     key={order.id}
-                    className="flex items-center justify-between rounded-xl border border-[#dce2d9] bg-[#fbfcf9] px-4 py-3"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-[#dce2d9] bg-[#fbfcf9] px-4 py-3"
                   >
-                    <div>
-                      <div className="text-sm font-black text-[#17251b]">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-black text-[#17251b]">
                         {order.orderNumber}
                       </div>
-                      <div className="mt-0.5 text-xs text-[#69756c]">
+                      <div className="mt-0.5 truncate text-xs text-[#69756c]">
                         {order.supplierName}
                       </div>
                     </div>
-                    <div className="text-sm font-black text-[#17633a]">
+                    <div className="shrink-0 text-sm font-black text-[#17633a]">
                       R{Number(order.total).toFixed(2)}
                     </div>
                   </div>
@@ -255,14 +264,14 @@ export default function CheckoutPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/orders")}
-                  className="rounded-xl bg-[#17633a] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#12512f]"
+                  className="w-full rounded-full bg-[#17633a] px-6 py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.99] sm:w-auto"
                 >
                   View my orders
                 </button>
 
                 <Link
                   href="/"
-                  className="rounded-xl border border-[#dce2d9] bg-white px-6 py-3 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+                  className="w-full rounded-full border border-[#dce2d9] bg-white px-6 py-3.5 text-sm font-bold text-[#344238] shadow-sm transition hover:bg-[#f7f8f4] active:scale-[0.99] sm:w-auto"
                 >
                   Continue shopping
                 </Link>
@@ -278,46 +287,58 @@ export default function CheckoutPage() {
     <AuthGuard requiredRole="BUYER">
       <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
         <header className="border-b border-[#dce2d9] bg-white">
-          <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
-            <div>
-              <BrandLogo height={24} />
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <div className="min-w-0">
+              <BrandLogo height={22} />
+              <h1 className="mt-2 text-xl font-black tracking-tight text-[#17251b]">
                 Checkout
               </h1>
-              <p className="mt-1 text-sm text-[#69756c]">
+              <p className="mt-1 text-xs leading-5 text-[#7c877e]">
                 One order per supplier — all placed together.
               </p>
             </div>
 
-            <Link
-              href="/orders"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
-            >
-              <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
-              My Orders
-            </Link>
+            {/* Own action row so the title never squeezes on thin phones. */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={goBack}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#dce2d9] bg-white px-4 py-2.5 text-xs font-bold text-[#344238] shadow-sm transition hover:bg-[#f7f8f4] active:scale-[0.99]"
+              >
+                <ArrowLeftIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                Back
+              </button>
+
+              <Link
+                href="/orders"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#dce2d9] bg-white px-4 py-2.5 text-xs font-bold text-[#344238] shadow-sm transition hover:bg-[#f7f8f4] active:scale-[0.99]"
+              >
+                <ArrowLeftIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                My Orders
+              </Link>
+            </div>
           </div>
         </header>
 
-        <div className="mx-auto max-w-4xl px-6 py-8">
+        <div className="mx-auto max-w-2xl space-y-4 px-4 py-6">
           {error ? (
             <div
               role="alert"
-              className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
             >
               {error}
             </div>
           ) : null}
 
           {loading ? (
-            <div className="rounded-2xl border border-[#dce2d9] bg-white p-10 text-center">
-              <div className="text-sm font-semibold text-[#17633a]">
+            <div className="rounded-2xl border border-[#dce2d9] bg-white p-8 text-center">
+              <div className="text-sm font-bold text-[#17633a]">
                 Loading your cart...
               </div>
             </div>
           ) : cartItems.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#cbd5ca] bg-white p-10 text-center">
-              <div className="text-lg font-semibold text-[#243229]">
+            <div className="rounded-2xl border border-dashed border-[#cbd5ca] bg-white p-8 text-center">
+              <div className="text-base font-black text-[#243229]">
                 Your cart is empty
               </div>
               <p className="mt-2 text-sm text-[#69756c]">
@@ -325,24 +346,24 @@ export default function CheckoutPage() {
               </p>
               <Link
                 href="/"
-                className="mt-6 inline-block rounded-xl bg-[#17633a] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#12512f]"
+                className="mt-6 inline-block rounded-full bg-[#17633a] px-6 py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.99]"
               >
                 Browse marketplace
               </Link>
             </div>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
-              <div className="space-y-6">
+            <div className="grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start">
+              <div className="space-y-4">
                 {/* Delivery address */}
-                <section className="rounded-2xl border border-[#dce2d9] bg-white p-6">
-                  <div className="flex items-center justify-between">
+                <section className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5">
+                  <div className="flex items-center justify-between gap-3">
                     <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[#7b867d]">
                       Deliver to
                     </h2>
 
                     <Link
                       href="/addresses"
-                      className="text-xs font-semibold text-[#17633a] hover:underline"
+                      className="shrink-0 text-xs font-bold text-[#17633a] hover:underline"
                     >
                       Manage addresses
                     </Link>
@@ -378,10 +399,10 @@ export default function CheckoutPage() {
                             onChange={(event) =>
                               setSelectedAddressId(event.target.value)
                             }
-                            className="mt-1 accent-[#17633a]"
+                            className="mt-1 shrink-0 accent-[#17633a]"
                           />
 
-                          <span className="min-w-0">
+                          <span className="min-w-0 flex-1">
                             <span className="block text-sm font-bold text-[#17251b]">
                               {address.label}
                               {address.isDefault ? (
@@ -390,10 +411,23 @@ export default function CheckoutPage() {
                                 </span>
                               ) : null}
                             </span>
-                            <span className="mt-0.5 block text-xs text-[#69756c]">
+                            <span className="mt-0.5 block text-xs leading-5 text-[#69756c]">
                               {address.recipientName} — {address.addressLine1},{" "}
                               {address.city}
                               {address.province ? `, ${address.province}` : ""}
+                            </span>
+                            {/* Pin status is informational only — checkout is
+                                never blocked by a missing destination pin. */}
+                            <span
+                              className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${
+                                address.lat != null && address.lng != null
+                                  ? "bg-[#e5f1e4] text-[#17633a]"
+                                  : "bg-[#eee8c9] text-[#8a6d12]"
+                              }`}
+                            >
+                              {address.lat != null && address.lng != null
+                                ? "Location confirmed"
+                                : "Needs location confirmation"}
                             </span>
                           </span>
                         </label>
@@ -412,13 +446,13 @@ export default function CheckoutPage() {
                     {supplierGroups.map((group) => (
                       <div
                         key={group.supplierName}
-                        className="rounded-2xl border border-[#dce2d9] bg-white p-5"
+                        className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm font-black text-[#17251b]">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 truncate text-sm font-black text-[#17251b]">
                             {group.supplierName}
                           </div>
-                          <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#7b867d]">
+                          <div className="shrink-0 text-[10px] font-black uppercase tracking-[0.14em] text-[#7b867d]">
                             1 order
                           </div>
                         </div>
@@ -445,14 +479,14 @@ export default function CheckoutPage() {
                                 ) : null}
                               </div>
 
-                              <div className="text-sm font-black text-[#17633a]">
+                              <div className="shrink-0 text-sm font-black text-[#17633a]">
                                 R{Number(item.lineTotal).toFixed(2)}
                               </div>
                             </div>
                           ))}
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between border-t border-[#e3e8e0] pt-4 text-sm font-black text-[#243229]">
+                        <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#e3e8e0] pt-4 text-sm font-black text-[#243229]">
                           <span>Order subtotal</span>
                           <span className="text-[#17633a]">
                             R{group.total.toFixed(2)}
@@ -464,7 +498,7 @@ export default function CheckoutPage() {
                 </section>
 
                 {/* Notes */}
-                <section className="rounded-2xl border border-[#dce2d9] bg-white p-6">
+                <section className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5">
                   <label
                     htmlFor="checkout-notes"
                     className="text-sm font-black text-[#243229]"
@@ -480,13 +514,13 @@ export default function CheckoutPage() {
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
                     placeholder="Gate code, best delivery time, quality requirements..."
-                    className="mt-2 w-full rounded-xl border border-[#cfd8ce] bg-[#fbfcf9] px-4 py-3 text-sm outline-none focus:border-[#17633a]"
+                    className="mt-2 w-full rounded-xl border border-[#cfd8ce] bg-[#fbfcf9] px-3.5 py-3 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                   />
                 </section>
               </div>
 
               {/* Summary */}
-              <aside className="rounded-2xl border border-[#dce2d9] bg-white p-6 lg:sticky lg:top-6">
+              <aside className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5 lg:sticky lg:top-6">
                 <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[#7b867d]">
                   Summary
                 </h2>
@@ -521,7 +555,7 @@ export default function CheckoutPage() {
                   type="button"
                   onClick={placeOrders}
                   disabled={!canPlace}
-                  className="mt-5 w-full rounded-xl bg-[#17633a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#12512f] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-5 w-full rounded-full bg-[#17633a] py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {placing
                     ? "Placing orders..."

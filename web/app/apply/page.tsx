@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthGuard from "../../components/auth/auth-guard";
 import { BrandLogo } from "../../components/brand/logo";
 import { ArrowLeftIcon, ArrowRightIcon } from "../../components/mobile/icons";
 import { authHeaders, fetchCurrentUser, type UserRole } from "../../lib/auth";
+import { goBackOr } from "../../lib/navigation";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -27,6 +29,7 @@ const ROLE_LABELS: Record<SellerApplication["desiredRole"], string> = {
 };
 
 export default function ApplyToSellPage() {
+  const router = useRouter();
   const [application, setApplication] = useState<SellerApplication | null>(null);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<UserRole | null>(null);
@@ -38,6 +41,13 @@ export default function ApplyToSellPage() {
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // True back: return to the screen the buyer came from (profile or the
+  // marketplace). Fresh deep links fall back to the profile hub where the
+  // "Sell on BonAgri" entry lives — see lib/navigation.ts.
+  function goBack() {
+    goBackOr(router, "/profile");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -130,21 +140,34 @@ export default function ApplyToSellPage() {
     <AuthGuard allowedRoles={["BUYER", "SUPPLIER", "AGRO_DEALER"]}>
       <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
         <header className="border-b border-[#dce2d9] bg-white">
-          <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
-            <div>
+          <div className="mx-auto max-w-3xl px-6 py-5">
+            <div className="min-w-0">
               <BrandLogo height={24} />
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">
                 Sell on BonAgri
               </h1>
             </div>
 
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
-            >
-              <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
-              Marketplace
-            </Link>
+            {/* Own wrapping action row so the title never gets squeezed
+                against the buttons on thin phones. */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={goBack}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+              >
+                <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
+                Back
+              </button>
+
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce2d9] bg-white px-4 py-2 text-sm font-medium text-[#344238] transition hover:bg-[#f7f8f4]"
+              >
+                <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
+                Marketplace
+              </Link>
+            </div>
           </div>
         </header>
 

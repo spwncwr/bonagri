@@ -327,6 +327,113 @@ describe("CartService (CP10 cart + multi-item checkout)", () => {
       });
     });
 
+    it("freezes the selected address into the order's destination snapshot", async () => {
+      const { service, prisma } = makeService();
+
+      const address = {
+        id: "addr-1",
+        userId: "buyer-1",
+        label: "Home",
+        recipientName: "Thandi",
+        phone: "072 111 2222",
+        addressLine1: "1 Marula St",
+        addressLine2: null,
+        city: "Tzaneen",
+        province: "Limpopo",
+        postalCode: "0880",
+        country: "South Africa",
+        isDefault: true,
+        lat: -23.8333,
+        lng: 30.1667,
+      };
+
+      prisma.user.findUnique.mockResolvedValue(buyerOk);
+      prisma.address.findFirst.mockResolvedValue(address);
+      prisma.cartItem.findMany.mockResolvedValue([cartItem()]);
+      prisma.order.create.mockResolvedValue({
+        id: "order-1",
+        orderNumber: "BON-1",
+        status: "PENDING",
+        subtotal: 36,
+        deliveryFee: 0,
+        total: 36,
+        items: [{ id: "oi-1" }],
+        deliverySnapshot: null,
+        deliveryAddress: address,
+      });
+      prisma.cartItem.deleteMany.mockResolvedValue({ count: 1 });
+
+      await service.checkout("buyer-1", { deliveryAddressId: "addr-1" });
+
+      const createCall = prisma.order.create.mock.calls[0][0] as {
+        data: {
+          deliverySnapshot?: {
+            addressId?: string;
+            city?: string;
+            lat?: number | null;
+            lng?: number | null;
+            snapshottedAt?: string;
+          };
+        };
+      };
+
+      expect(createCall.data.deliverySnapshot).toMatchObject({
+        addressId: "addr-1",
+        city: "Tzaneen",
+        lat: -23.8333,
+        lng: 30.1667,
+      });
+      expect(
+        Number.isNaN(
+          Date.parse(createCall.data.deliverySnapshot?.snapshottedAt ?? ""),
+        ),
+      ).toBe(false);
+    });
+
+    it("snapshots a pin-less legacy address without inventing coordinates", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue(buyerOk);
+      prisma.address.findFirst.mockResolvedValue({
+        id: "addr-legacy",
+        userId: "buyer-1",
+        label: "Old entry",
+        recipientName: "Thandi",
+        phone: null,
+        addressLine1: "1 Marula St",
+        addressLine2: null,
+        city: "Tzaneen",
+        province: null,
+        postalCode: null,
+        country: "South Africa",
+        isDefault: true,
+        lat: null,
+        lng: null,
+      });
+      prisma.cartItem.findMany.mockResolvedValue([cartItem()]);
+      prisma.order.create.mockResolvedValue({
+        id: "order-2",
+        orderNumber: "BON-2",
+        status: "PENDING",
+        subtotal: 36,
+        deliveryFee: 0,
+        total: 36,
+        items: [{ id: "oi-1" }],
+        deliverySnapshot: null,
+        deliveryAddress: { id: "addr-legacy" },
+      });
+      prisma.cartItem.deleteMany.mockResolvedValue({ count: 1 });
+
+      await service.checkout("buyer-1", { deliveryAddressId: "addr-legacy" });
+
+      const createCall = prisma.order.create.mock.calls[0][0] as {
+        data: { deliverySnapshot?: { lat?: number | null; lng?: number | null } };
+      };
+
+      expect(createCall.data.deliverySnapshot?.lat).toBeNull();
+      expect(createCall.data.deliverySnapshot?.lng).toBeNull();
+    });
+
     it("rejects a non-buyer and an inactive buyer", async () => {
       const { service, prisma } = makeService();
 

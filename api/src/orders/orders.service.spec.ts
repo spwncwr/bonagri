@@ -118,6 +118,83 @@ describe("OrdersService (CP0 foundations)", () => {
         },
       });
     });
+
+    it("freezes the selected address into the order's destination snapshot", async () => {
+      const tx = makeTx();
+      const { service } = makeService(tx);
+
+      tx.user.findUnique.mockResolvedValue({
+        id: "buyer-1",
+        role: "BUYER",
+        status: "ACTIVE",
+      });
+      tx.address.findFirst.mockResolvedValue({
+        id: "addr-1",
+        userId: "buyer-1",
+        label: "Home",
+        recipientName: "Thandi",
+        phone: "072 111 2222",
+        addressLine1: "1 Marula St",
+        addressLine2: null,
+        city: "Tzaneen",
+        province: "Limpopo",
+        postalCode: "0880",
+        country: "South Africa",
+        isDefault: true,
+        lat: -23.8333,
+        lng: 30.1667,
+      });
+      tx.product.findUnique.mockResolvedValue({
+        id: "prod-1",
+        name: "Fresh Tomatoes",
+        price: 18,
+        unit: "kg",
+        status: "ACTIVE",
+        inventory: { quantity: 10, reservedQuantity: 0 },
+      });
+      tx.order.create.mockResolvedValue({
+        id: "order-1",
+        orderNumber: "BON-1",
+        status: "PENDING",
+        subtotal: 36,
+        deliveryFee: 0,
+        total: 36,
+        items: [],
+        deliverySnapshot: null,
+        deliveryAddress: { id: "addr-1" },
+      });
+      tx.inventory.update.mockResolvedValue({});
+
+      await service.createOrder("buyer-1", {
+        deliveryAddressId: "addr-1",
+        productId: "prod-1",
+        quantity: 2,
+      } as never);
+
+      const createCall = tx.order.create.mock.calls[0][0] as {
+        data: {
+          deliverySnapshot?: {
+            addressId?: string;
+            city?: string;
+            lat?: number | null;
+            lng?: number | null;
+            snapshottedAt?: string;
+          };
+        };
+      };
+
+      expect(createCall.data.deliverySnapshot).toMatchObject({
+        addressId: "addr-1",
+        city: "Tzaneen",
+        lat: -23.8333,
+        lng: 30.1667,
+      });
+      expect(
+        Number.isNaN(
+          Date.parse(createCall.data.deliverySnapshot?.snapshottedAt ?? ""),
+        ),
+      ).toBe(false);
+    });
   });
 
   describe("updateOrderStatus", () => {

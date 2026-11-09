@@ -386,6 +386,135 @@ describe("CheckpointsService.createCheckpoint", () => {
       }),
     );
   });
+
+  it("geo-validates against the order's frozen destination, not a later address edit", async () => {
+    const { service, prisma } = makeService();
+
+    const base = deliveryFixture();
+    const frozenPin = { lat: -23.9, lng: 29.46 }; // Tzaneen, at order time
+    const editedPin = { lat: -26.2, lng: 28.04 }; // Joburg, edited afterwards
+
+    prisma.transporterProfile.findUnique.mockResolvedValue({ id: "tp-1" });
+    prisma.deliveryCheckpoint.findFirst.mockResolvedValue(null);
+    prisma.deliveryCheckpoint.create.mockResolvedValue({ id: "cp-1" });
+
+    const fixtureWithSnapshot = (deliveryAddress: {
+      id: string;
+      lat: number;
+      lng: number;
+    }) => ({
+      ...base,
+      order: {
+        ...base.order,
+        deliverySnapshot: {
+          addressId: "addr-1",
+          label: "Home",
+          recipientName: "Thandi",
+          phone: null,
+          addressLine1: "1 Marula St",
+          addressLine2: null,
+          city: "Tzaneen",
+          province: "Limpopo",
+          postalCode: null,
+          country: "South Africa",
+          lat: frozenPin.lat,
+          lng: frozenPin.lng,
+          snapshottedAt: "2026-10-01T00:00:00.000Z",
+        },
+        deliveryAddress,
+      },
+    });
+
+    // Evidence at the frozen destination → clean drop flag even though the
+    // saved address now points somewhere else entirely.
+    prisma.delivery.findUnique.mockResolvedValue(
+      fixtureWithSnapshot({ id: "addr-1", ...editedPin }),
+    );
+
+    await service.createCheckpoint("del-1", transporterActor, {
+      type: "DELIVERED",
+      lat: frozenPin.lat,
+      lng: frozenPin.lng,
+      accuracyM: 10,
+    });
+
+    const flagsAtFrozen = (
+      prisma.deliveryCheckpoint.create.mock.calls[0][0] as {
+        data: { flags: string[] };
+      }
+    ).data.flags;
+    expect(flagsAtFrozen).not.toContain("GEO_FAR_DROP");
+
+    // Evidence at the edited address → flagged, because the order's
+    // destination never moved.
+    prisma.delivery.findUnique.mockResolvedValue(
+      fixtureWithSnapshot({ id: "addr-1", ...editedPin }),
+    );
+
+    await service.createCheckpoint("del-1", transporterActor, {
+      type: "DELIVERED",
+      lat: editedPin.lat,
+      lng: editedPin.lng,
+      accuracyM: 10,
+    });
+
+    const flagsAtEdited = (
+      prisma.deliveryCheckpoint.create.mock.calls[1][0] as {
+        data: { flags: string[] };
+      }
+    ).data.flags;
+    expect(flagsAtEdited).toContain("GEO_FAR_DROP");
+  });
+
+  it("validates a later pin when the order was placed without one", async () => {
+    const { service, prisma } = makeService();
+
+    prisma.transporterProfile.findUnique.mockResolvedValue({ id: "tp-1" });
+    prisma.deliveryCheckpoint.findFirst.mockResolvedValue(null);
+    prisma.deliveryCheckpoint.create.mockResolvedValue({ id: "cp-1" });
+
+    // Order placed on a text-only address (no pin at checkout); the buyer
+    // confirms the pin afterwards — evidence from then on validates
+    // against it, while the order's served destination stays frozen.
+    prisma.delivery.findUnique.mockResolvedValue({
+      ...deliveryFixture(),
+      order: {
+        ...deliveryFixture().order,
+        deliverySnapshot: {
+          addressId: "addr-1",
+          label: "Home",
+          recipientName: "Thandi",
+          phone: null,
+          addressLine1: "1 Marula St",
+          addressLine2: null,
+          city: "Tzaneen",
+          province: "Limpopo",
+          postalCode: null,
+          country: "South Africa",
+          lat: null,
+          lng: null,
+          snapshottedAt: "2026-10-01T00:00:00.000Z",
+        },
+      },
+    });
+
+    await service.createCheckpoint("del-1", transporterActor, {
+      type: "DELIVERED",
+      lat: -23.9005,
+      lng: 29.4605,
+      accuracyM: 10,
+    });
+
+    const flags = (
+      prisma.deliveryCheckpoint.create.mock.calls[0][0] as {
+        data: { flags: string[] };
+      }
+    ).data.flags;
+
+    expect(flags).not.toContain("NO_REFERENCE_PIN");
+    expect(flags).not.toContain("GEO_FAR_DROP");
+    expect(flags).toContain("NO_PHOTO");
+  });
 });
 
 describe("CheckpointsService.listCheckpoints", () => {

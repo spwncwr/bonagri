@@ -239,5 +239,100 @@ describe("AddressesService (CP2 consumer flow)", () => {
         }),
       );
     });
+
+    it("stores the confirmed destination pin on create", async () => {
+      const { service, prisma, tx, primeActiveBuyer } = makeService();
+      primeActiveBuyer();
+      prisma.address.count.mockResolvedValue(1);
+      tx.address.create.mockResolvedValue({ id: "addr-2" });
+
+      await service.createBuyerAddress("buyer-1", {
+        label: "Farm",
+        recipientName: "Thandi",
+        addressLine1: "R101 Tzaneen",
+        city: "Tzaneen",
+        lat: -23.8333,
+        lng: 30.1667,
+      } as never);
+
+      expect(tx.address.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ lat: -23.8333, lng: 30.1667 }),
+        }),
+      );
+    });
+
+    it("stores an explicit no-pin create as null coordinates", async () => {
+      const { service, prisma, tx, primeActiveBuyer } = makeService();
+      primeActiveBuyer();
+      prisma.address.count.mockResolvedValue(1);
+      tx.address.create.mockResolvedValue({ id: "addr-2" });
+
+      await service.createBuyerAddress("buyer-1", {
+        label: "Farm",
+        recipientName: "Thandi",
+        addressLine1: "R101 Tzaneen",
+        city: "Tzaneen",
+      } as never);
+
+      expect(tx.address.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ lat: null, lng: null }),
+        }),
+      );
+    });
+
+    it("rejects a partial coordinate pair at the trusted boundary", async () => {
+      const { service, prisma, primeActiveBuyer } = makeService();
+      primeActiveBuyer();
+      prisma.address.count.mockResolvedValue(1);
+
+      await expect(
+        service.createBuyerAddress("buyer-1", {
+          label: "Farm",
+          recipientName: "Thandi",
+          addressLine1: "R101 Tzaneen",
+          city: "Tzaneen",
+          lat: -23.8333,
+        } as never),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("coordinate pairing (both order paths rely on it)", () => {
+    it("rejects an update that provides only one half of the pair", async () => {
+      const { service, prisma, primeActiveBuyer } = makeService();
+      primeActiveBuyer();
+      prisma.address.findFirst.mockResolvedValue({
+        id: "addr-1",
+        userId: "buyer-1",
+        isDefault: true,
+      });
+
+      await expect(
+        service.updateBuyerAddress("buyer-1", "addr-1", { lat: -23.9 }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("clears both halves together on an explicit null pair", async () => {
+      const { service, prisma, tx, primeActiveBuyer } = makeService();
+      primeActiveBuyer();
+      prisma.address.findFirst.mockResolvedValue({
+        id: "addr-1",
+        userId: "buyer-1",
+        isDefault: true,
+      });
+      tx.address.update.mockResolvedValue({ id: "addr-1" });
+
+      await service.updateBuyerAddress("buyer-1", "addr-1", {
+        lat: null,
+        lng: null,
+      });
+
+      expect(tx.address.update).toHaveBeenCalledWith({
+        where: { id: "addr-1" },
+        data: { lat: null, lng: null },
+      });
+    });
   });
 });

@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { effectiveAddressPin } from "../common/delivery-snapshot";
 import {
   CheckpointTypeValue,
   CreateCheckpointDto,
@@ -152,6 +153,7 @@ export class CheckpointsService {
           select: {
             id: true,
             userId: true,
+            deliverySnapshot: true,
             deliveryAddress: { select: { id: true, lat: true, lng: true } },
             items: {
               select: {
@@ -233,7 +235,11 @@ export class CheckpointsService {
       lng: dto.lng,
       accuracyM: dto.accuracyM,
       supplierPin: supplier,
-      addressPin: order.deliveryAddress,
+      // Destination pin for drop evidence: the frozen snapshot pin when
+      // the order carries one (a later address edit never re-points it);
+      // an order placed without a pin falls back to the address's current
+      // pin so the buyer's confirmation still validates this delivery.
+      addressPin: effectiveAddressPin(order),
       previous,
       clientAt,
       recordedAt,

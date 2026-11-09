@@ -6,6 +6,10 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  buildDeliverySnapshot,
+  materializeDeliveryAddress,
+} from "../common/delivery-snapshot";
 import { AddCartItemDto } from "./dto/add-cart-item.dto";
 import { UpdateCartItemDto } from "./dto/update-cart-item.dto";
 import { CheckoutDto } from "./dto/checkout.dto";
@@ -265,6 +269,9 @@ export class CartService {
             orderNumber: this.generateOrderNumber(),
             userId,
             deliveryAddressId: dto.deliveryAddressId,
+            // Immutable destination snapshot (see common/delivery-snapshot):
+            // later address edits never rewrite this order's destination.
+            deliverySnapshot: buildDeliverySnapshot(address),
             orderGroupId,
             status: "PENDING",
             subtotal,
@@ -318,7 +325,7 @@ export class CartService {
           total: order.total,
           supplierName: group[0].product.supplier.businessName,
           items: order.items,
-          deliveryAddress: order.deliveryAddress,
+          deliveryAddress: materializeDeliveryAddress(order),
         });
       }
 

@@ -6,6 +6,10 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  buildDeliverySnapshot,
+  materializeDeliveryAddress,
+} from "../common/delivery-snapshot";
 import { UserRole } from "../common/types";
 import { NotificationsService } from "../notifications/notifications.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
@@ -30,7 +34,7 @@ export class OrdersService {
   }
 
   private async getAllOrdersForAdmin() {
-    return this.prisma.order.findMany({
+    const orders = await this.prisma.order.findMany({
       include: {
         user: {
           select: {
@@ -62,6 +66,11 @@ export class OrdersService {
         createdAt: "desc",
       },
     });
+
+    return orders.map((order) => ({
+      ...order,
+      deliveryAddress: materializeDeliveryAddress(order),
+    }));
   }
 
   async getBuyerOrders(userId: string, role: UserRole) {
@@ -86,7 +95,7 @@ export class OrdersService {
       throw new BadRequestException("User is not a buyer");
     }
 
-    return this.prisma.order.findMany({
+    const orders = await this.prisma.order.findMany({
       where: { userId },
       include: {
         items: {
@@ -109,6 +118,11 @@ export class OrdersService {
         createdAt: "desc",
       },
     });
+
+    return orders.map((order) => ({
+      ...order,
+      deliveryAddress: materializeDeliveryAddress(order),
+    }));
   }
 
   async getSupplierOrders(userId: string, role: UserRole) {
@@ -130,7 +144,7 @@ export class OrdersService {
       throw new NotFoundException("Supplier profile not found");
     }
 
-    return this.prisma.order.findMany({
+    const orders = await this.prisma.order.findMany({
       where: {
         items: {
           some: {
@@ -171,6 +185,11 @@ export class OrdersService {
         createdAt: "desc",
       },
     });
+
+    return orders.map((order) => ({
+      ...order,
+      deliveryAddress: materializeDeliveryAddress(order),
+    }));
   }
 
   async getOrderDetail(orderId: string, actorUserId: string, actorRole: UserRole) {
@@ -214,6 +233,10 @@ export class OrdersService {
     if (!order) {
       throw new NotFoundException("Order not found");
     }
+
+    // Freeze the destination projection for every role branch below: the
+    // snapshot (not the live address row) is what each audience receives.
+    order.deliveryAddress = materializeDeliveryAddress(order);
 
     if (actorRole === "ADMIN") {
       return order;
@@ -316,6 +339,9 @@ export class OrdersService {
           orderNumber: this.generateOrderNumber(),
           userId,
           deliveryAddressId: dto.deliveryAddressId,
+          // Immutable destination snapshot (see common/delivery-snapshot):
+          // later address edits never rewrite this order's destination.
+          deliverySnapshot: buildDeliverySnapshot(address),
           status: "PENDING",
           subtotal,
           deliveryFee,
@@ -365,7 +391,7 @@ export class OrdersService {
         deliveryFee: order.deliveryFee,
         total: order.total,
         items: order.items,
-        deliveryAddress: order.deliveryAddress,
+        deliveryAddress: materializeDeliveryAddress(order),
       };
     });
   }
@@ -654,7 +680,10 @@ export class OrdersService {
         },
       });
 
-      return updated;
+      return {
+        ...updated,
+        deliveryAddress: materializeDeliveryAddress(updated),
+      };
     });
 
     // Notification rows + emails fire after the transaction commits
@@ -873,7 +902,7 @@ export class OrdersService {
           include: { transporter: { select: { businessName: true } } },
         },
         items: { select: { product: { select: { supplierId: true } } } },
-        deliveryAddress: { select: { province: true } },
+        deliveryAddress: true,
       },
     });
 
@@ -951,8 +980,9 @@ export class OrdersService {
 
     // Fan-out rows go to verified transporters covering the delivery
     // province (all verified transporters when the province is unknown —
-    // those jobs are board-visible to everyone).
-    const province = order.deliveryAddress.province;
+    // those jobs are board-visible to everyone). The province comes from
+    // the order's snapshot so address edits never re-region a live job.
+    const province = materializeDeliveryAddress(order).province;
     const transporters = await this.prisma.transporterProfile.findMany({
       where: {
         verified: true,

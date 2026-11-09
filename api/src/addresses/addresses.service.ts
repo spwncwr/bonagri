@@ -73,6 +73,17 @@ export class AddressesService {
   ) {
     await this.getActiveBuyer(userId);
 
+    // Destination pin is both-or-neither: a partial pair would silently
+    // behave as "no pin" downstream, so reject it at the trusted boundary.
+    const hasLat = dto.lat !== undefined && dto.lat !== null;
+    const hasLng = dto.lng !== undefined && dto.lng !== null;
+
+    if (hasLat !== hasLng) {
+      throw new BadRequestException(
+        "lat and lng must be provided together (or both omitted)",
+      );
+    }
+
     const existingCount = await this.prisma.address.count({
       where: { userId },
     });
@@ -106,6 +117,8 @@ export class AddressesService {
           postalCode: dto.postalCode?.trim(),
           country: dto.country?.trim() || "South Africa",
           isDefault: shouldBeDefault,
+          lat: hasLat ? dto.lat : null,
+          lng: hasLng ? dto.lng : null,
         },
       });
     });
@@ -127,6 +140,14 @@ export class AddressesService {
 
     if (!existing) {
       throw new NotFoundException("Address not found");
+    }
+
+    // Same both-or-neither rule as create: an explicit null clears the pin
+    // but must be paired (clearing one half would leave a partial pair).
+    if ((dto.lat !== undefined) !== (dto.lng !== undefined)) {
+      throw new BadRequestException(
+        "lat and lng must be provided together (or both omitted)",
+      );
     }
 
     return this.prisma.$transaction(async (tx) => {

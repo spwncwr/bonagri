@@ -1,9 +1,13 @@
 import {
   IsBoolean,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
 } from "class-validator";
+import { Type } from "class-transformer";
 
 export class CreateAddressDto {
   @IsString()
@@ -50,4 +54,21 @@ export class CreateAddressDto {
   @IsOptional()
   @IsBoolean()
   isDefault?: boolean;
+
+  // Optional delivery destination pin (same validators as the update DTO).
+  // Both halves must be sent together — the service rejects partial pairs.
+  // null is accepted and stored as "no pin".
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  lat?: number | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  lng?: number | null;
 }

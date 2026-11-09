@@ -4544,7 +4544,7 @@ echo "========================================"
 # PATCH /catalog/supplier/pin, delivery pin via PATCH /addresses/:id.
 
 echo
-echo "[N1/8] Supplier farm pin + delivery id..."
+echo "[N1/9] Supplier farm pin + delivery id..."
 
 N_PIN_HTTP="$(
   curl -sS -o "$LOG_DIR/n-supplier-pin.json" -w "%{http_code}" \
@@ -4577,7 +4577,7 @@ fi
 echo "✓ Farm pin stored; delivery $N_DELIVERY_ID in scope"
 
 echo
-echo "[N2/8] Endpoint guards + create-only surface..."
+echo "[N2/9] Endpoint guards + create-only surface..."
 
 N_ANON_HTTP="$(
   curl -sS -o /dev/null -w "%{http_code}" \
@@ -4646,7 +4646,7 @@ fi
 echo "✓ Guards hold (401/403/404) and no update/delete route exists"
 
 echo
-echo "[N3/8] Transporter pickup checkpoint next to the farm pin..."
+echo "[N3/9] Transporter pickup checkpoint next to the farm pin..."
 
 N_PICKUP_HTTP="$(
   curl -sS -o "$LOG_DIR/n-pickup.json" -w "%{http_code}" \
@@ -4678,7 +4678,7 @@ print("✓ Pickup checkpoint stored (flags: {})".format(", ".join(flags)))
 PYJSON
 
 echo
-echo "[N4/8] Geo flags: far pickup + impossible speed..."
+echo "[N4/9] Geo flags: far pickup + impossible speed..."
 
 N_FAR_HTTP="$(
   curl -sS -o "$LOG_DIR/n-far.json" -w "%{http_code}" \
@@ -4729,7 +4729,7 @@ print("✓ Impossible speed flagged ({})".format(", ".join(flags)))
 PYJSON
 
 echo
-echo "[N5/8] Clock skew + low accuracy..."
+echo "[N5/9] Clock skew + low accuracy..."
 
 N_SKEW_AT="$(date -u -v-30M +%Y-%m-%dT%H:%M:%SZ)"
 
@@ -4782,7 +4782,7 @@ print("✓ Low accuracy flagged ({})".format(", ".join(flags)))
 PYJSON
 
 echo
-echo "[N6/8] Delivery checkpoints vs the delivery address pin..."
+echo "[N6/9] Delivery checkpoints vs the delivery address pin..."
 
 N_NOPIN_HTTP="$(
   curl -sS -o "$LOG_DIR/n-nopin.json" -w "%{http_code}" \
@@ -4808,6 +4808,23 @@ if "NO_REFERENCE_PIN" not in flags:
 print("✓ Missing reference pin flagged ({})".format(", ".join(flags)))
 PYJSON
 
+# CP15a pin pairing: a lone coordinate must be rejected before the
+# complete pair is accepted.
+N_PARTIAL_PIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-addr-pin-partial.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/addresses/$ADDRESS_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"lat":-23.9}'
+)"
+
+if [[ "$N_PARTIAL_PIN_HTTP" != "400" ]]; then
+  cat "$LOG_DIR/n-addr-pin-partial.json"
+  fail "Partial coordinate pair must be rejected with 400. HTTP $N_PARTIAL_PIN_HTTP"
+fi
+
+echo "✓ Partial lat/lng pair rejected (400)"
+
 N_ADDR_PIN_HTTP="$(
   curl -sS -o "$LOG_DIR/n-addr-pin.json" -w "%{http_code}" \
     -X PATCH "$API_URL$API_PREFIX/addresses/$ADDRESS_ID" \
@@ -4819,6 +4836,12 @@ N_ADDR_PIN_HTTP="$(
 if [[ "$N_ADDR_PIN_HTTP" != "200" ]]; then
   cat "$LOG_DIR/n-addr-pin.json"
   fail "Address pin update failed. HTTP $N_ADDR_PIN_HTTP"
+fi
+
+if ! grep -q '"lat"[[:space:]]*:[[:space:]]*-23.9' "$LOG_DIR/n-addr-pin.json" || \
+   ! grep -q '"lng"[[:space:]]*:[[:space:]]*29.46' "$LOG_DIR/n-addr-pin.json"; then
+  cat "$LOG_DIR/n-addr-pin.json"
+  fail "Address pin response did not carry both stored coordinates."
 fi
 
 N_NEAR_DROP_HTTP="$(
@@ -4868,7 +4891,7 @@ print("✓ Buyer reads the full {}-row ledger (ordered, no actor ids)".format(le
 PYJSON
 
 echo
-echo "[N7/8] Checkpoints never drive the state machine..."
+echo "[N7/9] Checkpoints never drive the state machine..."
 
 N_SELF_ORDER_HTTP="$(
   curl -sS -o "$LOG_DIR/n-self-order.json" -w "%{http_code}" \
@@ -4926,7 +4949,82 @@ if [[ -z "$N_SELF_DELIVERY_ID" ]]; then
 fi
 
 echo
-echo "[N8/8] Supplier self-delivery evidence + state-machine isolation..."
+echo "[N8/9] Order destination snapshot survives address edits..."
+
+curl -sS -o "$LOG_DIR/n-snap-before.json" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "$API_URL$API_PREFIX/orders/$N_SELF_ORDER_ID"
+
+N_SNAP_BEFORE="$(
+  python3 - "$LOG_DIR/n-snap-before.json" <<'PYJSON'
+import json, sys
+
+order = json.load(open(sys.argv[1], encoding="utf-8"))
+address = order.get("deliveryAddress") or {}
+
+if address.get("city") != "Giyani":
+    raise SystemExit("ERROR: order must carry the pinned address text, got: {}".format(address.get("city")))
+if address.get("lat") != -23.9 or address.get("lng") != 29.46:
+    raise SystemExit("ERROR: order must carry the pinned coordinates, got: {}, {}".format(address.get("lat"), address.get("lng")))
+
+print("{}|{}|{}".format(address["city"], address["lat"], address["lng"]))
+PYJSON
+)"
+
+if [[ -z "$N_SNAP_BEFORE" ]]; then
+  fail "Could not read the order's destination snapshot before mutation."
+fi
+
+N_SNAP_EDIT_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-snap-edit.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/addresses/$ADDRESS_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"city":"Snapshot Edit City","lat":-24.55,"lng":29.55}'
+)"
+
+if [[ "$N_SNAP_EDIT_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/n-snap-edit.json"
+  fail "Address mutation for snapshot check failed. HTTP $N_SNAP_EDIT_HTTP"
+fi
+
+curl -sS -o "$LOG_DIR/n-snap-after.json" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "$API_URL$API_PREFIX/orders/$N_SELF_ORDER_ID"
+
+N_SNAP_AFTER="$(
+  python3 - "$LOG_DIR/n-snap-after.json" <<'PYJSON'
+import json, sys
+
+order = json.load(open(sys.argv[1], encoding="utf-8"))
+address = order.get("deliveryAddress") or {}
+
+print("{}|{}|{}".format(address.get("city"), address.get("lat"), address.get("lng")))
+PYJSON
+)"
+
+if [[ "$N_SNAP_AFTER" != "$N_SNAP_BEFORE" ]]; then
+  cat "$LOG_DIR/n-snap-after.json"
+  fail "Order destination snapshot changed after the address edit (before: $N_SNAP_BEFORE, after: $N_SNAP_AFTER)."
+fi
+
+N_SNAP_RESTORE_HTTP="$(
+  curl -sS -o "$LOG_DIR/n-snap-restore.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/addresses/$ADDRESS_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"city":"Giyani","lat":-23.9,"lng":29.46}'
+)"
+
+if [[ "$N_SNAP_RESTORE_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/n-snap-restore.json"
+  fail "Address restore after snapshot check failed. HTTP $N_SNAP_RESTORE_HTTP"
+fi
+
+echo "✓ Order snapshot immutable across address edit + restore ($N_SNAP_BEFORE)"
+
+echo
+echo "[N9/9] Supplier self-delivery evidence + state-machine isolation..."
 
 N_SELF_CP_HTTP="$(
   curl -sS -o "$LOG_DIR/n-self-cp.json" -w "%{http_code}" \

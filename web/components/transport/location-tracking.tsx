@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders } from "../../lib/auth";
 import { ArrowLeftIcon, CallIcon, TruckIcon } from "../mobile/icons";
-import LiveMap, { type MapPoint } from "./live-map";
+import LiveMap, { type MapPoint, type RouteStats } from "./live-map";
 import { resolvePoint } from "../../lib/geo";
 import type { Delivery } from "../../lib/transport";
 
@@ -15,6 +15,18 @@ function distanceMeters(a: MapPoint, b: MapPoint): number {
   const x = (b.lng - a.lng) * 111_320 * Math.cos(lat);
   const y = (b.lat - a.lat) * 110_574;
   return Math.hypot(x, y);
+}
+
+// Routing-service numbers only — this never invents a figure from geometry.
+function formatRouteStats(stats: RouteStats): string {
+  const km = stats.distanceMeters / 1000;
+  const minutes = Math.max(1, Math.round(stats.durationSeconds / 60));
+  const kmLabel = km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
+  const timeLabel =
+    minutes >= 60
+      ? `${Math.floor(minutes / 60)} h ${minutes % 60} min`
+      : `${minutes} min`;
+  return `${kmLabel} · ${timeLabel}`;
 }
 
 function formatDate(value: string | null | undefined): string {
@@ -171,7 +183,47 @@ export default function LocationTracking({
   const [checkpointTrail, setCheckpointTrail] = useState<MapPoint[]>([]);
   const [focusKey, setFocusKey] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  // The detail sheet rolls out of the way on a map tap so the route owns the
+  // whole screen; the handle line (tap target) brings it back.
+  const [sheetCollapsed, setSheetCollapsed] = useState(false);
+  const mapLayerRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLElement>(null);
+
+  // Always roll the sheet down from the top, so the collapsed strip shows the
+  // handle line (never whatever the transporter scrolled to).
+  useEffect(() => {
+    if (sheetCollapsed && sheetRef.current) sheetRef.current.scrollTop = 0;
+  }, [sheetCollapsed]);
+
+  // Leaflet runs disableClickPropagation on its container, so a map tap never
+  // bubbles up to React — listen on the way down (capture phase) instead,
+  // which runs before the map's own stopPropagation.
+  useEffect(() => {
+    const layer = mapLayerRef.current;
+    if (!layer) return;
+    const collapse = () => setSheetCollapsed(true);
+    layer.addEventListener("click", collapse, true);
+    return () => layer.removeEventListener("click", collapse, true);
+  }, []);
+  // undefined = still waiting for the routing service, null = it answered
+  // "no route" (failure / nothing to route). LiveMap keeps both honest.
+  const [routeStats, setRouteStats] = useState<RouteStats | null | undefined>(
+    undefined,
+  );
   const lastTrailPoint = useRef<MapPoint | null>(null);
+
+  // Keyless hand-off to the device's own navigation app: the buyer's
+  // confirmed pin when the address has one, the readable address otherwise.
+  const destinationParam =
+    address.lat != null && address.lng != null
+      ? `${address.lat},${address.lng}`
+      : [address.addressLine1, address.city, address.province]
+          .filter(Boolean)
+          .join(", ");
+  const directionsHref =
+    destinationParam.length > 0
+      ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destinationParam)}`
+      : null;
 
   // Lock the page behind the overlay while tracking is open.
   useEffect(() => {
@@ -267,20 +319,23 @@ export default function LocationTracking({
 
   return (
     <div className="fixed inset-0 z-[70] isolate bg-[#e7ebe5]">
-      <div className="absolute inset-0 z-0">
+      <div ref={mapLayerRef} className="absolute inset-0 z-0">
         <LiveMap
           pickup={pickup.point}
           dropoff={dropoff.point}
           courier={courier}
           trail={trail}
           focusKey={focusKey}
+          onRouteStats={setRouteStats}
         />
       </div>
       <a
         href="https://www.openstreetmap.org/copyright"
         target="_blank"
         rel="noreferrer"
-        className="absolute bottom-[calc(62vh+8px)] left-3 z-20 rounded bg-white/80 px-2 py-0.5 text-[9px] font-semibold text-[#4b5563] shadow-sm backdrop-blur"
+        className={`absolute left-3 z-20 rounded bg-white/80 px-2 py-0.5 text-[9px] font-semibold text-[#4b5563] shadow-sm backdrop-blur ${
+          sheetCollapsed ? "bottom-[36px]" : "bottom-[calc(62vh_+_8px)]"
+        }`}
       >
         © OpenStreetMap contributors
       </a>
@@ -346,10 +401,33 @@ export default function LocationTracking({
         </div>
       </div>
 
-      {/* Detail sheet */}
-      <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center">
-        <section className="max-h-[62vh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-[#171b18] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 text-white shadow-[0_-18px_50px_rgba(0,0,0,0.35)]">
-          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/25" />
+      {/* Detail sheet — rolls down on a map tap, the handle line pulls it back */}
+      <div
+        id="tracking-detail-sheet"
+        className={`absolute inset-x-0 bottom-0 z-20 flex justify-center transition-transform duration-300 ease-out motion-reduce:transition-none ${
+          sheetCollapsed
+            ? "pointer-events-none translate-y-[calc(100%_-_1.75rem)]"
+            : "translate-y-0"
+        }`}
+      >
+        <section
+          ref={sheetRef}
+          className="max-h-[62vh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-[#171b18] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 text-white shadow-[0_-18px_50px_rgba(0,0,0,0.35)]"
+        >
+          <button
+            type="button"
+            onClick={() => setSheetCollapsed((collapsed) => !collapsed)}
+            aria-expanded={!sheetCollapsed}
+            aria-controls="tracking-detail-sheet"
+            aria-label={
+              sheetCollapsed
+                ? "Show delivery progress"
+                : "Hide delivery progress"
+            }
+            className="-mx-5 -mt-3 flex w-[calc(100%_+_2.5rem)] items-center justify-center pb-3 pt-3 pointer-events-auto"
+          >
+            <span className="h-1 w-10 rounded-full bg-white/25" />
+          </button>
 
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -425,6 +503,30 @@ export default function LocationTracking({
               </dd>
             </div>
           </dl>
+
+          {/* Distance/ETA — present only when the routing service answered;
+              pending and failure degrade to words, never fake numbers. */}
+          <div className="mt-3 rounded-xl bg-white/[0.06] px-3 py-2.5 text-xs">
+            <div className="font-semibold text-white/45">Remaining route</div>
+            <div className="mt-0.5 font-bold">
+              {routeStats
+                ? formatRouteStats(routeStats)
+                : routeStats === undefined
+                  ? "Calculating route…"
+                  : "Route unavailable right now — the destination is still marked on the map."}
+            </div>
+          </div>
+
+          {directionsHref ? (
+            <a
+              href={directionsHref}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2.5 text-xs font-black text-white transition hover:bg-white/10"
+            >
+              Open in Maps
+            </a>
+          ) : null}
 
           {delivery.status === "FAILED" && delivery.failedReason && (
             <div className="mt-4 rounded-xl bg-red-500/15 px-3 py-2 text-xs font-bold text-red-300">

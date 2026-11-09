@@ -6,6 +6,13 @@ import type { LayerGroup, Map as LeafletMap, Marker, Polyline } from "leaflet";
 
 export type MapPoint = { lat: number; lng: number };
 
+// Distance/ETA handed to the UI *only* when the routing service answered —
+// null means "no route data", never a straight-line estimate.
+export type RouteStats = {
+  distanceMeters: number;
+  durationSeconds: number;
+};
+
 type Props = {
   pickup: MapPoint | null;
   dropoff: MapPoint | null;
@@ -18,6 +25,9 @@ type Props = {
   // overlay's original framing.
   topInsetPx?: number;
   bottomInsetRatio?: number;
+  // Fires with OSRM's numbers after each successful route, or null when the
+  // routing service failed / there is nothing to route.
+  onRouteStats?: (stats: RouteStats | null) => void;
 };
 
 // Keyless OSM tiles (CARTO's CDN now requires an API key). The tile pane is
@@ -27,12 +37,25 @@ const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
+// Re-request the route only after the courier (or, before pickup, the route
+// origin) has moved meaningfully — GPS ticks are ~1/s.
+const REROUTE_AFTER_M = 100;
+// Minimum spacing between retries when the routing service itself failed.
+const ROUTE_RETRY_MS = 15_000;
+
 function toLatLng(point: MapPoint): [number, number] {
   return [point.lat, point.lng];
 }
 
 function boundsOf(points: MapPoint[]): [number, number][] {
   return points.map(toLatLng);
+}
+
+function distanceMeters(a: MapPoint, b: MapPoint): number {
+  const lat = ((a.lat + b.lat) / 2) * (Math.PI / 180);
+  const x = (b.lng - a.lng) * 111_320 * Math.cos(lat);
+  const y = (b.lat - a.lat) * 110_574;
+  return Math.hypot(x, y);
 }
 
 // The detail sheet covers the lower part of the screen, so fit the route
@@ -102,6 +125,7 @@ export default function LiveMap({
   focusKey = 0,
   topInsetPx = 96,
   bottomInsetRatio = 0.63,
+  onRouteStats,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -110,6 +134,19 @@ export default function LiveMap({
   const routeRef = useRef<Polyline | null>(null);
   const trailRef = useRef<Polyline | null>(null);
   const courierRef = useRef<Marker | null>(null);
+  const onRouteStatsRef = useRef(onRouteStats);
+
+  useEffect(() => {
+    onRouteStatsRef.current = onRouteStats;
+  }, [onRouteStats]);
+
+  // Last origin the routing service was asked about — the throttle gate for
+  // re-routing as the courier moves (plus a slow retry after a failure).
+  const routedFromRef = useRef<{
+    start: MapPoint;
+    key: string;
+    failedAt?: number;
+  } | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -150,7 +187,8 @@ export default function LiveMap({
     };
   }, []);
 
-  // Pickup + drop pins and the driving route.
+  // Pickup + destination pins and the camera fit. The route line itself is
+  // owned by the routing effect below so it can follow the courier.
   useEffect(() => {
     const L = leafletRef.current;
     const map = mapRef.current;
@@ -158,8 +196,6 @@ export default function LiveMap({
     if (!ready || !L || !map || !points) return;
 
     points.clearLayers();
-    routeRef.current?.remove();
-    routeRef.current = null;
 
     const pickupPoint = pickup;
     const dropoffPoint = dropoff;
@@ -180,26 +216,59 @@ export default function LiveMap({
       }).addTo(points);
     }
 
-    if (pickupPoint && dropoffPoint) {
-      const straight = L.polyline(
-        boundsOf([pickupPoint, dropoffPoint]),
-        {
-          color: "#27302a",
-          weight: 5,
-          opacity: 0.85,
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      ).addTo(map);
-      routeRef.current = straight;
-    }
-
     const targets = [pickupPoint, dropoffPoint, courier].filter(
       (point): point is MapPoint => point !== null,
     );
     fitToPoints(map, targets, false, topInsetPx, bottomInsetRatio);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- courier only seeds the initial fit
+  }, [ready, pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng]);
 
-    if (!pickupPoint || !dropoffPoint) return;
+  // Route: from the courier's own position once tracking (else the pickup)
+  // to the destination pin. Straight line first so the map is never empty;
+  // real road geometry replaces it when the public OSRM demo answers, which
+  // is also the only source of distance/ETA numbers.
+  useEffect(() => {
+    const L = leafletRef.current;
+    const map = mapRef.current;
+    if (!ready || !L || !map) return;
+
+    const start = courier ?? pickup;
+    const key = dropoff ? `${dropoff.lat},${dropoff.lng}` : "";
+
+    if (!start || !dropoff) {
+      routeRef.current?.remove();
+      routeRef.current = null;
+      routedFromRef.current = null;
+      onRouteStatsRef.current?.(null);
+      return;
+    }
+
+    // Throttle: same destination and the origin hasn't moved far enough.
+    // A failed route retries on the next tick after ROUTE_RETRY_MS instead
+    // of hammering the service every second.
+    const previous = routedFromRef.current;
+    const retryDue =
+      previous?.failedAt != null &&
+      Date.now() - previous.failedAt >= ROUTE_RETRY_MS;
+    if (
+      previous &&
+      previous.key === key &&
+      distanceMeters(previous.start, start) < REROUTE_AFTER_M &&
+      !retryDue
+    ) {
+      return;
+    }
+
+    routedFromRef.current = { start, key };
+
+    routeRef.current?.remove();
+    routeRef.current = L.polyline(boundsOf([start, dropoff]), {
+      color: "#27302a",
+      weight: 5,
+      opacity: 0.85,
+      lineCap: "round",
+      lineJoin: "round",
+    }).addTo(map);
 
     // Real road geometry when the public OSRM demo responds; the straight
     // line above stays as the fallback when it does not.
@@ -207,18 +276,25 @@ export default function LiveMap({
     const timer = window.setTimeout(() => controller.abort(), 5000);
     const url =
       "https://router.project-osrm.org/route/v1/driving/" +
-      `${pickupPoint.lng},${pickupPoint.lat};${dropoffPoint.lng},${dropoffPoint.lat}` +
+      `${start.lng},${start.lat};${dropoff.lng},${dropoff.lat}` +
       "?overview=full&geometries=geojson";
 
     void (async () => {
       try {
         const response = await fetch(url, { signal: controller.signal });
-        if (!response.ok) return;
+        if (!response.ok) throw new Error(`osrm ${response.status}`);
         const body = (await response.json()) as {
-          routes?: { geometry?: { coordinates?: [number, number][] } }[];
+          routes?: {
+            geometry?: { coordinates?: [number, number][] };
+            distance?: number;
+            duration?: number;
+          }[];
         };
-        const coordinates = body.routes?.[0]?.geometry?.coordinates;
-        if (!coordinates || coordinates.length < 2) return;
+        const route = body.routes?.[0];
+        const coordinates = route?.geometry?.coordinates;
+        if (!coordinates || coordinates.length < 2) {
+          throw new Error("empty route");
+        }
 
         const path = coordinates.map(
           ([lng, lat]) => [lat, lng] as [number, number],
@@ -232,8 +308,25 @@ export default function LiveMap({
           lineJoin: "round",
         }).addTo(map);
         routeRef.current.bringToBack();
+
+        if (
+          typeof route?.distance === "number" &&
+          typeof route?.duration === "number"
+        ) {
+          onRouteStatsRef.current?.({
+            distanceMeters: route.distance,
+            durationSeconds: route.duration,
+          });
+        } else {
+          onRouteStatsRef.current?.(null);
+        }
       } catch {
-        // Offline or rate-limited: the straight route remains.
+        // Offline or rate-limited: the straight route remains and the UI
+        // gets no numbers (never a fabricated estimate).
+        if (routedFromRef.current?.key === key) {
+          routedFromRef.current = { ...routedFromRef.current, failedAt: Date.now() };
+        }
+        onRouteStatsRef.current?.(null);
       } finally {
         window.clearTimeout(timer);
       }
@@ -243,8 +336,16 @@ export default function LiveMap({
       controller.abort();
       window.clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- courier only seeds the initial fit
-  }, [ready, pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run is governed by the throttle above
+  }, [
+    ready,
+    pickup?.lat,
+    pickup?.lng,
+    dropoff?.lat,
+    dropoff?.lng,
+    courier?.lat,
+    courier?.lng,
+  ]);
 
   // Breadcrumb of positions already travelled (server checkpoints + live GPS).
   useEffect(() => {

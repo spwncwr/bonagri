@@ -313,6 +313,59 @@ async function main(): Promise<void> {
   });
 
   // ---------------------------------------------------------------------------
+  // Development transporter account (CP14) — the delivery board test account
+  // ---------------------------------------------------------------------------
+
+  const transporterUser = await prisma.user.upsert({
+    where: { email: "driver@bonagri.co.za" },
+    update: {
+      passwordHash: devPasswordHash,
+      firstName: "BonAgri",
+      lastName: "Driver",
+      phone: "+27000000004",
+      role: "TRANSPORTER",
+      status: "ACTIVE",
+      // Seeded accounts are pre-verified so they can sign in immediately.
+      emailVerifiedAt: new Date(),
+    },
+    create: {
+      email: "driver@bonagri.co.za",
+      passwordHash: devPasswordHash,
+      firstName: "BonAgri",
+      lastName: "Driver",
+      phone: "+27000000004",
+      role: "TRANSPORTER",
+      status: "ACTIVE",
+      emailVerifiedAt: new Date(),
+    },
+  });
+
+  await prisma.transporterProfile.upsert({
+    where: { userId: transporterUser.id },
+    update: {
+      businessName: "BonAgri Haulage",
+      vehicleType: "Bakkie",
+      phone: "+27000000004",
+      email: "driver@bonagri.co.za",
+      city: "Tzaneen",
+      province: "Limpopo",
+      serviceProvinces: ["Limpopo", "Gauteng"],
+      verified: true,
+    },
+    create: {
+      userId: transporterUser.id,
+      businessName: "BonAgri Haulage",
+      vehicleType: "Bakkie",
+      phone: "+27000000004",
+      email: "driver@bonagri.co.za",
+      city: "Tzaneen",
+      province: "Limpopo",
+      serviceProvinces: ["Limpopo", "Gauteng"],
+      verified: true,
+    },
+  });
+
+  // ---------------------------------------------------------------------------
   // Development products and inventory
   // ---------------------------------------------------------------------------
 
@@ -609,6 +662,9 @@ async function main(): Promise<void> {
   );
   console.log(
     "Agro dealer: dealer@bonagri.co.za (AGRO_DEALER, Limpopo Agro Equipment).",
+  );
+  console.log(
+    "Transporter: driver@bonagri.co.za (verified board account, Limpopo + Gauteng).",
   );
 }
 

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
+import { dirname } from "node:path";
 import * as nodemailer from "nodemailer";
 
 @Injectable()
@@ -108,6 +109,78 @@ export class MailService {
       });
     } catch (error) {
       console.error("BonAgri SMTP delivery error:", error);
+      throw error;
+    }
+  }
+
+  // CP17: buyer phone verification. There is no SMS provider in this stack —
+  // the code travels over the already-verified account email (the trusted
+  // channel we have). 6 digits, 10 minute expiry; the caller stores only the
+  // hash. Same E2E capture convention as the other transactional mails.
+  async sendPhoneOtpEmail(
+    email: string,
+    firstName: string,
+    code: string,
+    phone: string,
+  ) {
+    if (
+      process.env.E2E_CAPTURE_MAIL === "true" &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      const captureFile =
+        process.env.E2E_OTP_CAPTURE_FILE ?? ".e2e/phone-otp.txt";
+
+      const { mkdir, writeFile } = await import("node:fs/promises");
+
+      await mkdir(dirname(captureFile), { recursive: true });
+      await writeFile(captureFile, code, "utf8");
+
+      // Capture mode short-circuits: E2E runs must never hit real SMTP.
+      return;
+    }
+
+    if (!this.transporter) {
+      throw new ServiceUnavailableException(
+        "Email delivery is not configured",
+      );
+    }
+
+    const from =
+      process.env.SMTP_FROM ??
+      process.env.SMTP_USER;
+
+    try {
+      await this.transporter.sendMail({
+        from,
+        to: email,
+        subject: "Your BonAgri phone verification code",
+        text: [
+          `Hello ${firstName},`,
+          "",
+          `Your BonAgri verification code for ${phone} is:`,
+          "",
+          code,
+          "",
+          "It expires in 10 minutes. If you did not request this code,",
+          "you can ignore this email — your number stays unverified.",
+          "",
+          "BonAgri",
+          "Agricultural trade, connected.",
+        ].join("\n"),
+        html: `
+          <div style="font-family:Arial,sans-serif;line-height:1.6;max-width:600px;margin:auto">
+            <h2>Phone verification code</h2>
+            <p>Hello ${firstName},</p>
+            <p>Your verification code for <strong>${phone}</strong> is:</p>
+            <p style="font-size:32px;letter-spacing:8px;font-weight:bold">${code}</p>
+            <p>It expires in 10 minutes.</p>
+            <p>If you did not request this code, ignore this email — your number stays unverified.</p>
+            <p>BonAgri<br />Agricultural trade, connected.</p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.error("BonAgri OTP SMTP delivery error:", error);
       throw error;
     }
   }

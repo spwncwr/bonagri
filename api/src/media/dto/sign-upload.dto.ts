@@ -10,7 +10,11 @@ export type UploadKind =
   | "promotion"
   // Account settings: every role uploads exactly one kind of personal image,
   // the display picture on their settings screen.
-  | "avatar";
+  | "avatar"
+  // CP17: business verification evidence. Signed as a Cloudinary *private*
+  // asset into bonagri/verification/ — no public URL is ever issued; the API
+  // serves it to the owner or an admin through a signed delivery URL.
+  | "verification_document";
 
 export class SignUploadDto {
   @IsIn([
@@ -20,6 +24,7 @@ export class SignUploadDto {
     "banner",
     "promotion",
     "avatar",
+    "verification_document",
   ])
   kind!: UploadKind;
 }

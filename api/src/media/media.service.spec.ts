@@ -31,7 +31,7 @@ describe("MediaService (CP16a media foundation)", () => {
       setEnv({});
       const service = new MediaService();
 
-      expect(() => service.signUpload("product")).toThrow(
+      expect(() => service.signUpload("product", "SUPPLIER")).toThrow(
         ServiceUnavailableException,
       );
     });
@@ -44,7 +44,7 @@ describe("MediaService (CP16a media foundation)", () => {
       });
       const service = new MediaService();
 
-      const result = service.signUpload("product");
+      const result = service.signUpload("product", "SUPPLIER");
 
       expect(result.cloudName).toBe("bonagri-test");
       expect(result.apiKey).toBe("key123");
@@ -65,9 +65,121 @@ describe("MediaService (CP16a media foundation)", () => {
       });
       const service = new MediaService();
 
-      expect(service.signUpload("supplier_logo").publicId).toMatch(
+      expect(service.signUpload("supplier_logo", "SUPPLIER").publicId).toMatch(
         /^bonagri\/supplier_logo\//,
       );
+    });
+
+    // CP17: the endpoint used to sign ANY kind for ANY role. Each kind now
+    // has an explicit role allow-list.
+    it("rejects kinds the caller's role may not upload", () => {
+      setEnv({
+        CLOUDINARY_CLOUD_NAME: "bonagri-test",
+        CLOUDINARY_API_KEY: "key123",
+        CLOUDINARY_API_SECRET: "secret123",
+      });
+      const service = new MediaService();
+
+      expect(() => service.signUpload("product", "BUYER")).toThrow(
+        "cannot upload",
+      );
+      expect(() => service.signUpload("banner", "SUPPLIER")).toThrow(
+        "cannot upload",
+      );
+      expect(() => service.signUpload("category", "AGRO_DEALER")).toThrow(
+        "cannot upload",
+      );
+      expect(() =>
+        service.signUpload("verification_document", "BUYER"),
+      ).toThrow("cannot upload");
+      // The avatar kind stays open to every signed-in role.
+      expect(service.signUpload("avatar", "BUYER").publicId).toMatch(
+        /^bonagri\/avatar\//,
+      );
+    });
+
+    // CP17: verification evidence is signed as a private asset in its own
+    // folder — never a public product-image path.
+    it("signs verification documents as private bonagri/verification assets", () => {
+      setEnv({
+        CLOUDINARY_CLOUD_NAME: "bonagri-test",
+        CLOUDINARY_API_KEY: "key123",
+        CLOUDINARY_API_SECRET: "secret123",
+      });
+      const service = new MediaService();
+      const signSpy = jest.spyOn(cloudinary.utils, "api_sign_request");
+
+      const result = service.signUpload("verification_document", "SUPPLIER");
+
+      expect(result.publicId).toMatch(/^bonagri\/verification\/[0-9a-f-]{36}$/);
+      expect(result.type).toBe("private");
+      expect(result.signature.length).toBeGreaterThan(0);
+
+      // The signed payload must include type=private, so the asset is stored
+      // private server-side, not merely delivered behind a signature.
+      expect(signSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "private" }),
+        "secret123",
+      );
+
+      // Dealers may upload too; the generic kinds send no type field.
+      expect(
+        service.signUpload("verification_document", "AGRO_DEALER").type,
+      ).toBe("private");
+      expect(
+        service.signUpload("product", "SUPPLIER").type,
+      ).toBeUndefined();
+    });
+  });
+
+  describe("signDeliveryUrl", () => {
+    const service = new MediaService();
+
+    it("refuses publicIds outside the verification folder", () => {
+      expect(() => service.signDeliveryUrl("bonagri/product/abc")).toThrow(
+        "Invalid document reference",
+      );
+    });
+
+    it("answers 503 when Cloudinary is not configured", () => {
+      setEnv({});
+      expect(() =>
+        service.signDeliveryUrl("bonagri/verification/abc"),
+      ).toThrow(ServiceUnavailableException);
+    });
+
+    it("issues a signed private URL", () => {
+      setEnv({
+        CLOUDINARY_CLOUD_NAME: "bonagri-test",
+        CLOUDINARY_API_KEY: "key123",
+        CLOUDINARY_API_SECRET: "secret123",
+      });
+
+      const result = service.signDeliveryUrl("bonagri/verification/doc-1");
+
+      expect(result.url).toContain("res.cloudinary.com/bonagri-test/image/");
+      expect(result.url).toContain("bonagri/verification/doc-1");
+      expect(result.expiresInSeconds).toBeNull();
+    });
+
+    it("adds an expiring auth token when a token secret is configured", () => {
+      setEnv({
+        CLOUDINARY_CLOUD_NAME: "bonagri-test",
+        CLOUDINARY_API_KEY: "key123",
+        CLOUDINARY_API_SECRET: "secret123",
+      });
+      process.env.CLOUDINARY_AUTH_TOKEN_SECRET =
+        "a1b2c3d4e5f60718293a4b5c6d7e8f90";
+
+      try {
+        const result = service.signDeliveryUrl("bonagri/verification/doc-1");
+
+        expect(result.url).toContain("__cld_token__=");
+        expect(result.url).toContain("exp=");
+        expect(result.expiresInSeconds).toBe(300);
+      } finally {
+        delete process.env.CLOUDINARY_AUTH_TOKEN_SECRET;
+      }
     });
   });
 

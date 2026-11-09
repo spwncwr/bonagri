@@ -8,6 +8,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
 import { MediaService } from "../media/media.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { VerificationService } from "../verification/verification.service";
 import { ListUsersQueryDto } from "./dto/list-users-query.dto";
 import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
 import { PromoteSupplierDto } from "./dto/promote-supplier.dto";
@@ -53,6 +54,7 @@ export class AdminService {
     private readonly notificationsService: NotificationsService,
     private readonly mediaService: MediaService,
     private readonly mailService: MailService,
+    private readonly verificationService: VerificationService,
   ) {}
 
   async getUsers(query: ListUsersQueryDto) {
@@ -213,6 +215,7 @@ export class AdminService {
   async setSupplierVerified(
     supplierId: string,
     dto: UpdateSupplierVerifyDto,
+    adminUserId: string,
   ) {
     const profile = await this.prisma.supplierProfile.findUnique({
       where: { id: supplierId },
@@ -238,6 +241,19 @@ export class AdminService {
         },
       },
     });
+
+    // CP17: this legacy toggle is no longer the badge's only writer — the
+    // centralised summary (User.businessStatus + latest application) is
+    // synced through the verification service so the two can never disagree.
+    try {
+      await this.verificationService.syncLegacyBadge(
+        profile.user.id,
+        dto.verified,
+        adminUserId,
+      );
+    } catch (error) {
+      console.error("BonAgri verification summary sync failed:", error);
+    }
 
     // Verification is granted only here (CP6): tell the vendor.
     if (dto.verified) {

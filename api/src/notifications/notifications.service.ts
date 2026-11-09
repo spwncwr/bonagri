@@ -157,6 +157,80 @@ export class NotificationsService {
     );
   }
 
+  // CP17: verification lifecycle — submitted, corrections requested, decision,
+  // suspension, and the buyer phone OTP success. Same deliver() channel as
+  // every other notification (DB row + best-effort email).
+  async onPhoneVerified(recipient: Recipient) {
+    await this.deliver(
+      recipient,
+      "Your phone number is verified",
+      "Your BonAgri phone number is confirmed. You can now place orders on the marketplace.",
+    );
+  }
+
+  async onVerificationSubmitted(
+    recipient: Recipient,
+    businessName: string,
+    resubmitted = false,
+  ) {
+    await this.deliver(
+      recipient,
+      resubmitted
+        ? "Your corrected verification application was received"
+        : "Your business verification was submitted",
+      resubmitted
+        ? `Thanks — your updated ${businessName} documents are in the review queue. The BonAgri team will be in touch if anything else is needed.`
+        : `We received the ${businessName} verification application. A BonAgri admin will review it and notify you of the decision.`,
+    );
+  }
+
+  async onVerificationInfoRequested(
+    recipient: Recipient,
+    businessName: string,
+    reason: string,
+  ) {
+    await this.deliver(
+      recipient,
+      "More information needed for your verification",
+      `The BonAgri team needs more information for ${businessName}: ${reason} Open your Verification Centre to update and resubmit.`,
+    );
+  }
+
+  async onVerificationApproved(
+    recipient: Recipient,
+    businessName: string,
+  ) {
+    await this.deliver(
+      recipient,
+      "Your business is verified",
+      `${businessName} passed BonAgri business verification. The Business verified badge now appears on your listings and you can publish products and accept orders.`,
+    );
+  }
+
+  async onVerificationRejected(
+    recipient: Recipient,
+    businessName: string,
+    reason: string,
+  ) {
+    await this.deliver(
+      recipient,
+      "Your verification application was not approved",
+      `Unfortunately ${businessName} did not pass verification: ${reason} You can review the feedback and resubmit from your Verification Centre.`,
+    );
+  }
+
+  async onVerificationSuspended(
+    recipient: Recipient,
+    businessName: string,
+    reason: string,
+  ) {
+    await this.deliver(
+      recipient,
+      "Your verification was suspended",
+      `Business verification for ${businessName} was suspended: ${reason} Contact the BonAgri team to resolve this.`,
+    );
+  }
+
   async onRequestResponseAccepted(
     vendor: { id: string; email: string; firstName: string },
     requestTitle: string,

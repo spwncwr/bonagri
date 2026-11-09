@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -6,9 +8,31 @@ import {
 import { randomUUID } from "node:crypto";
 import { v2 as cloudinary } from "cloudinary";
 import type { UploadKind } from "./dto/sign-upload.dto";
+import type { UserRole } from "../common/types";
 
 const CLOUDINARY_HOST = "res.cloudinary.com";
 const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1";
+
+// CP17: per-kind authorization. The endpoint used to accept any kind from
+// any signed-in role; each kind now maps to the roles that may actually
+// upload it (admins run the console kinds, vendors their own storefront,
+// every account its avatar, suppliers/dealers their verification evidence).
+const UPLOAD_ROLES: Record<UploadKind, readonly UserRole[]> = {
+  product: ["SUPPLIER", "AGRO_DEALER", "ADMIN"],
+  supplier_logo: ["SUPPLIER", "AGRO_DEALER", "ADMIN"],
+  category: ["ADMIN"],
+  banner: ["ADMIN"],
+  promotion: ["ADMIN"],
+  avatar: ["BUYER", "SUPPLIER", "AGRO_DEALER", "TRANSPORTER", "ADMIN"],
+  verification_document: ["SUPPLIER", "AGRO_DEALER"],
+};
+
+// Private assets are only ever delivered through a signed URL. When the
+// optional CLOUDINARY_AUTH_TOKEN_SECRET is configured (Cloudinary console →
+// Settings → Security → Signed URL) the URL also expires; without it the
+// signature itself still gates access to the private asset.
+const DOCUMENT_URL_TTL_SECONDS = 300;
+const VERIFICATION_FOLDER = "bonagri/verification/";
 
 // CP16a: media foundation. The browser asks this API for an upload signature,
 // uploads the file **directly to Cloudinary** (bytes never transit the API —
@@ -23,6 +47,9 @@ const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1";
 //      **server-side** (never trusted from the client), so replacements can
 //      destroy the old asset;
 //   3. cleanup  — best-effort destroy of replaced assets.
+//   4. private   — CP17 verification documents are signed as type=private
+//      into bonagri/verification/ and delivered only via signDeliveryUrl()
+//      after an owner-or-admin check in the verification module.
 //
 // Without CLOUDINARY_* env vars the signature endpoint answers 503 and the
 // rest of the API keeps working (URL-paste fallback) — the local/CI smoke
@@ -39,7 +66,13 @@ export class MediaService {
     );
   }
 
-  signUpload(kind: UploadKind) {
+  signUpload(kind: UploadKind, role: UserRole) {
+    if (!UPLOAD_ROLES[kind]?.includes(role)) {
+      throw new ForbiddenException(
+        "Your account type cannot upload this kind of file",
+      );
+    }
+
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
@@ -49,11 +82,16 @@ export class MediaService {
     }
 
     const timestamp = Math.floor(Date.now() / 1000);
-    const publicId = `bonagri/${kind}/${randomUUID()}`;
-    const signature = cloudinary.utils.api_sign_request(
-      { public_id: publicId, timestamp },
-      apiSecret,
-    );
+    const isPrivate = kind === "verification_document";
+    // Verification evidence lands in its own folder so a stray URL-paste or
+    // folder listing can never mix it with public product imagery.
+    const publicId = isPrivate
+      ? `${VERIFICATION_FOLDER}${randomUUID()}`
+      : `bonagri/${kind}/${randomUUID()}`;
+    const params: Record<string, string | number> = isPrivate
+      ? { public_id: publicId, timestamp, type: "private" }
+      : { public_id: publicId, timestamp };
+    const signature = cloudinary.utils.api_sign_request(params, apiSecret);
 
     return {
       cloudName,
@@ -62,6 +100,49 @@ export class MediaService {
       timestamp,
       signature,
       publicId,
+      // Private uploads must echo the signed `type` field back in the form;
+      // public uploads send nothing extra (existing client keeps working).
+      ...(isPrivate ? { type: "private" as const } : {}),
+    };
+  }
+
+  // CP17: short-lived signed delivery URL for a private verification
+  // document. Ownership/authorization is checked by the caller (owner of the
+  // application or an admin) — this method only turns an already-authorized
+  // publicId into a fetchable link. Never returns a permanent public URL.
+  signDeliveryUrl(publicId: string): {
+    url: string;
+    expiresInSeconds: number | null;
+  } {
+    if (!publicId.startsWith(VERIFICATION_FOLDER)) {
+      throw new BadRequestException("Invalid document reference");
+    }
+
+    if (!this.isConfigured()) {
+      throw new ServiceUnavailableException("Media storage not configured");
+    }
+
+    this.applyConfig();
+
+    const authSecret = process.env.CLOUDINARY_AUTH_TOKEN_SECRET;
+    const url = cloudinary.url(publicId, {
+      type: "private",
+      sign_url: true,
+      secure: true,
+      ...(authSecret
+        ? {
+            auth_token: {
+              key: authSecret,
+              expiration:
+                Math.floor(Date.now() / 1000) + DOCUMENT_URL_TTL_SECONDS,
+            },
+          }
+        : {}),
+    });
+
+    return {
+      url,
+      expiresInSeconds: authSecret ? DOCUMENT_URL_TTL_SECONDS : null,
     };
   }
 

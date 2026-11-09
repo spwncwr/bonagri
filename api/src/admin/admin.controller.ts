@@ -97,10 +97,15 @@ export class AdminController {
 
   @Patch("suppliers/:id")
   setSupplierVerified(
+    @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
     @Body() dto: UpdateSupplierVerifyDto,
   ) {
-    return this.adminService.setSupplierVerified(id, dto);
+    return this.adminService.setSupplierVerified(
+      id,
+      dto,
+      request.user.id,
+    );
   }
 
   @Post("categories")

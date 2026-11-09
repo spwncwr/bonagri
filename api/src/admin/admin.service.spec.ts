@@ -66,18 +66,24 @@ function makeService() {
     sendNotificationEmail: jest.fn(),
   };
 
+  const verification = {
+    syncLegacyBadge: jest.fn(),
+  };
+
   return {
     service: new AdminService(
       prisma as never,
       notifications as never,
       media as never,
       mail as never,
+      verification as never,
     ),
     prisma,
     tx,
     notifications,
     media,
     mail,
+    verification,
   };
 }
 
@@ -442,18 +448,23 @@ describe("AdminService (CP3 management)", () => {
   });
 
   describe("setSupplierVerified", () => {
-    it("toggles the verified flag", async () => {
-      const { service, prisma } = makeService();
+    it("toggles the verified flag and syncs the centralised summary", async () => {
+      const { service, prisma, verification } = makeService();
 
-      prisma.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-1",
+        user: { id: "user-1", email: "vendor@example.com", firstName: "Vusi" },
+      });
       prisma.supplierProfile.update.mockResolvedValue({
         id: "sup-1",
         verified: true,
       });
 
-      const result = await service.setSupplierVerified("sup-1", {
-        verified: true,
-      });
+      const result = await service.setSupplierVerified(
+        "sup-1",
+        { verified: true },
+        "admin-1",
+      );
 
       expect(result.verified).toBe(true);
       expect(prisma.supplierProfile.update).toHaveBeenCalledWith(
@@ -461,6 +472,12 @@ describe("AdminService (CP3 management)", () => {
           where: { id: "sup-1" },
           data: { verified: true },
         }),
+      );
+      // CP17: the legacy toggle must not be the badge's only writer.
+      expect(verification.syncLegacyBadge).toHaveBeenCalledWith(
+        "user-1",
+        true,
+        "admin-1",
       );
     });
 
@@ -470,7 +487,7 @@ describe("AdminService (CP3 management)", () => {
       prisma.supplierProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.setSupplierVerified("ghost", { verified: true }),
+        service.setSupplierVerified("ghost", { verified: true }, "admin-1"),
       ).rejects.toThrow(NotFoundException);
     });
   });

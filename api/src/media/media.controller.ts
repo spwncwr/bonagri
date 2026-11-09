@@ -21,7 +21,8 @@ export class MediaController {
   // Product/branding uploads are vendor work; the "avatar" kind is the one
   // personal image any signed-in account may upload from its settings screen
   // (CP15b delivery photos stay bytea evidence, not Cloudinary). 503 when
-  // CLOUDINARY_* is unset.
+  // CLOUDINARY_* is unset. CP17: each kind is role-checked inside the
+  // service — verification documents are supplier/dealer-only private assets.
   @Post("signature")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("BUYER", "SUPPLIER", "AGRO_DEALER", "TRANSPORTER", "ADMIN")
@@ -29,6 +30,6 @@ export class MediaController {
     @Req() request: AuthenticatedRequest,
     @Body() dto: SignUploadDto,
   ) {
-    return this.mediaService.signUpload(dto.kind);
+    return this.mediaService.signUpload(dto.kind, request.user.role);
   }
 }

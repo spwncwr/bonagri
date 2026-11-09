@@ -18,6 +18,7 @@ import { CheckpointsModule } from "./checkpoints/checkpoints.module";
 import { MediaModule } from "./media/media.module";
 import { PromotionsModule } from "./promotions/promotions.module";
 import { ProfileModule } from "./profile/profile.module";
+import { VerificationModule } from "./verification/verification.module";
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { ProfileModule } from "./profile/profile.module";
     ReviewsModule,
     PromotionsModule,
     ProfileModule,
+    VerificationModule,
   ],
 })
 export class AppModule {}

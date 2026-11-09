@@ -78,6 +78,26 @@ export type Dispute = Prisma.DisputeModel
  */
 export type SellerApplication = Prisma.SellerApplicationModel
 /**
+ * Model PhoneOtpCode
+ * 
+ */
+export type PhoneOtpCode = Prisma.PhoneOtpCodeModel
+/**
+ * Model VerificationApplication
+ * 
+ */
+export type VerificationApplication = Prisma.VerificationApplicationModel
+/**
+ * Model VerificationDocument
+ * 
+ */
+export type VerificationDocument = Prisma.VerificationDocumentModel
+/**
+ * Model VerificationAuditLog
+ * 
+ */
+export type VerificationAuditLog = Prisma.VerificationAuditLogModel
+/**
  * Model ProductRequest
  * 
  */

@@ -112,6 +112,44 @@ export const SellerApplicationStatus = {
 export type SellerApplicationStatus = (typeof SellerApplicationStatus)[keyof typeof SellerApplicationStatus]
 
 
+export const VerificationStatus = {
+  NOT_STARTED: 'NOT_STARTED',
+  PENDING: 'PENDING',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  ACTION_REQUIRED: 'ACTION_REQUIRED',
+  VERIFIED: 'VERIFIED',
+  REJECTED: 'REJECTED',
+  SUSPENDED: 'SUSPENDED'
+} as const
+
+export type VerificationStatus = (typeof VerificationStatus)[keyof typeof VerificationStatus]
+
+
+export const VerificationAction = {
+  SUBMITTED: 'SUBMITTED',
+  RESUBMITTED: 'RESUBMITTED',
+  STARTED_REVIEW: 'STARTED_REVIEW',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  INFO_REQUESTED: 'INFO_REQUESTED',
+  SUSPENDED: 'SUSPENDED'
+} as const
+
+export type VerificationAction = (typeof VerificationAction)[keyof typeof VerificationAction]
+
+
+export const VerificationDocumentKind = {
+  BUSINESS_REGISTRATION: 'BUSINESS_REGISTRATION',
+  BUSINESS_LICENCE: 'BUSINESS_LICENCE',
+  AGRICULTURAL_INPUT_LICENCE: 'AGRICULTURAL_INPUT_LICENCE',
+  PROOF_OF_BUSINESS_ADDRESS: 'PROOF_OF_BUSINESS_ADDRESS',
+  OWNER_ID: 'OWNER_ID',
+  OTHER: 'OTHER'
+} as const
+
+export type VerificationDocumentKind = (typeof VerificationDocumentKind)[keyof typeof VerificationDocumentKind]
+
+
 export const ProductRequestStatus = {
   OPEN: 'OPEN',
   FULFILLED: 'FULFILLED',

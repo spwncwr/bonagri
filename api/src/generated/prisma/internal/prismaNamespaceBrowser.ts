@@ -63,6 +63,10 @@ export const ModelName = {
   OrderStatusHistory: 'OrderStatusHistory',
   Dispute: 'Dispute',
   SellerApplication: 'SellerApplication',
+  PhoneOtpCode: 'PhoneOtpCode',
+  VerificationApplication: 'VerificationApplication',
+  VerificationDocument: 'VerificationDocument',
+  VerificationAuditLog: 'VerificationAuditLog',
   ProductRequest: 'ProductRequest',
   RequestResponse: 'RequestResponse',
   CartItem: 'CartItem',
@@ -108,6 +112,10 @@ export const UserScalarFieldEnum = {
   avatarUrl: 'avatarUrl',
   avatarPublicId: 'avatarPublicId',
   emailVerifiedAt: 'emailVerifiedAt',
+  phoneVerifiedAt: 'phoneVerifiedAt',
+  businessStatus: 'businessStatus',
+  businessVerifiedAt: 'businessVerifiedAt',
+  latestApplicationId: 'latestApplicationId',
   role: 'role',
   status: 'status',
   createdAt: 'createdAt',
@@ -298,6 +306,73 @@ export const SellerApplicationScalarFieldEnum = {
 } as const
 
 export type SellerApplicationScalarFieldEnum = (typeof SellerApplicationScalarFieldEnum)[keyof typeof SellerApplicationScalarFieldEnum]
+
+
+export const PhoneOtpCodeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  phone: 'phone',
+  codeHash: 'codeHash',
+  expiresAt: 'expiresAt',
+  consumedAt: 'consumedAt',
+  attempts: 'attempts',
+  createdAt: 'createdAt'
+} as const
+
+export type PhoneOtpCodeScalarFieldEnum = (typeof PhoneOtpCodeScalarFieldEnum)[keyof typeof PhoneOtpCodeScalarFieldEnum]
+
+
+export const VerificationApplicationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  role: 'role',
+  status: 'status',
+  businessName: 'businessName',
+  registrationNumber: 'registrationNumber',
+  contactPhone: 'contactPhone',
+  contactEmail: 'contactEmail',
+  physicalAddress: 'physicalAddress',
+  representativeName: 'representativeName',
+  details: 'details',
+  submittedAt: 'submittedAt',
+  updatedAt: 'updatedAt',
+  reviewedAt: 'reviewedAt',
+  reviewedById: 'reviewedById',
+  reviewNotes: 'reviewNotes',
+  rejectionReason: 'rejectionReason',
+  infoRequest: 'infoRequest'
+} as const
+
+export type VerificationApplicationScalarFieldEnum = (typeof VerificationApplicationScalarFieldEnum)[keyof typeof VerificationApplicationScalarFieldEnum]
+
+
+export const VerificationDocumentScalarFieldEnum = {
+  id: 'id',
+  applicationId: 'applicationId',
+  kind: 'kind',
+  publicId: 'publicId',
+  fileName: 'fileName',
+  mimeType: 'mimeType',
+  sizeBytes: 'sizeBytes',
+  createdAt: 'createdAt'
+} as const
+
+export type VerificationDocumentScalarFieldEnum = (typeof VerificationDocumentScalarFieldEnum)[keyof typeof VerificationDocumentScalarFieldEnum]
+
+
+export const VerificationAuditLogScalarFieldEnum = {
+  id: 'id',
+  applicationId: 'applicationId',
+  userId: 'userId',
+  adminId: 'adminId',
+  action: 'action',
+  fromStatus: 'fromStatus',
+  toStatus: 'toStatus',
+  reason: 'reason',
+  createdAt: 'createdAt'
+} as const
+
+export type VerificationAuditLogScalarFieldEnum = (typeof VerificationAuditLogScalarFieldEnum)[keyof typeof VerificationAuditLogScalarFieldEnum]
 
 
 export const ProductRequestScalarFieldEnum = {

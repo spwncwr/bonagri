@@ -409,6 +409,10 @@ export const ModelName = {
   OrderStatusHistory: 'OrderStatusHistory',
   Dispute: 'Dispute',
   SellerApplication: 'SellerApplication',
+  PhoneOtpCode: 'PhoneOtpCode',
+  VerificationApplication: 'VerificationApplication',
+  VerificationDocument: 'VerificationDocument',
+  VerificationAuditLog: 'VerificationAuditLog',
   ProductRequest: 'ProductRequest',
   RequestResponse: 'RequestResponse',
   CartItem: 'CartItem',
@@ -441,7 +445,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "productReview" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "sellerApplication" | "productRequest" | "requestResponse" | "cartItem" | "orderItem" | "payment" | "delivery" | "deliveryCheckpoint" | "deliveryPhoto" | "transporterProfile" | "notification" | "invoice" | "notificationBroadcast" | "promoBanner" | "promoCampaign" | "promoCampaignImage" | "promoCampaignProduct" | "promoCampaignEvent"
+    modelProps: "user" | "emailVerificationToken" | "supplierProfile" | "address" | "category" | "product" | "productReview" | "inventory" | "order" | "orderStatusHistory" | "dispute" | "sellerApplication" | "phoneOtpCode" | "verificationApplication" | "verificationDocument" | "verificationAuditLog" | "productRequest" | "requestResponse" | "cartItem" | "orderItem" | "payment" | "delivery" | "deliveryCheckpoint" | "deliveryPhoto" | "transporterProfile" | "notification" | "invoice" | "notificationBroadcast" | "promoBanner" | "promoCampaign" | "promoCampaignImage" | "promoCampaignProduct" | "promoCampaignEvent"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1330,6 +1334,302 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.SellerApplicationCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.SellerApplicationCountAggregateOutputType> | number
+        }
+      }
+    }
+    PhoneOtpCode: {
+      payload: Prisma.$PhoneOtpCodePayload<ExtArgs>
+      fields: Prisma.PhoneOtpCodeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PhoneOtpCodeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PhoneOtpCodePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PhoneOtpCodeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PhoneOtpCodePayload>
+        }
+        findFirst: {
+          args: Prisma.PhoneOtpCodeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PhoneOtpCodePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PhoneOtpCodeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PhoneOtpCodePayload>
+        }
+        findMany: {
+          args: Prisma.PhoneOtpCodeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PhoneOtpCodePayload>[]
+        }
+        create: {
+          args: Prisma.PhoneOtpCodeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PhoneOtpCodePayload>
+        }
+        createMany: {
+          args: Prisma.PhoneOtpCodeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PhoneOtpCodeCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PhoneOtpCodePayload>[]
+        }
+        delete: {
+          args: Prisma.PhoneOtpCodeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PhoneOtpCodePayload>
+        }
+        update: {
+          args: Prisma.PhoneOtpCodeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PhoneOtpCodePayload>
+        }
+        deleteMany: {
+          args: Prisma.PhoneOtpCodeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PhoneOtpCodeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PhoneOtpCodeUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PhoneOtpCodePayload>[]
+        }
+        upsert: {
+          args: Prisma.PhoneOtpCodeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PhoneOtpCodePayload>
+        }
+        aggregate: {
+          args: Prisma.PhoneOtpCodeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePhoneOtpCode>
+        }
+        groupBy: {
+          args: Prisma.PhoneOtpCodeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PhoneOtpCodeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PhoneOtpCodeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PhoneOtpCodeCountAggregateOutputType> | number
+        }
+      }
+    }
+    VerificationApplication: {
+      payload: Prisma.$VerificationApplicationPayload<ExtArgs>
+      fields: Prisma.VerificationApplicationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.VerificationApplicationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationApplicationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.VerificationApplicationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationApplicationPayload>
+        }
+        findFirst: {
+          args: Prisma.VerificationApplicationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationApplicationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.VerificationApplicationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationApplicationPayload>
+        }
+        findMany: {
+          args: Prisma.VerificationApplicationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationApplicationPayload>[]
+        }
+        create: {
+          args: Prisma.VerificationApplicationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationApplicationPayload>
+        }
+        createMany: {
+          args: Prisma.VerificationApplicationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.VerificationApplicationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationApplicationPayload>[]
+        }
+        delete: {
+          args: Prisma.VerificationApplicationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationApplicationPayload>
+        }
+        update: {
+          args: Prisma.VerificationApplicationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationApplicationPayload>
+        }
+        deleteMany: {
+          args: Prisma.VerificationApplicationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.VerificationApplicationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.VerificationApplicationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationApplicationPayload>[]
+        }
+        upsert: {
+          args: Prisma.VerificationApplicationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationApplicationPayload>
+        }
+        aggregate: {
+          args: Prisma.VerificationApplicationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateVerificationApplication>
+        }
+        groupBy: {
+          args: Prisma.VerificationApplicationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VerificationApplicationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.VerificationApplicationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VerificationApplicationCountAggregateOutputType> | number
+        }
+      }
+    }
+    VerificationDocument: {
+      payload: Prisma.$VerificationDocumentPayload<ExtArgs>
+      fields: Prisma.VerificationDocumentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.VerificationDocumentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationDocumentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.VerificationDocumentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationDocumentPayload>
+        }
+        findFirst: {
+          args: Prisma.VerificationDocumentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationDocumentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.VerificationDocumentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationDocumentPayload>
+        }
+        findMany: {
+          args: Prisma.VerificationDocumentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationDocumentPayload>[]
+        }
+        create: {
+          args: Prisma.VerificationDocumentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationDocumentPayload>
+        }
+        createMany: {
+          args: Prisma.VerificationDocumentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.VerificationDocumentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationDocumentPayload>[]
+        }
+        delete: {
+          args: Prisma.VerificationDocumentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationDocumentPayload>
+        }
+        update: {
+          args: Prisma.VerificationDocumentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationDocumentPayload>
+        }
+        deleteMany: {
+          args: Prisma.VerificationDocumentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.VerificationDocumentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.VerificationDocumentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationDocumentPayload>[]
+        }
+        upsert: {
+          args: Prisma.VerificationDocumentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationDocumentPayload>
+        }
+        aggregate: {
+          args: Prisma.VerificationDocumentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateVerificationDocument>
+        }
+        groupBy: {
+          args: Prisma.VerificationDocumentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VerificationDocumentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.VerificationDocumentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VerificationDocumentCountAggregateOutputType> | number
+        }
+      }
+    }
+    VerificationAuditLog: {
+      payload: Prisma.$VerificationAuditLogPayload<ExtArgs>
+      fields: Prisma.VerificationAuditLogFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.VerificationAuditLogFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationAuditLogPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.VerificationAuditLogFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationAuditLogPayload>
+        }
+        findFirst: {
+          args: Prisma.VerificationAuditLogFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationAuditLogPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.VerificationAuditLogFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationAuditLogPayload>
+        }
+        findMany: {
+          args: Prisma.VerificationAuditLogFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationAuditLogPayload>[]
+        }
+        create: {
+          args: Prisma.VerificationAuditLogCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationAuditLogPayload>
+        }
+        createMany: {
+          args: Prisma.VerificationAuditLogCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.VerificationAuditLogCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationAuditLogPayload>[]
+        }
+        delete: {
+          args: Prisma.VerificationAuditLogDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationAuditLogPayload>
+        }
+        update: {
+          args: Prisma.VerificationAuditLogUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationAuditLogPayload>
+        }
+        deleteMany: {
+          args: Prisma.VerificationAuditLogDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.VerificationAuditLogUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.VerificationAuditLogUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationAuditLogPayload>[]
+        }
+        upsert: {
+          args: Prisma.VerificationAuditLogUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VerificationAuditLogPayload>
+        }
+        aggregate: {
+          args: Prisma.VerificationAuditLogAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateVerificationAuditLog>
+        }
+        groupBy: {
+          args: Prisma.VerificationAuditLogGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VerificationAuditLogGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.VerificationAuditLogCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VerificationAuditLogCountAggregateOutputType> | number
         }
       }
     }
@@ -2640,6 +2940,10 @@ export const UserScalarFieldEnum = {
   avatarUrl: 'avatarUrl',
   avatarPublicId: 'avatarPublicId',
   emailVerifiedAt: 'emailVerifiedAt',
+  phoneVerifiedAt: 'phoneVerifiedAt',
+  businessStatus: 'businessStatus',
+  businessVerifiedAt: 'businessVerifiedAt',
+  latestApplicationId: 'latestApplicationId',
   role: 'role',
   status: 'status',
   createdAt: 'createdAt',
@@ -2830,6 +3134,73 @@ export const SellerApplicationScalarFieldEnum = {
 } as const
 
 export type SellerApplicationScalarFieldEnum = (typeof SellerApplicationScalarFieldEnum)[keyof typeof SellerApplicationScalarFieldEnum]
+
+
+export const PhoneOtpCodeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  phone: 'phone',
+  codeHash: 'codeHash',
+  expiresAt: 'expiresAt',
+  consumedAt: 'consumedAt',
+  attempts: 'attempts',
+  createdAt: 'createdAt'
+} as const
+
+export type PhoneOtpCodeScalarFieldEnum = (typeof PhoneOtpCodeScalarFieldEnum)[keyof typeof PhoneOtpCodeScalarFieldEnum]
+
+
+export const VerificationApplicationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  role: 'role',
+  status: 'status',
+  businessName: 'businessName',
+  registrationNumber: 'registrationNumber',
+  contactPhone: 'contactPhone',
+  contactEmail: 'contactEmail',
+  physicalAddress: 'physicalAddress',
+  representativeName: 'representativeName',
+  details: 'details',
+  submittedAt: 'submittedAt',
+  updatedAt: 'updatedAt',
+  reviewedAt: 'reviewedAt',
+  reviewedById: 'reviewedById',
+  reviewNotes: 'reviewNotes',
+  rejectionReason: 'rejectionReason',
+  infoRequest: 'infoRequest'
+} as const
+
+export type VerificationApplicationScalarFieldEnum = (typeof VerificationApplicationScalarFieldEnum)[keyof typeof VerificationApplicationScalarFieldEnum]
+
+
+export const VerificationDocumentScalarFieldEnum = {
+  id: 'id',
+  applicationId: 'applicationId',
+  kind: 'kind',
+  publicId: 'publicId',
+  fileName: 'fileName',
+  mimeType: 'mimeType',
+  sizeBytes: 'sizeBytes',
+  createdAt: 'createdAt'
+} as const
+
+export type VerificationDocumentScalarFieldEnum = (typeof VerificationDocumentScalarFieldEnum)[keyof typeof VerificationDocumentScalarFieldEnum]
+
+
+export const VerificationAuditLogScalarFieldEnum = {
+  id: 'id',
+  applicationId: 'applicationId',
+  userId: 'userId',
+  adminId: 'adminId',
+  action: 'action',
+  fromStatus: 'fromStatus',
+  toStatus: 'toStatus',
+  reason: 'reason',
+  createdAt: 'createdAt'
+} as const
+
+export type VerificationAuditLogScalarFieldEnum = (typeof VerificationAuditLogScalarFieldEnum)[keyof typeof VerificationAuditLogScalarFieldEnum]
 
 
 export const ProductRequestScalarFieldEnum = {
@@ -3178,6 +3549,20 @@ export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaM
 
 
 /**
+ * Reference to a field of type 'VerificationStatus'
+ */
+export type EnumVerificationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VerificationStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'VerificationStatus[]'
+ */
+export type ListEnumVerificationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VerificationStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'UserRole'
  */
 export type EnumUserRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserRole'>
@@ -3335,6 +3720,34 @@ export type EnumSellerApplicationStatusFieldRefInput<$PrismaModel> = FieldRefInp
  * Reference to a field of type 'SellerApplicationStatus[]'
  */
 export type ListEnumSellerApplicationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SellerApplicationStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'VerificationDocumentKind'
+ */
+export type EnumVerificationDocumentKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VerificationDocumentKind'>
+    
+
+
+/**
+ * Reference to a field of type 'VerificationDocumentKind[]'
+ */
+export type ListEnumVerificationDocumentKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VerificationDocumentKind[]'>
+    
+
+
+/**
+ * Reference to a field of type 'VerificationAction'
+ */
+export type EnumVerificationActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VerificationAction'>
+    
+
+
+/**
+ * Reference to a field of type 'VerificationAction[]'
+ */
+export type ListEnumVerificationActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VerificationAction[]'>
     
 
 
@@ -3696,6 +4109,10 @@ export type GlobalOmitConfig = {
   orderStatusHistory?: Prisma.OrderStatusHistoryOmit
   dispute?: Prisma.DisputeOmit
   sellerApplication?: Prisma.SellerApplicationOmit
+  phoneOtpCode?: Prisma.PhoneOtpCodeOmit
+  verificationApplication?: Prisma.VerificationApplicationOmit
+  verificationDocument?: Prisma.VerificationDocumentOmit
+  verificationAuditLog?: Prisma.VerificationAuditLogOmit
   productRequest?: Prisma.ProductRequestOmit
   requestResponse?: Prisma.RequestResponseOmit
   cartItem?: Prisma.CartItemOmit

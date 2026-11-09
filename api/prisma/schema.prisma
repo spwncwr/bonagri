@@ -83,6 +83,45 @@ enum SellerApplicationStatus {
   REJECTED
 }
 
+// Centralised verification status, shared by the user's safe summary
+// (User.businessStatus) and their business applications so the whole app
+// speaks one vocabulary. NOT_STARTED only ever appears on User — an
+// application always starts at PENDING.
+enum VerificationStatus {
+  NOT_STARTED
+  PENDING
+  UNDER_REVIEW
+  ACTION_REQUIRED
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+// Recorded against every verification decision (admin or applicant) so past
+// administrative choices survive resubmissions.
+enum VerificationAction {
+  SUBMITTED
+  RESUBMITTED
+  STARTED_REVIEW
+  APPROVED
+  REJECTED
+  INFO_REQUESTED
+  SUSPENDED
+}
+
+// Document requirements are configured per role in the verification module;
+// the kind list is intentionally small — only evidence a reviewer actually
+// needs. Agro-dealers add the agricultural-input licence when their product
+// categories require it.
+enum VerificationDocumentKind {
+  BUSINESS_REGISTRATION
+  BUSINESS_LICENCE
+  AGRICULTURAL_INPUT_LICENCE
+  PROOF_OF_BUSINESS_ADDRESS
+  OWNER_ID
+  OTHER
+}
+
 enum ProductRequestStatus {
   OPEN
   FULFILLED
@@ -125,11 +164,23 @@ model User {
   avatarUrl       String?
   avatarPublicId  String?
   emailVerifiedAt DateTime?
+  // Verification summary — the ONLY verification state public profile reads
+  // ever see. Written exclusively by the verification service; buyers get
+  // phoneVerifiedAt, suppliers/agro-dealers get businessStatus.
+  phoneVerifiedAt     DateTime?
+  businessStatus      VerificationStatus @default(NOT_STARTED)
+  businessVerifiedAt  DateTime?
+  latestApplicationId String?  @unique
   role            UserRole         @default(BUYER)
   status          UserStatus       @default(ACTIVE)
   supplierProfile SupplierProfile?
   addresses       Address[]
   emailVerificationTokens EmailVerificationToken[]
+  phoneOtpCodes       PhoneOtpCode[]
+  verificationApplications VerificationApplication[] @relation("VerificationApplicant")
+  latestApplication   VerificationApplication? @relation("LatestApplication", fields: [latestApplicationId], references: [id], onDelete: SetNull)
+  reviewedVerificationApplications VerificationApplication[] @relation("VerificationReviewer")
+  verificationActionsTaken VerificationAuditLog[] @relation("VerificationActionAdmin")
   orders          Order[]
   notifications   Notification[]
   actedOnOrders   OrderStatusHistory[]
@@ -377,6 +428,99 @@ model SellerApplication {
   reviewedBy User? @relation("ApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
+}
+
+// Buyer phone verification: 6-digit OTP emailed to the (already verified)
+// account address. Only the SHA-256 hash is stored, mirroring
+// EmailVerificationToken. Single live code per user — requesting a new one
+// invalidates the previous.
+model PhoneOtpCode {
+  id        String    @id @default(uuid())
+  userId    String
+  phone     String
+  codeHash  String    @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// One row per submission; resubmissions create a NEW application and keep
+// the old one, so administrative history is never erased.
+model VerificationApplication {
+  id                 String             @id @default(uuid())
+  userId             String
+  role               UserRole // SUPPLIER | AGRO_DEALER
+  status             VerificationStatus @default(PENDING)
+  // Business details (spec §2). registrationNumber / contactEmail optional —
+  // not every trader is registered.
+  businessName       String
+  registrationNumber String?
+  contactPhone       String
+  contactEmail       String?
+  physicalAddress    String
+  representativeName String
+  // Extra role/category-specific answers (e.g. licence categories sold).
+  details            Json?
+  submittedAt        DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  // Review metadata — set only by admin operations.
+  reviewedAt         DateTime?
+  reviewedById       String?
+  reviewNotes        String? // internal admin notes, never sent to the applicant
+  rejectionReason    String? // user-facing, set on REJECTED
+  infoRequest        String? // user-facing, set on ACTION_REQUIRED
+
+  user       User   @relation("VerificationApplicant", fields: [userId], references: [id], onDelete: Cascade)
+  latestOf   User?  @relation("LatestApplication")
+  reviewedBy User?  @relation("VerificationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  documents  VerificationDocument[]
+  auditLogs  VerificationAuditLog[]
+
+  @@index([status, submittedAt])
+  @@index([userId])
+}
+
+// Private document references only — never bytes, never URLs. The asset
+// lives in Cloudinary as type=private and is served exclusively through the
+// authorized short-lived signed-URL endpoint.
+model VerificationDocument {
+  id            String                 @id @default(uuid())
+  applicationId String
+  kind          VerificationDocumentKind
+  publicId      String // bonagri/verification/<uuid>
+  fileName      String?
+  mimeType      String?
+  sizeBytes     Int?
+  createdAt     DateTime               @default(now())
+
+  application VerificationApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}
+
+// Append-only decision trail (spec §4). Written by both applicants
+// (SUBMITTED/RESUBMITTED) and admins (everything else).
+model VerificationAuditLog {
+  id            String             @id @default(uuid())
+  applicationId String
+  userId        String // subject of the action
+  adminId       String // actor (the applicant for their own submissions)
+  action        VerificationAction
+  fromStatus    VerificationStatus?
+  toStatus      VerificationStatus?
+  reason        String?
+  createdAt     DateTime           @default(now())
+
+  application VerificationApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  admin       User                   @relation("VerificationActionAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt])
 }
 
 model ProductRequest {

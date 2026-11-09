@@ -34,6 +34,10 @@ export type UserMinAggregateOutputType = {
   avatarUrl: string | null
   avatarPublicId: string | null
   emailVerifiedAt: Date | null
+  phoneVerifiedAt: Date | null
+  businessStatus: $Enums.VerificationStatus | null
+  businessVerifiedAt: Date | null
+  latestApplicationId: string | null
   role: $Enums.UserRole | null
   status: $Enums.UserStatus | null
   createdAt: Date | null
@@ -50,6 +54,10 @@ export type UserMaxAggregateOutputType = {
   avatarUrl: string | null
   avatarPublicId: string | null
   emailVerifiedAt: Date | null
+  phoneVerifiedAt: Date | null
+  businessStatus: $Enums.VerificationStatus | null
+  businessVerifiedAt: Date | null
+  latestApplicationId: string | null
   role: $Enums.UserRole | null
   status: $Enums.UserStatus | null
   createdAt: Date | null
@@ -66,6 +74,10 @@ export type UserCountAggregateOutputType = {
   avatarUrl: number
   avatarPublicId: number
   emailVerifiedAt: number
+  phoneVerifiedAt: number
+  businessStatus: number
+  businessVerifiedAt: number
+  latestApplicationId: number
   role: number
   status: number
   createdAt: number
@@ -84,6 +96,10 @@ export type UserMinAggregateInputType = {
   avatarUrl?: true
   avatarPublicId?: true
   emailVerifiedAt?: true
+  phoneVerifiedAt?: true
+  businessStatus?: true
+  businessVerifiedAt?: true
+  latestApplicationId?: true
   role?: true
   status?: true
   createdAt?: true
@@ -100,6 +116,10 @@ export type UserMaxAggregateInputType = {
   avatarUrl?: true
   avatarPublicId?: true
   emailVerifiedAt?: true
+  phoneVerifiedAt?: true
+  businessStatus?: true
+  businessVerifiedAt?: true
+  latestApplicationId?: true
   role?: true
   status?: true
   createdAt?: true
@@ -116,6 +136,10 @@ export type UserCountAggregateInputType = {
   avatarUrl?: true
   avatarPublicId?: true
   emailVerifiedAt?: true
+  phoneVerifiedAt?: true
+  businessStatus?: true
+  businessVerifiedAt?: true
+  latestApplicationId?: true
   role?: true
   status?: true
   createdAt?: true
@@ -205,6 +229,10 @@ export type UserGroupByOutputType = {
   avatarUrl: string | null
   avatarPublicId: string | null
   emailVerifiedAt: Date | null
+  phoneVerifiedAt: Date | null
+  businessStatus: $Enums.VerificationStatus
+  businessVerifiedAt: Date | null
+  latestApplicationId: string | null
   role: $Enums.UserRole
   status: $Enums.UserStatus
   createdAt: Date
@@ -242,6 +270,10 @@ export type UserWhereInput = {
   avatarUrl?: Prisma.StringNullableFilter<"User"> | string | null
   avatarPublicId?: Prisma.StringNullableFilter<"User"> | string | null
   emailVerifiedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  phoneVerifiedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFilter<"User"> | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  latestApplicationId?: Prisma.StringNullableFilter<"User"> | string | null
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
   status?: Prisma.EnumUserStatusFilter<"User"> | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
@@ -249,6 +281,11 @@ export type UserWhereInput = {
   supplierProfile?: Prisma.XOR<Prisma.SupplierProfileNullableScalarRelationFilter, Prisma.SupplierProfileWhereInput> | null
   addresses?: Prisma.AddressListRelationFilter
   emailVerificationTokens?: Prisma.EmailVerificationTokenListRelationFilter
+  phoneOtpCodes?: Prisma.PhoneOtpCodeListRelationFilter
+  verificationApplications?: Prisma.VerificationApplicationListRelationFilter
+  latestApplication?: Prisma.XOR<Prisma.VerificationApplicationNullableScalarRelationFilter, Prisma.VerificationApplicationWhereInput> | null
+  reviewedVerificationApplications?: Prisma.VerificationApplicationListRelationFilter
+  verificationActionsTaken?: Prisma.VerificationAuditLogListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
   actedOnOrders?: Prisma.OrderStatusHistoryListRelationFilter
@@ -272,6 +309,10 @@ export type UserOrderByWithRelationInput = {
   avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   avatarPublicId?: Prisma.SortOrderInput | Prisma.SortOrder
   emailVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  phoneVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  businessStatus?: Prisma.SortOrder
+  businessVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  latestApplicationId?: Prisma.SortOrderInput | Prisma.SortOrder
   role?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -279,6 +320,11 @@ export type UserOrderByWithRelationInput = {
   supplierProfile?: Prisma.SupplierProfileOrderByWithRelationInput
   addresses?: Prisma.AddressOrderByRelationAggregateInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenOrderByRelationAggregateInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeOrderByRelationAggregateInput
+  verificationApplications?: Prisma.VerificationApplicationOrderByRelationAggregateInput
+  latestApplication?: Prisma.VerificationApplicationOrderByWithRelationInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationOrderByRelationAggregateInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogOrderByRelationAggregateInput
   orders?: Prisma.OrderOrderByRelationAggregateInput
   notifications?: Prisma.NotificationOrderByRelationAggregateInput
   actedOnOrders?: Prisma.OrderStatusHistoryOrderByRelationAggregateInput
@@ -295,6 +341,7 @@ export type UserOrderByWithRelationInput = {
 export type UserWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   email?: string
+  latestApplicationId?: string
   AND?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   OR?: Prisma.UserWhereInput[]
   NOT?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
@@ -305,6 +352,9 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   avatarUrl?: Prisma.StringNullableFilter<"User"> | string | null
   avatarPublicId?: Prisma.StringNullableFilter<"User"> | string | null
   emailVerifiedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  phoneVerifiedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFilter<"User"> | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
   status?: Prisma.EnumUserStatusFilter<"User"> | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
@@ -312,6 +362,11 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   supplierProfile?: Prisma.XOR<Prisma.SupplierProfileNullableScalarRelationFilter, Prisma.SupplierProfileWhereInput> | null
   addresses?: Prisma.AddressListRelationFilter
   emailVerificationTokens?: Prisma.EmailVerificationTokenListRelationFilter
+  phoneOtpCodes?: Prisma.PhoneOtpCodeListRelationFilter
+  verificationApplications?: Prisma.VerificationApplicationListRelationFilter
+  latestApplication?: Prisma.XOR<Prisma.VerificationApplicationNullableScalarRelationFilter, Prisma.VerificationApplicationWhereInput> | null
+  reviewedVerificationApplications?: Prisma.VerificationApplicationListRelationFilter
+  verificationActionsTaken?: Prisma.VerificationAuditLogListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
   actedOnOrders?: Prisma.OrderStatusHistoryListRelationFilter
@@ -323,7 +378,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   productRequests?: Prisma.ProductRequestListRelationFilter
   cartItems?: Prisma.CartItemListRelationFilter
   productReviews?: Prisma.ProductReviewListRelationFilter
-}, "id" | "email">
+}, "id" | "email" | "latestApplicationId">
 
 export type UserOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -335,6 +390,10 @@ export type UserOrderByWithAggregationInput = {
   avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   avatarPublicId?: Prisma.SortOrderInput | Prisma.SortOrder
   emailVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  phoneVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  businessStatus?: Prisma.SortOrder
+  businessVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  latestApplicationId?: Prisma.SortOrderInput | Prisma.SortOrder
   role?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -357,6 +416,10 @@ export type UserScalarWhereWithAggregatesInput = {
   avatarUrl?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   avatarPublicId?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   emailVerifiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  phoneVerifiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusWithAggregatesFilter<"User"> | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  latestApplicationId?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   role?: Prisma.EnumUserRoleWithAggregatesFilter<"User"> | $Enums.UserRole
   status?: Prisma.EnumUserStatusWithAggregatesFilter<"User"> | $Enums.UserStatus
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
@@ -373,6 +436,9 @@ export type UserCreateInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -380,6 +446,11 @@ export type UserCreateInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -403,6 +474,10 @@ export type UserUncheckedCreateInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -410,6 +485,10 @@ export type UserUncheckedCreateInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -433,6 +512,9 @@ export type UserUpdateInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -440,6 +522,11 @@ export type UserUpdateInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -463,6 +550,10 @@ export type UserUncheckedUpdateInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -470,6 +561,10 @@ export type UserUncheckedUpdateInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -493,6 +588,10 @@ export type UserCreateManyInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -509,6 +608,9 @@ export type UserUpdateManyMutationInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -525,6 +627,10 @@ export type UserUncheckedUpdateManyInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -541,6 +647,10 @@ export type UserCountOrderByAggregateInput = {
   avatarUrl?: Prisma.SortOrder
   avatarPublicId?: Prisma.SortOrder
   emailVerifiedAt?: Prisma.SortOrder
+  phoneVerifiedAt?: Prisma.SortOrder
+  businessStatus?: Prisma.SortOrder
+  businessVerifiedAt?: Prisma.SortOrder
+  latestApplicationId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -557,6 +667,10 @@ export type UserMaxOrderByAggregateInput = {
   avatarUrl?: Prisma.SortOrder
   avatarPublicId?: Prisma.SortOrder
   emailVerifiedAt?: Prisma.SortOrder
+  phoneVerifiedAt?: Prisma.SortOrder
+  businessStatus?: Prisma.SortOrder
+  businessVerifiedAt?: Prisma.SortOrder
+  latestApplicationId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -573,6 +687,10 @@ export type UserMinOrderByAggregateInput = {
   avatarUrl?: Prisma.SortOrder
   avatarPublicId?: Prisma.SortOrder
   emailVerifiedAt?: Prisma.SortOrder
+  phoneVerifiedAt?: Prisma.SortOrder
+  businessStatus?: Prisma.SortOrder
+  businessVerifiedAt?: Prisma.SortOrder
+  latestApplicationId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -599,6 +717,10 @@ export type NullableStringFieldUpdateOperationsInput = {
 
 export type NullableDateTimeFieldUpdateOperationsInput = {
   set?: Date | string | null
+}
+
+export type EnumVerificationStatusFieldUpdateOperationsInput = {
+  set?: $Enums.VerificationStatus
 }
 
 export type EnumUserRoleFieldUpdateOperationsInput = {
@@ -759,6 +881,96 @@ export type UserUpdateOneWithoutReviewedApplicationsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutReviewedApplicationsInput, Prisma.UserUpdateWithoutReviewedApplicationsInput>, Prisma.UserUncheckedUpdateWithoutReviewedApplicationsInput>
 }
 
+export type UserCreateNestedOneWithoutPhoneOtpCodesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutPhoneOtpCodesInput, Prisma.UserUncheckedCreateWithoutPhoneOtpCodesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutPhoneOtpCodesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutPhoneOtpCodesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutPhoneOtpCodesInput, Prisma.UserUncheckedCreateWithoutPhoneOtpCodesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutPhoneOtpCodesInput
+  upsert?: Prisma.UserUpsertWithoutPhoneOtpCodesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutPhoneOtpCodesInput, Prisma.UserUpdateWithoutPhoneOtpCodesInput>, Prisma.UserUncheckedUpdateWithoutPhoneOtpCodesInput>
+}
+
+export type UserCreateNestedOneWithoutVerificationApplicationsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutVerificationApplicationsInput, Prisma.UserUncheckedCreateWithoutVerificationApplicationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutVerificationApplicationsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutLatestApplicationInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLatestApplicationInput, Prisma.UserUncheckedCreateWithoutLatestApplicationInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLatestApplicationInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutReviewedVerificationApplicationsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutReviewedVerificationApplicationsInput, Prisma.UserUncheckedCreateWithoutReviewedVerificationApplicationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutReviewedVerificationApplicationsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUncheckedCreateNestedOneWithoutLatestApplicationInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLatestApplicationInput, Prisma.UserUncheckedCreateWithoutLatestApplicationInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLatestApplicationInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutVerificationApplicationsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutVerificationApplicationsInput, Prisma.UserUncheckedCreateWithoutVerificationApplicationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutVerificationApplicationsInput
+  upsert?: Prisma.UserUpsertWithoutVerificationApplicationsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutVerificationApplicationsInput, Prisma.UserUpdateWithoutVerificationApplicationsInput>, Prisma.UserUncheckedUpdateWithoutVerificationApplicationsInput>
+}
+
+export type UserUpdateOneWithoutLatestApplicationNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLatestApplicationInput, Prisma.UserUncheckedCreateWithoutLatestApplicationInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLatestApplicationInput
+  upsert?: Prisma.UserUpsertWithoutLatestApplicationInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutLatestApplicationInput, Prisma.UserUpdateWithoutLatestApplicationInput>, Prisma.UserUncheckedUpdateWithoutLatestApplicationInput>
+}
+
+export type UserUpdateOneWithoutReviewedVerificationApplicationsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutReviewedVerificationApplicationsInput, Prisma.UserUncheckedCreateWithoutReviewedVerificationApplicationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutReviewedVerificationApplicationsInput
+  upsert?: Prisma.UserUpsertWithoutReviewedVerificationApplicationsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutReviewedVerificationApplicationsInput, Prisma.UserUpdateWithoutReviewedVerificationApplicationsInput>, Prisma.UserUncheckedUpdateWithoutReviewedVerificationApplicationsInput>
+}
+
+export type UserUncheckedUpdateOneWithoutLatestApplicationNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLatestApplicationInput, Prisma.UserUncheckedCreateWithoutLatestApplicationInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLatestApplicationInput
+  upsert?: Prisma.UserUpsertWithoutLatestApplicationInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutLatestApplicationInput, Prisma.UserUpdateWithoutLatestApplicationInput>, Prisma.UserUncheckedUpdateWithoutLatestApplicationInput>
+}
+
+export type UserCreateNestedOneWithoutVerificationActionsTakenInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutVerificationActionsTakenInput, Prisma.UserUncheckedCreateWithoutVerificationActionsTakenInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutVerificationActionsTakenInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutVerificationActionsTakenNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutVerificationActionsTakenInput, Prisma.UserUncheckedCreateWithoutVerificationActionsTakenInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutVerificationActionsTakenInput
+  upsert?: Prisma.UserUpsertWithoutVerificationActionsTakenInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutVerificationActionsTakenInput, Prisma.UserUpdateWithoutVerificationActionsTakenInput>, Prisma.UserUncheckedUpdateWithoutVerificationActionsTakenInput>
+}
+
 export type UserCreateNestedOneWithoutProductRequestsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutProductRequestsInput, Prisma.UserUncheckedCreateWithoutProductRequestsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutProductRequestsInput
@@ -825,12 +1037,20 @@ export type UserCreateWithoutEmailVerificationTokensInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -854,12 +1074,20 @@ export type UserUncheckedCreateWithoutEmailVerificationTokensInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -899,12 +1127,20 @@ export type UserUpdateWithoutEmailVerificationTokensInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -928,12 +1164,20 @@ export type UserUncheckedUpdateWithoutEmailVerificationTokensInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -957,12 +1201,20 @@ export type UserCreateWithoutSupplierProfileInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -986,12 +1238,20 @@ export type UserUncheckedCreateWithoutSupplierProfileInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -1031,12 +1291,20 @@ export type UserUpdateWithoutSupplierProfileInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -1060,12 +1328,20 @@ export type UserUncheckedUpdateWithoutSupplierProfileInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -1089,12 +1365,20 @@ export type UserCreateWithoutAddressesInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -1118,12 +1402,20 @@ export type UserUncheckedCreateWithoutAddressesInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -1163,12 +1455,20 @@ export type UserUpdateWithoutAddressesInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -1192,12 +1492,20 @@ export type UserUncheckedUpdateWithoutAddressesInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -1221,6 +1529,9 @@ export type UserCreateWithoutProductReviewsInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1228,6 +1539,11 @@ export type UserCreateWithoutProductReviewsInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -1250,6 +1566,10 @@ export type UserUncheckedCreateWithoutProductReviewsInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1257,6 +1577,10 @@ export type UserUncheckedCreateWithoutProductReviewsInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -1295,6 +1619,9 @@ export type UserUpdateWithoutProductReviewsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1302,6 +1629,11 @@ export type UserUpdateWithoutProductReviewsInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -1324,6 +1656,10 @@ export type UserUncheckedUpdateWithoutProductReviewsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1331,6 +1667,10 @@ export type UserUncheckedUpdateWithoutProductReviewsInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -1353,6 +1693,9 @@ export type UserCreateWithoutOrdersInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1360,6 +1703,11 @@ export type UserCreateWithoutOrdersInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
@@ -1382,6 +1730,10 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1389,6 +1741,10 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
@@ -1427,6 +1783,9 @@ export type UserUpdateWithoutOrdersInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1434,6 +1793,11 @@ export type UserUpdateWithoutOrdersInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
@@ -1456,6 +1820,10 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1463,6 +1831,10 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
@@ -1485,6 +1857,9 @@ export type UserCreateWithoutActedOnOrdersInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1492,6 +1867,11 @@ export type UserCreateWithoutActedOnOrdersInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
@@ -1514,6 +1894,10 @@ export type UserUncheckedCreateWithoutActedOnOrdersInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1521,6 +1905,10 @@ export type UserUncheckedCreateWithoutActedOnOrdersInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
@@ -1559,6 +1947,9 @@ export type UserUpdateWithoutActedOnOrdersInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1566,6 +1957,11 @@ export type UserUpdateWithoutActedOnOrdersInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
@@ -1588,6 +1984,10 @@ export type UserUncheckedUpdateWithoutActedOnOrdersInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1595,6 +1995,10 @@ export type UserUncheckedUpdateWithoutActedOnOrdersInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
@@ -1617,6 +2021,9 @@ export type UserCreateWithoutOpenedDisputesInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1624,6 +2031,11 @@ export type UserCreateWithoutOpenedDisputesInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -1646,6 +2058,10 @@ export type UserUncheckedCreateWithoutOpenedDisputesInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1653,6 +2069,10 @@ export type UserUncheckedCreateWithoutOpenedDisputesInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -1680,6 +2100,9 @@ export type UserCreateWithoutResolvedDisputesInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1687,6 +2110,11 @@ export type UserCreateWithoutResolvedDisputesInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -1709,6 +2137,10 @@ export type UserUncheckedCreateWithoutResolvedDisputesInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1716,6 +2148,10 @@ export type UserUncheckedCreateWithoutResolvedDisputesInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -1754,6 +2190,9 @@ export type UserUpdateWithoutOpenedDisputesInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1761,6 +2200,11 @@ export type UserUpdateWithoutOpenedDisputesInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -1783,6 +2227,10 @@ export type UserUncheckedUpdateWithoutOpenedDisputesInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1790,6 +2238,10 @@ export type UserUncheckedUpdateWithoutOpenedDisputesInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -1823,6 +2275,9 @@ export type UserUpdateWithoutResolvedDisputesInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1830,6 +2285,11 @@ export type UserUpdateWithoutResolvedDisputesInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -1852,6 +2312,10 @@ export type UserUncheckedUpdateWithoutResolvedDisputesInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1859,6 +2323,10 @@ export type UserUncheckedUpdateWithoutResolvedDisputesInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -1881,6 +2349,9 @@ export type UserCreateWithoutSellerApplicationInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1888,6 +2359,11 @@ export type UserCreateWithoutSellerApplicationInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -1910,6 +2386,10 @@ export type UserUncheckedCreateWithoutSellerApplicationInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1917,6 +2397,10 @@ export type UserUncheckedCreateWithoutSellerApplicationInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -1944,6 +2428,9 @@ export type UserCreateWithoutReviewedApplicationsInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1951,6 +2438,11 @@ export type UserCreateWithoutReviewedApplicationsInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -1973,6 +2465,10 @@ export type UserUncheckedCreateWithoutReviewedApplicationsInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -1980,6 +2476,10 @@ export type UserUncheckedCreateWithoutReviewedApplicationsInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -2018,6 +2518,9 @@ export type UserUpdateWithoutSellerApplicationInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2025,6 +2528,11 @@ export type UserUpdateWithoutSellerApplicationInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -2047,6 +2555,10 @@ export type UserUncheckedUpdateWithoutSellerApplicationInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2054,6 +2566,10 @@ export type UserUncheckedUpdateWithoutSellerApplicationInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -2087,6 +2603,9 @@ export type UserUpdateWithoutReviewedApplicationsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2094,6 +2613,11 @@ export type UserUpdateWithoutReviewedApplicationsInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -2116,6 +2640,10 @@ export type UserUncheckedUpdateWithoutReviewedApplicationsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2123,12 +2651,836 @@ export type UserUncheckedUpdateWithoutReviewedApplicationsInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
   sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUncheckedUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUncheckedUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUncheckedUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserCreateWithoutPhoneOtpCodesInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewCreateNestedManyWithoutBuyerInput
+}
+
+export type UserUncheckedCreateWithoutPhoneOtpCodesInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestUncheckedCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemUncheckedCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewUncheckedCreateNestedManyWithoutBuyerInput
+}
+
+export type UserCreateOrConnectWithoutPhoneOtpCodesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutPhoneOtpCodesInput, Prisma.UserUncheckedCreateWithoutPhoneOtpCodesInput>
+}
+
+export type UserUpsertWithoutPhoneOtpCodesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutPhoneOtpCodesInput, Prisma.UserUncheckedUpdateWithoutPhoneOtpCodesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutPhoneOtpCodesInput, Prisma.UserUncheckedCreateWithoutPhoneOtpCodesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutPhoneOtpCodesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutPhoneOtpCodesInput, Prisma.UserUncheckedUpdateWithoutPhoneOtpCodesInput>
+}
+
+export type UserUpdateWithoutPhoneOtpCodesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserUncheckedUpdateWithoutPhoneOtpCodesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUncheckedUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUncheckedUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUncheckedUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserCreateWithoutVerificationApplicationsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewCreateNestedManyWithoutBuyerInput
+}
+
+export type UserUncheckedCreateWithoutVerificationApplicationsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestUncheckedCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemUncheckedCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewUncheckedCreateNestedManyWithoutBuyerInput
+}
+
+export type UserCreateOrConnectWithoutVerificationApplicationsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutVerificationApplicationsInput, Prisma.UserUncheckedCreateWithoutVerificationApplicationsInput>
+}
+
+export type UserCreateWithoutLatestApplicationInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewCreateNestedManyWithoutBuyerInput
+}
+
+export type UserUncheckedCreateWithoutLatestApplicationInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestUncheckedCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemUncheckedCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewUncheckedCreateNestedManyWithoutBuyerInput
+}
+
+export type UserCreateOrConnectWithoutLatestApplicationInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutLatestApplicationInput, Prisma.UserUncheckedCreateWithoutLatestApplicationInput>
+}
+
+export type UserCreateWithoutReviewedVerificationApplicationsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewCreateNestedManyWithoutBuyerInput
+}
+
+export type UserUncheckedCreateWithoutReviewedVerificationApplicationsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestUncheckedCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemUncheckedCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewUncheckedCreateNestedManyWithoutBuyerInput
+}
+
+export type UserCreateOrConnectWithoutReviewedVerificationApplicationsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutReviewedVerificationApplicationsInput, Prisma.UserUncheckedCreateWithoutReviewedVerificationApplicationsInput>
+}
+
+export type UserUpsertWithoutVerificationApplicationsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutVerificationApplicationsInput, Prisma.UserUncheckedUpdateWithoutVerificationApplicationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutVerificationApplicationsInput, Prisma.UserUncheckedCreateWithoutVerificationApplicationsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutVerificationApplicationsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutVerificationApplicationsInput, Prisma.UserUncheckedUpdateWithoutVerificationApplicationsInput>
+}
+
+export type UserUpdateWithoutVerificationApplicationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserUncheckedUpdateWithoutVerificationApplicationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUncheckedUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUncheckedUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUncheckedUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserUpsertWithoutLatestApplicationInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutLatestApplicationInput, Prisma.UserUncheckedUpdateWithoutLatestApplicationInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutLatestApplicationInput, Prisma.UserUncheckedCreateWithoutLatestApplicationInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutLatestApplicationInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutLatestApplicationInput, Prisma.UserUncheckedUpdateWithoutLatestApplicationInput>
+}
+
+export type UserUpdateWithoutLatestApplicationInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserUncheckedUpdateWithoutLatestApplicationInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUncheckedUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUncheckedUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUncheckedUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserUpsertWithoutReviewedVerificationApplicationsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutReviewedVerificationApplicationsInput, Prisma.UserUncheckedUpdateWithoutReviewedVerificationApplicationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutReviewedVerificationApplicationsInput, Prisma.UserUncheckedCreateWithoutReviewedVerificationApplicationsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutReviewedVerificationApplicationsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutReviewedVerificationApplicationsInput, Prisma.UserUncheckedUpdateWithoutReviewedVerificationApplicationsInput>
+}
+
+export type UserUpdateWithoutReviewedVerificationApplicationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserUncheckedUpdateWithoutReviewedVerificationApplicationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUncheckedUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUncheckedUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUncheckedUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserCreateWithoutVerificationActionsTakenInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewCreateNestedManyWithoutBuyerInput
+}
+
+export type UserUncheckedCreateWithoutVerificationActionsTakenInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestUncheckedCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemUncheckedCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewUncheckedCreateNestedManyWithoutBuyerInput
+}
+
+export type UserCreateOrConnectWithoutVerificationActionsTakenInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutVerificationActionsTakenInput, Prisma.UserUncheckedCreateWithoutVerificationActionsTakenInput>
+}
+
+export type UserUpsertWithoutVerificationActionsTakenInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutVerificationActionsTakenInput, Prisma.UserUncheckedUpdateWithoutVerificationActionsTakenInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutVerificationActionsTakenInput, Prisma.UserUncheckedCreateWithoutVerificationActionsTakenInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutVerificationActionsTakenInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutVerificationActionsTakenInput, Prisma.UserUncheckedUpdateWithoutVerificationActionsTakenInput>
+}
+
+export type UserUpdateWithoutVerificationActionsTakenInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserUncheckedUpdateWithoutVerificationActionsTakenInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
   transporterProfile?: Prisma.TransporterProfileUncheckedUpdateOneWithoutUserNestedInput
   productRequests?: Prisma.ProductRequestUncheckedUpdateManyWithoutBuyerNestedInput
   cartItems?: Prisma.CartItemUncheckedUpdateManyWithoutUserNestedInput
@@ -2145,6 +3497,9 @@ export type UserCreateWithoutProductRequestsInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -2152,6 +3507,11 @@ export type UserCreateWithoutProductRequestsInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -2174,6 +3534,10 @@ export type UserUncheckedCreateWithoutProductRequestsInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -2181,6 +3545,10 @@ export type UserUncheckedCreateWithoutProductRequestsInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -2219,6 +3587,9 @@ export type UserUpdateWithoutProductRequestsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2226,6 +3597,11 @@ export type UserUpdateWithoutProductRequestsInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -2248,6 +3624,10 @@ export type UserUncheckedUpdateWithoutProductRequestsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2255,6 +3635,10 @@ export type UserUncheckedUpdateWithoutProductRequestsInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -2277,6 +3661,9 @@ export type UserCreateWithoutCartItemsInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -2284,6 +3671,11 @@ export type UserCreateWithoutCartItemsInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -2306,6 +3698,10 @@ export type UserUncheckedCreateWithoutCartItemsInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -2313,6 +3709,10 @@ export type UserUncheckedCreateWithoutCartItemsInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -2351,6 +3751,9 @@ export type UserUpdateWithoutCartItemsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2358,6 +3761,11 @@ export type UserUpdateWithoutCartItemsInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -2380,6 +3788,10 @@ export type UserUncheckedUpdateWithoutCartItemsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2387,6 +3799,10 @@ export type UserUncheckedUpdateWithoutCartItemsInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -2409,6 +3825,9 @@ export type UserCreateWithoutTransporterProfileInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -2416,6 +3835,11 @@ export type UserCreateWithoutTransporterProfileInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -2438,6 +3862,10 @@ export type UserUncheckedCreateWithoutTransporterProfileInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -2445,6 +3873,10 @@ export type UserUncheckedCreateWithoutTransporterProfileInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -2483,6 +3915,9 @@ export type UserUpdateWithoutTransporterProfileInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2490,6 +3925,11 @@ export type UserUpdateWithoutTransporterProfileInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -2512,6 +3952,10 @@ export type UserUncheckedUpdateWithoutTransporterProfileInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2519,6 +3963,10 @@ export type UserUncheckedUpdateWithoutTransporterProfileInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -2541,6 +3989,9 @@ export type UserCreateWithoutNotificationsInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -2548,6 +3999,11 @@ export type UserCreateWithoutNotificationsInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
@@ -2570,6 +4026,10 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   avatarUrl?: string | null
   avatarPublicId?: string | null
   emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
   createdAt?: Date | string
@@ -2577,6 +4037,10 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
@@ -2615,6 +4079,9 @@ export type UserUpdateWithoutNotificationsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2622,6 +4089,11 @@ export type UserUpdateWithoutNotificationsInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
@@ -2644,6 +4116,10 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2651,6 +4127,10 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
@@ -2671,6 +4151,10 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
 export type UserCountOutputType = {
   addresses: number
   emailVerificationTokens: number
+  phoneOtpCodes: number
+  verificationApplications: number
+  reviewedVerificationApplications: number
+  verificationActionsTaken: number
   orders: number
   notifications: number
   actedOnOrders: number
@@ -2685,6 +4169,10 @@ export type UserCountOutputType = {
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   addresses?: boolean | UserCountOutputTypeCountAddressesArgs
   emailVerificationTokens?: boolean | UserCountOutputTypeCountEmailVerificationTokensArgs
+  phoneOtpCodes?: boolean | UserCountOutputTypeCountPhoneOtpCodesArgs
+  verificationApplications?: boolean | UserCountOutputTypeCountVerificationApplicationsArgs
+  reviewedVerificationApplications?: boolean | UserCountOutputTypeCountReviewedVerificationApplicationsArgs
+  verificationActionsTaken?: boolean | UserCountOutputTypeCountVerificationActionsTakenArgs
   orders?: boolean | UserCountOutputTypeCountOrdersArgs
   notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
   actedOnOrders?: boolean | UserCountOutputTypeCountActedOnOrdersArgs
@@ -2718,6 +4206,34 @@ export type UserCountOutputTypeCountAddressesArgs<ExtArgs extends runtime.Types.
  */
 export type UserCountOutputTypeCountEmailVerificationTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.EmailVerificationTokenWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountPhoneOtpCodesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PhoneOtpCodeWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountVerificationApplicationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.VerificationApplicationWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountReviewedVerificationApplicationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.VerificationApplicationWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountVerificationActionsTakenArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.VerificationAuditLogWhereInput
 }
 
 /**
@@ -2794,6 +4310,10 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   avatarUrl?: boolean
   avatarPublicId?: boolean
   emailVerifiedAt?: boolean
+  phoneVerifiedAt?: boolean
+  businessStatus?: boolean
+  businessVerifiedAt?: boolean
+  latestApplicationId?: boolean
   role?: boolean
   status?: boolean
   createdAt?: boolean
@@ -2801,6 +4321,11 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   supplierProfile?: boolean | Prisma.User$supplierProfileArgs<ExtArgs>
   addresses?: boolean | Prisma.User$addressesArgs<ExtArgs>
   emailVerificationTokens?: boolean | Prisma.User$emailVerificationTokensArgs<ExtArgs>
+  phoneOtpCodes?: boolean | Prisma.User$phoneOtpCodesArgs<ExtArgs>
+  verificationApplications?: boolean | Prisma.User$verificationApplicationsArgs<ExtArgs>
+  latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
+  reviewedVerificationApplications?: boolean | Prisma.User$reviewedVerificationApplicationsArgs<ExtArgs>
+  verificationActionsTaken?: boolean | Prisma.User$verificationActionsTakenArgs<ExtArgs>
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
   actedOnOrders?: boolean | Prisma.User$actedOnOrdersArgs<ExtArgs>
@@ -2825,10 +4350,15 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   avatarUrl?: boolean
   avatarPublicId?: boolean
   emailVerifiedAt?: boolean
+  phoneVerifiedAt?: boolean
+  businessStatus?: boolean
+  businessVerifiedAt?: boolean
+  latestApplicationId?: boolean
   role?: boolean
   status?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
 export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -2841,10 +4371,15 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   avatarUrl?: boolean
   avatarPublicId?: boolean
   emailVerifiedAt?: boolean
+  phoneVerifiedAt?: boolean
+  businessStatus?: boolean
+  businessVerifiedAt?: boolean
+  latestApplicationId?: boolean
   role?: boolean
   status?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
 export type UserSelectScalar = {
@@ -2857,17 +4392,26 @@ export type UserSelectScalar = {
   avatarUrl?: boolean
   avatarPublicId?: boolean
   emailVerifiedAt?: boolean
+  phoneVerifiedAt?: boolean
+  businessStatus?: boolean
+  businessVerifiedAt?: boolean
+  latestApplicationId?: boolean
   role?: boolean
   status?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstName" | "lastName" | "phone" | "avatarUrl" | "avatarPublicId" | "emailVerifiedAt" | "role" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstName" | "lastName" | "phone" | "avatarUrl" | "avatarPublicId" | "emailVerifiedAt" | "phoneVerifiedAt" | "businessStatus" | "businessVerifiedAt" | "latestApplicationId" | "role" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   supplierProfile?: boolean | Prisma.User$supplierProfileArgs<ExtArgs>
   addresses?: boolean | Prisma.User$addressesArgs<ExtArgs>
   emailVerificationTokens?: boolean | Prisma.User$emailVerificationTokensArgs<ExtArgs>
+  phoneOtpCodes?: boolean | Prisma.User$phoneOtpCodesArgs<ExtArgs>
+  verificationApplications?: boolean | Prisma.User$verificationApplicationsArgs<ExtArgs>
+  latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
+  reviewedVerificationApplications?: boolean | Prisma.User$reviewedVerificationApplicationsArgs<ExtArgs>
+  verificationActionsTaken?: boolean | Prisma.User$verificationActionsTakenArgs<ExtArgs>
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
   actedOnOrders?: boolean | Prisma.User$actedOnOrdersArgs<ExtArgs>
@@ -2881,8 +4425,12 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   productReviews?: boolean | Prisma.User$productReviewsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
-export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
-export type UserIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
+}
+export type UserIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
+}
 
 export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "User"
@@ -2890,6 +4438,11 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     supplierProfile: Prisma.$SupplierProfilePayload<ExtArgs> | null
     addresses: Prisma.$AddressPayload<ExtArgs>[]
     emailVerificationTokens: Prisma.$EmailVerificationTokenPayload<ExtArgs>[]
+    phoneOtpCodes: Prisma.$PhoneOtpCodePayload<ExtArgs>[]
+    verificationApplications: Prisma.$VerificationApplicationPayload<ExtArgs>[]
+    latestApplication: Prisma.$VerificationApplicationPayload<ExtArgs> | null
+    reviewedVerificationApplications: Prisma.$VerificationApplicationPayload<ExtArgs>[]
+    verificationActionsTaken: Prisma.$VerificationAuditLogPayload<ExtArgs>[]
     orders: Prisma.$OrderPayload<ExtArgs>[]
     notifications: Prisma.$NotificationPayload<ExtArgs>[]
     actedOnOrders: Prisma.$OrderStatusHistoryPayload<ExtArgs>[]
@@ -2912,6 +4465,10 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     avatarUrl: string | null
     avatarPublicId: string | null
     emailVerifiedAt: Date | null
+    phoneVerifiedAt: Date | null
+    businessStatus: $Enums.VerificationStatus
+    businessVerifiedAt: Date | null
+    latestApplicationId: string | null
     role: $Enums.UserRole
     status: $Enums.UserStatus
     createdAt: Date
@@ -3313,6 +4870,11 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   supplierProfile<T extends Prisma.User$supplierProfileArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$supplierProfileArgs<ExtArgs>>): Prisma.Prisma__SupplierProfileClient<runtime.Types.Result.GetResult<Prisma.$SupplierProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   addresses<T extends Prisma.User$addressesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$addressesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AddressPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   emailVerificationTokens<T extends Prisma.User$emailVerificationTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$emailVerificationTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EmailVerificationTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  phoneOtpCodes<T extends Prisma.User$phoneOtpCodesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$phoneOtpCodesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PhoneOtpCodePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  verificationApplications<T extends Prisma.User$verificationApplicationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$verificationApplicationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VerificationApplicationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  latestApplication<T extends Prisma.User$latestApplicationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$latestApplicationArgs<ExtArgs>>): Prisma.Prisma__VerificationApplicationClient<runtime.Types.Result.GetResult<Prisma.$VerificationApplicationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  reviewedVerificationApplications<T extends Prisma.User$reviewedVerificationApplicationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$reviewedVerificationApplicationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VerificationApplicationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  verificationActionsTaken<T extends Prisma.User$verificationActionsTakenArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$verificationActionsTakenArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VerificationAuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   orders<T extends Prisma.User$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notifications<T extends Prisma.User$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   actedOnOrders<T extends Prisma.User$actedOnOrdersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$actedOnOrdersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3362,6 +4924,10 @@ export interface UserFieldRefs {
   readonly avatarUrl: Prisma.FieldRef<"User", 'String'>
   readonly avatarPublicId: Prisma.FieldRef<"User", 'String'>
   readonly emailVerifiedAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly phoneVerifiedAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly businessStatus: Prisma.FieldRef<"User", 'VerificationStatus'>
+  readonly businessVerifiedAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly latestApplicationId: Prisma.FieldRef<"User", 'String'>
   readonly role: Prisma.FieldRef<"User", 'UserRole'>
   readonly status: Prisma.FieldRef<"User", 'UserStatus'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
@@ -3620,6 +5186,10 @@ export type UserCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions
    */
   data: Prisma.UserCreateManyInput | Prisma.UserCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -3690,6 +5260,10 @@ export type UserUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions
    * Limit how many Users to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -3823,6 +5397,121 @@ export type User$emailVerificationTokensArgs<ExtArgs extends runtime.Types.Exten
   take?: number
   skip?: number
   distinct?: Prisma.EmailVerificationTokenScalarFieldEnum | Prisma.EmailVerificationTokenScalarFieldEnum[]
+}
+
+/**
+ * User.phoneOtpCodes
+ */
+export type User$phoneOtpCodesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PhoneOtpCode
+   */
+  select?: Prisma.PhoneOtpCodeSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PhoneOtpCode
+   */
+  omit?: Prisma.PhoneOtpCodeOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PhoneOtpCodeInclude<ExtArgs> | null
+  where?: Prisma.PhoneOtpCodeWhereInput
+  orderBy?: Prisma.PhoneOtpCodeOrderByWithRelationInput | Prisma.PhoneOtpCodeOrderByWithRelationInput[]
+  cursor?: Prisma.PhoneOtpCodeWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PhoneOtpCodeScalarFieldEnum | Prisma.PhoneOtpCodeScalarFieldEnum[]
+}
+
+/**
+ * User.verificationApplications
+ */
+export type User$verificationApplicationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the VerificationApplication
+   */
+  select?: Prisma.VerificationApplicationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the VerificationApplication
+   */
+  omit?: Prisma.VerificationApplicationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.VerificationApplicationInclude<ExtArgs> | null
+  where?: Prisma.VerificationApplicationWhereInput
+  orderBy?: Prisma.VerificationApplicationOrderByWithRelationInput | Prisma.VerificationApplicationOrderByWithRelationInput[]
+  cursor?: Prisma.VerificationApplicationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.VerificationApplicationScalarFieldEnum | Prisma.VerificationApplicationScalarFieldEnum[]
+}
+
+/**
+ * User.latestApplication
+ */
+export type User$latestApplicationArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the VerificationApplication
+   */
+  select?: Prisma.VerificationApplicationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the VerificationApplication
+   */
+  omit?: Prisma.VerificationApplicationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.VerificationApplicationInclude<ExtArgs> | null
+  where?: Prisma.VerificationApplicationWhereInput
+}
+
+/**
+ * User.reviewedVerificationApplications
+ */
+export type User$reviewedVerificationApplicationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the VerificationApplication
+   */
+  select?: Prisma.VerificationApplicationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the VerificationApplication
+   */
+  omit?: Prisma.VerificationApplicationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.VerificationApplicationInclude<ExtArgs> | null
+  where?: Prisma.VerificationApplicationWhereInput
+  orderBy?: Prisma.VerificationApplicationOrderByWithRelationInput | Prisma.VerificationApplicationOrderByWithRelationInput[]
+  cursor?: Prisma.VerificationApplicationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.VerificationApplicationScalarFieldEnum | Prisma.VerificationApplicationScalarFieldEnum[]
+}
+
+/**
+ * User.verificationActionsTaken
+ */
+export type User$verificationActionsTakenArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the VerificationAuditLog
+   */
+  select?: Prisma.VerificationAuditLogSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the VerificationAuditLog
+   */
+  omit?: Prisma.VerificationAuditLogOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.VerificationAuditLogInclude<ExtArgs> | null
+  where?: Prisma.VerificationAuditLogWhereInput
+  orderBy?: Prisma.VerificationAuditLogOrderByWithRelationInput | Prisma.VerificationAuditLogOrderByWithRelationInput[]
+  cursor?: Prisma.VerificationAuditLogWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.VerificationAuditLogScalarFieldEnum | Prisma.VerificationAuditLogScalarFieldEnum[]
 }
 
 /**

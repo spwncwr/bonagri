@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   useEffect,
-  useRef,
   useState,
   type ComponentType,
   type ReactNode,
@@ -22,7 +21,6 @@ import {
   LogoutIcon,
   MegaphoneIcon,
   PlusIcon,
-  SearchIcon,
   SettingsIcon,
   ShieldIcon,
   SlidersIcon,
@@ -40,24 +38,31 @@ type NavItem = {
   key: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
-  href?: string;
-  target?: string;
+  href: string;
 };
 
-// Routes leave the desk; anchors jump to a section of the dashboard itself.
+// Every destination is its own screen — no anchor jumps, so each section
+// keeps its own route (and its own back button) instead of one long scroll.
 const NAV: NavItem[] = [
   { key: "desk", label: "Dashboard", icon: HomeIcon, href: "/supplier" },
-  { key: "queue", label: "Order queue", icon: TruckIcon, target: "queue" },
+  { key: "queue", label: "Order queue", icon: TruckIcon, href: "/supplier/orders" },
   { key: "listings", label: "Listings", icon: BoxIcon, href: "/supplier/products" },
   { key: "inventory", label: "Inventory", icon: BasketIcon, href: "/supplier/inventory" },
   { key: "new", label: "New listing", icon: PlusIcon, href: "/supplier/products/new" },
-  { key: "demand", label: "Demand board", icon: MegaphoneIcon, target: "demand" },
-  { key: "disputes", label: "Disputes", icon: ShieldIcon, target: "disputes" },
+  { key: "demand", label: "Demand board", icon: MegaphoneIcon, href: "/supplier/demand" },
+  { key: "disputes", label: "Disputes", icon: ShieldIcon, href: "/supplier/disputes" },
   { key: "market", label: "Marketplace", icon: GlobeIcon, href: "/" },
 ];
 
 // The phone bar can only carry four destinations plus an overflow sheet.
 const MOBILE_KEYS = ["desk", "listings", "inventory", "demand"];
+
+// Destinations that only exist in the overflow sheet: the desk settings
+// screen has no room in the bar, and the rail already carries its own
+// help/settings affordance at the bottom.
+const SHEET_ITEMS: NavItem[] = [
+  { key: "settings", label: "Settings", icon: SettingsIcon, href: "/supplier/settings" },
+];
 
 function roleLabel(role: UserRole | null): string {
   if (role === "AGRO_DEALER") return "Agro dealer";
@@ -67,25 +72,18 @@ function roleLabel(role: UserRole | null): string {
 
 export default function SupplierShell({
   vendorRole,
-  query,
-  onQueryChange,
   attention = 0,
   children,
 }: {
   vendorRole: UserRole | null;
-  query: string;
-  onQueryChange: (value: string) => void;
   attention?: number;
   children: ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const inlineSearchRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,12 +97,7 @@ export default function SupplierShell({
     };
   }, []);
 
-  useEffect(() => {
-    if (searchOpen) searchInputRef.current?.focus();
-  }, [searchOpen]);
-
   function closePopovers() {
-    setSearchOpen(false);
     setMenuOpen(false);
     setMoreOpen(false);
   }
@@ -115,15 +108,12 @@ export default function SupplierShell({
     router.replace("/login");
   }
 
-  function jumpTo(target: string) {
-    closePopovers();
-    document
-      .getElementById(target)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
   function renderItem(item: NavItem, variant: "rail" | "bar" | "sheet") {
-    const active = item.href ? pathname === item.href : false;
+    // The desk root matches only itself; every other destination also lights
+    // up for its child routes (Listings while editing a listing, for example).
+    const active =
+      pathname === item.href ||
+      (item.href !== "/supplier" && pathname.startsWith(`${item.href}/`));
     const className =
       variant === "rail"
         ? `flex h-11 w-11 items-center justify-center rounded-2xl transition ${
@@ -147,33 +137,18 @@ export default function SupplierShell({
       </>
     );
 
-    if (item.href) {
-      return (
-        <Link
-          key={item.key}
-          href={item.href}
-          onClick={closePopovers}
-          aria-label={item.label}
-          aria-current={active ? "page" : undefined}
-          title={item.label}
-          className={className}
-        >
-          {inner}
-        </Link>
-      );
-    }
-
     return (
-      <button
+      <Link
         key={item.key}
-        type="button"
-        onClick={() => jumpTo(item.target as string)}
+        href={item.href}
+        onClick={closePopovers}
         aria-label={item.label}
+        aria-current={active ? "page" : undefined}
         title={item.label}
         className={className}
       >
         {inner}
-      </button>
+      </Link>
     );
   }
 
@@ -188,7 +163,7 @@ export default function SupplierShell({
 
           <div className="flex flex-col items-center gap-2">
             <Link
-              href="/settings"
+              href="/supplier/settings"
               aria-label="Help and settings"
               title="Help and settings"
               className="flex h-11 w-11 items-center justify-center rounded-2xl text-ink-faint transition hover:bg-surface-raised hover:text-ink"
@@ -219,84 +194,42 @@ export default function SupplierShell({
               >
                 <BrandIcon size={30} className="rounded-xl" />
                 <h1 className="text-xl font-black tracking-tight text-ink">
-                  {roleLabel(vendorRole)} desk
+                  {/* roleLabel() falls back to "Supply desk" for a role that
+                      has not loaded yet, so only append " desk" once the role
+                      is known — otherwise the heading reads "Supply desk
+                      desk" during the first paint. */}
+                  {vendorRole ? `${roleLabel(vendorRole)} desk` : "Supply desk"}
                 </h1>
               </Link>
 
-              <button
-                type="button"
-                onClick={() => jumpTo("queue")}
+              <Link
+                href="/supplier/orders"
+                onClick={closePopovers}
                 className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface-raised px-3 py-1.5 text-xs font-bold text-ink-soft transition hover:bg-surface"
               >
                 {vendorRole === "AGRO_DEALER" ? "Tools and equipment" : "All products"}
                 <ChevronRightIcon className="h-3.5 w-3.5 rotate-90 text-ink-faint" />
-              </button>
+              </Link>
 
               <div className="ml-auto flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => jumpTo("queue")}
+                <Link
+                  href="/supplier/orders"
                   aria-label="Filter orders"
                   className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-line bg-surface-raised text-ink-muted transition hover:text-ink sm:flex"
                 >
                   <SlidersIcon className="h-4.5 w-4.5" />
-                </button>
-
-                <label className="relative hidden w-[min(340px,34vw)] items-center md:flex">
-                  <SearchIcon className="pointer-events-none absolute left-3 h-4 w-4 text-ink-faint" />
-                  <input
-                    ref={inlineSearchRef}
-                    value={query}
-                    onChange={(event) => onQueryChange(event.target.value)}
-                    placeholder="Search"
-                    aria-label="Search the order queue"
-                    className="w-full rounded-full border border-line bg-field py-2 pl-9 pr-3 text-sm text-ink outline-none transition placeholder:text-ink-disabled focus:border-line-strong"
-                  />
-                </label>
+                </Link>
 
                 <Link
-                  href="/settings"
+                  href="/supplier/settings"
                   aria-label="Settings"
                   className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface-raised text-ink-muted transition hover:text-ink sm:flex"
                 >
                   <SettingsIcon className="h-4.5 w-4.5" />
                 </Link>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchOpen((open) => !open);
-                    setMenuOpen(false);
-                  }}
-                  aria-label="Search the order queue"
-                  aria-expanded={searchOpen}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface-raised text-ink-muted transition hover:text-ink md:hidden"
-                >
-                  <SearchIcon className="h-4.5 w-4.5" />
-                </button>
-
-                {searchOpen ? (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setSearchOpen(false)}
-                    />
-                    <div className="absolute right-4 top-full z-50 mt-2 w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-line bg-surface p-2 shadow-xl md:hidden">
-                      <input
-                        ref={searchInputRef}
-                        value={query}
-                        onChange={(event) => onQueryChange(event.target.value)}
-                        placeholder="Search orders, buyers, products..."
-                        aria-label="Search the order queue"
-                        className="w-full rounded-xl bg-field px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-disabled"
-                      />
-                    </div>
-                  </>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={() => jumpTo("notifications")}
+                <Link
+                  href="/supplier#notifications"
                   aria-label={`Notifications${
                     attention > 0 ? `, ${attention} needing attention` : ""
                   }`}
@@ -306,15 +239,12 @@ export default function SupplierShell({
                   {attention > 0 ? (
                     <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-danger ring-2 ring-surface" />
                   ) : null}
-                </button>
+                </Link>
 
                 <div className="relative">
                   <button
                     type="button"
-                    onClick={() => {
-                      setMenuOpen((open) => !open);
-                      setSearchOpen(false);
-                    }}
+                    onClick={() => setMenuOpen((open) => !open)}
                     aria-label="Account menu"
                     aria-expanded={menuOpen}
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-sm font-black text-brand-ink transition hover:opacity-90"
@@ -408,9 +338,9 @@ export default function SupplierShell({
             </div>
 
             <div className="space-y-0.5">
-              {NAV.filter((item) => !MOBILE_KEYS.includes(item.key)).map((item) =>
-                renderItem(item, "sheet"),
-              )}
+              {[...NAV, ...SHEET_ITEMS].filter(
+                (item) => !MOBILE_KEYS.includes(item.key),
+              ).map((item) => renderItem(item, "sheet"))}
             </div>
 
             <AppearanceSection className="mt-3" />

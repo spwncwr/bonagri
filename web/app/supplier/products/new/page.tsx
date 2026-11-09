@@ -1,12 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import AuthGuard from "../../../../components/auth/auth-guard";
-import { BrandLogo } from "../../../../components/brand/logo";
 import ImageUpload from "../../../../components/media/image-upload";
-import { ArrowLeftIcon } from "../../../../components/mobile/icons";
+import PageHeading from "../../../../components/supplier/page-heading";
 import { authHeaders } from "../../../../lib/auth";
 
 const API_BASE_URL =
@@ -140,34 +137,16 @@ export default function NewProductPage() {
   }
 
   return (
-    <AuthGuard allowedRoles={["SUPPLIER", "AGRO_DEALER"]}>
-      <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
-        <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
-            <div>
-              <BrandLogo height={24} />
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-                Add product
-              </h1>
-            </div>
+    <>
+      <PageHeading title="Add product" fallback="/supplier/products" />
 
-            <Link
-              href="/supplier/products"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
-              My listings
-            </Link>
-          </div>
-        </header>
-
-        <div className="mx-auto max-w-3xl px-6 py-8">
+        <div className="mx-auto max-w-3xl pt-5">
           <form
             onSubmit={(event) => {
               event.preventDefault();
               void submitListing("ACTIVE");
             }}
-            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+            className="rounded-3xl border border-line bg-surface p-4 sm:p-6"
           >
             {error ? (
               <div
@@ -378,7 +357,6 @@ export default function NewProductPage() {
             </div>
           </form>
         </div>
-      </main>
-    </AuthGuard>
+    </>
   );
 }

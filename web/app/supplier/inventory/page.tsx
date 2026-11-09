@@ -1,10 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import AuthGuard from "../../../components/auth/auth-guard";
-import { BrandLogo } from "../../../components/brand/logo";
-
 import { useEffect, useMemo, useState } from "react";
+import PageHeading from "../../../components/supplier/page-heading";
 import { authHeaders } from "../../../lib/auth";
 
 const API_BASE_URL =
@@ -319,40 +316,14 @@ export default function SupplierInventoryPage() {
   };
 
   return (
-    <AuthGuard allowedRoles={["SUPPLIER", "AGRO_DEALER"]}>
-      <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <div>
-            <BrandLogo height={24} />
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              Supplier Inventory
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Manage stock levels, reserved quantities and replenishment
-              thresholds.
-            </p>
-          </div>
+    <>
+      <PageHeading
+        title="Inventory"
+        description="Manage stock levels, reserved quantities and replenishment thresholds."
+        fallback="/supplier"
+      />
 
-          <div className="flex gap-2">
-            <Link
-              href="/supplier"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Orders
-            </Link>
-
-            <Link
-              href="/"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Marketplace
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="flex flex-col gap-5">
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <SummaryCard label="Products" value={metrics.products} />
           <SummaryCard label="Total stock" value={metrics.totalQuantity} />
@@ -365,7 +336,7 @@ export default function SupplierInventoryPage() {
           />
         </section>
 
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Inventory catalogue</h2>
@@ -457,7 +428,7 @@ export default function SupplierInventoryPage() {
                 return (
                   <article
                     key={item.productId}
-                    className="rounded-2xl border border-slate-200 p-5"
+                    className="rounded-2xl border border-line bg-page p-4 sm:p-5"
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div>
@@ -566,8 +537,7 @@ export default function SupplierInventoryPage() {
           )}
         </section>
       </div>
-      </main>
-    </AuthGuard>
+    </>
   );
 }
 
@@ -582,8 +552,8 @@ function SummaryCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border bg-white p-5 shadow-sm ${
-        alert ? "border-amber-200" : "border-slate-200"
+      className={`rounded-2xl border bg-surface p-4 sm:p-5 ${
+        alert ? "border-amber-200" : "border-line"
       }`}
     >
       <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">

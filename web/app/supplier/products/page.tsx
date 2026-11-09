@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import AuthGuard from "../../../components/auth/auth-guard";
-import { BrandLogo } from "../../../components/brand/logo";
+import PageHeading from "../../../components/supplier/page-heading";
 import { authHeaders } from "../../../lib/auth";
 
 const API_BASE_URL =
@@ -141,46 +140,22 @@ export default function SupplierProductsPage() {
   };
 
   return (
-    <AuthGuard allowedRoles={["SUPPLIER", "AGRO_DEALER"]}>
-      <main className="min-h-screen bg-[#f6f7f2] text-slate-900">
-        <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-            <div>
-              <BrandLogo height={24} />
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-                My listings
-              </h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Create and manage the products you offer on the marketplace.
-              </p>
-            </div>
+    <>
+      <PageHeading
+        title="My listings"
+        description="Create and manage the products you offer on the marketplace."
+        fallback="/supplier"
+        actions={
+          <Link
+            href="/supplier/products/new"
+            className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+          >
+            Add product
+          </Link>
+        }
+      />
 
-            <div className="flex items-center gap-2">
-              <Link
-                href="/supplier/products/new"
-                className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
-              >
-                Add product
-              </Link>
-
-              <Link
-                href="/supplier"
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Order queue
-              </Link>
-
-              <Link
-                href="/supplier/inventory"
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Inventory
-              </Link>
-            </div>
-          </div>
-        </header>
-
-        <div className="mx-auto max-w-7xl px-6 py-8">
+        <div className="mt-5">
           {error ? (
             <div
               role="alert"
@@ -208,88 +183,76 @@ export default function SupplierProductsPage() {
               </Link>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3">Product</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Price</th>
-                    <th className="px-4 py-3">Available</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {products.map((product) => {
-                    const available = product.inventory
-                      ? Math.max(
-                          product.inventory.quantity -
-                            product.inventory.reservedQuantity,
-                          0,
-                        )
-                      : 0;
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {products.map((product) => {
+                const available = product.inventory
+                  ? Math.max(
+                      product.inventory.quantity -
+                        product.inventory.reservedQuantity,
+                      0,
+                    )
+                  : 0;
 
-                    return (
-                      <tr key={product.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3">
-                          <p className="max-w-[260px] truncate font-semibold text-slate-900">
-                            {product.name}
-                          </p>
-                          <p className="text-xs text-slate-500">{product.sku}</p>
-                        </td>
-                        <td className="px-4 py-3 text-slate-600">
-                          {product.category.name}
-                        </td>
-                        <td className="px-4 py-3 text-slate-700">
-                          R {Number(product.price).toFixed(2)} / {product.unit}
-                        </td>
-                        <td className="px-4 py-3 text-slate-700">
-                          {available} {product.unit}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[product.status]}`}
-                          >
-                            {STATUS_LABELS[product.status]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-2">
-                            <Link
-                              href={`/supplier/products/${product.id}`}
-                              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                            >
-                              Edit
-                            </Link>
+                return (
+                  <article
+                    key={product.id}
+                    className="flex flex-col justify-between gap-4 rounded-3xl border border-line bg-surface p-4 sm:p-5"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="min-w-0 break-words font-black tracking-tight text-ink">
+                          {product.name}
+                        </h3>
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[product.status]}`}
+                        >
+                          {STATUS_LABELS[product.status]}
+                        </span>
+                      </div>
 
-                            <button
-                              type="button"
-                              disabled={updatingId === product.id}
-                              onClick={() => void toggleStatus(product)}
-                              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                                product.status === "ACTIVE"
-                                  ? "border border-slate-200 text-slate-600 hover:bg-slate-50"
-                                  : "bg-emerald-700 text-white hover:bg-emerald-800"
-                              }`}
-                            >
-                              {updatingId === product.id
-                                ? "Saving..."
-                                : product.status === "ACTIVE"
-                                  ? "Deactivate"
-                                  : "Activate"}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      <p className="mt-1 break-words text-xs text-ink-muted">
+                        SKU {product.sku} • {product.category.name}
+                      </p>
+
+                      <p className="mt-3 text-sm font-black text-ink">
+                        R {Number(product.price).toFixed(2)} / {product.unit}
+                      </p>
+                      <p className="mt-1 text-xs text-ink-muted">
+                        {available} {product.unit} available
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/supplier/products/${product.id}`}
+                        className="rounded-xl border border-line bg-surface-raised px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-page"
+                      >
+                        Edit
+                      </Link>
+
+                      <button
+                        type="button"
+                        disabled={updatingId === product.id}
+                        onClick={() => void toggleStatus(product)}
+                        className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                          product.status === "ACTIVE"
+                            ? "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                            : "bg-emerald-700 text-white hover:bg-emerald-800"
+                        }`}
+                      >
+                        {updatingId === product.id
+                          ? "Saving..."
+                          : product.status === "ACTIVE"
+                            ? "Deactivate"
+                            : "Activate"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>
-      </main>
-    </AuthGuard>
+    </>
   );
 }

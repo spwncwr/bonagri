@@ -52,7 +52,17 @@ type CarouselSlide = {
   imageUrl: string | null;
 };
 
-export default function PromoCarousel() {
+type PromoCarouselProps = {
+  /**
+   * Any slide deep-linking into /requests advertises the post-a-product-
+   * request feature — a buyer-only surface. Other roles never see it.
+   */
+  showRequestSlide?: boolean;
+};
+
+export default function PromoCarousel({
+  showRequestSlide = false,
+}: PromoCarouselProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const [slides, setSlides] = useState<CarouselSlide[]>(FALLBACK_SLIDES);
@@ -116,13 +126,20 @@ export default function PromoCarousel() {
     setIndex(nextIndex);
   }
 
+  // Slides deep-linking into /requests are part of the buyer-only
+  // post-a-request feature — dropped for every other role.
+  const visibleSlides = slides.filter(
+    (slide) => showRequestSlide || !slide.href.startsWith("/requests"),
+  );
+  const visibleCount = visibleSlides.length;
+
   // Auto-play sliding every 5 seconds when there are multiple slides
   useEffect(() => {
-    if (slides.length <= 1) return;
+    if (visibleCount <= 1) return;
 
     const timer = setInterval(() => {
       setIndex((current) => {
-        const next = (current + 1) % slides.length;
+        const next = (current + 1) % visibleCount;
         const track = trackRef.current;
         if (track && track.clientWidth > 0) {
           track.scrollTo({ left: next * track.clientWidth, behavior: "smooth" });
@@ -132,7 +149,7 @@ export default function PromoCarousel() {
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [slides.length]);
+  }, [visibleCount]);
 
   return (
     <section aria-label="Highlights">
@@ -141,7 +158,7 @@ export default function PromoCarousel() {
         onScroll={handleScroll}
         className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {slides.map((slide) => (
+        {visibleSlides.map((slide) => (
           <Link
             key={slide.id}
             href={slide.href}
@@ -185,7 +202,7 @@ export default function PromoCarousel() {
       </div>
 
       <div className="mt-2.5 flex justify-center gap-1.5">
-        {slides.map((slide, slideIndex) => (
+        {visibleSlides.map((slide, slideIndex) => (
           <button
             key={slide.id}
             type="button"

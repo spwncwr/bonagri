@@ -29,7 +29,51 @@ test("the desktop pane is mounted beside the shopping column", () => {
     shell,
     /<BuyerSidebar[\s\S]*?onPickCategory=\{pickCategory\}/,
   );
-  assert.match(shell, /"lg:min-w-0 lg:flex-1"/);
+  assert.match(
+    shell,
+    /"lg:min-w-0 lg:flex-1 lg:self-stretch lg:min-h-0 lg:overflow-y-auto lg:overflow-x-hidden"/,
+  );
+});
+
+test("the desktop shell pins the page so only the listings scroll", () => {
+  // The buyer shell (and only it) becomes a viewport-height flex column at
+  // lg: header in flow, wrapper filling the rest, page overflow clipped —
+  // phones and guests keep min-h-screen page scrolling untouched.
+  assert.match(
+    shell,
+    /" pb-24 lg:pb-0 lg:flex lg:flex-col lg:h-dvh lg:min-h-0 lg:overflow-hidden"/,
+  );
+  // The wrapper must be allowed to shrink to the leftover height, otherwise
+  // its content would be clipped by the shell's overflow-hidden.
+  assert.match(
+    shell,
+    /"mx-auto w-full max-w-\[1600px\] lg:flex lg:items-start lg:gap-6 lg:px-6 lg:flex-1 lg:min-h-0"/,
+  );
+  // View/product switches reset the column scroll next to the window scroll.
+  const resets = shell.match(
+    /contentColumnRef\.current\?\.scrollTo\(\{ top: 0/g,
+  );
+  assert.equal(
+    resets?.length,
+    4,
+    "goTo (both branches), showProduct and closeProduct reset",
+  );
+  assert.match(
+    shell,
+    /contentColumnRef\.current\?\.scrollTo\(\{ top: 0, behavior: "smooth" \}\)/,
+    "same-tab navigation scrolls the column smoothly",
+  );
+  // The footer moves into the column for buyers, but guests keep it after
+  // their marketing close-out — one shared definition, both placements.
+  assert.match(shell, /function SiteFooter\(/);
+  assert.match(
+    shell,
+    /\{!appMode \? \(\s*<SiteFooter view=\{view\} selectedProduct=\{selectedProduct\} role=\{currentUser\?\.role\} \/>/,
+  );
+  assert.match(
+    shell,
+    /\{appMode \? \(\s*<SiteFooter view=\{view\} selectedProduct=\{selectedProduct\} role=\{currentUser\?\.role\} \/>/,
+  );
 });
 
 test("the sidebar is desktop-only and reuses existing destinations", () => {
@@ -90,7 +134,10 @@ test("the phone feed keeps its original grid and containers", () => {
 
 test("the bottom tab bar steps aside for the desktop pane", () => {
   assert.match(shell, /<div className="lg:hidden">\s*<TabBar/);
-  assert.match(shell, /" pb-24 lg:pb-16"/);
+  assert.match(
+    shell,
+    /" pb-24 lg:pb-0 lg:flex lg:flex-col lg:h-dvh lg:min-h-0 lg:overflow-hidden"/,
+  );
 });
 
 test("the header only changes at lg", () => {
@@ -113,4 +160,53 @@ test("the product card was not redesigned", () => {
   assert.match(card, /className="flex flex-col transition active:scale-\[0\.985\]"/);
   assert.match(card, /aspect-square overflow-hidden rounded-2xl/);
   assert.match(card, /w-full rounded-xl bg-\[#17633a\] py-2\.5 text-xs font-black/);
+});
+
+test("posting a product request is a buyer-only surface", () => {
+  // The home demand section renders for buyers alone — never for guests or
+  // the supplier/admin/transporter consoles.
+  const demand = block(
+    'currentUser?.role === "BUYER" && view === "home"',
+    "</section>",
+  );
+  assert.match(demand, /Post a product request/);
+  assert.equal(
+    (demand.match(/router\.push\("\/requests"\)/g) ?? []).length,
+    3,
+    "every CTA in the section deep-links to /requests",
+  );
+  assert.doesNotMatch(
+    demand,
+    /promptSignIn|role === "SUPPLIER"/,
+    "no guest prompt or supplier branch left inside the buyer-only section",
+  );
+
+  // The footer anchor follows the same rule.
+  assert.match(
+    shell,
+    /role === "BUYER" && view === "home" \? \(\s*<a href="#requests"/,
+  );
+
+  // Sidebar and profile menu rows are filtered by role too.
+  assert.match(
+    sidebar,
+    /item\.key !== "requests" \|\| user\?\.role === "BUYER"/,
+  );
+  const profile = read("../components/mobile/profile-screen.tsx");
+  block('user.role === "BUYER" ?', 'label="Product requests"', profile);
+
+  // The promo carousel drops every /requests slide for non-buyers, and both
+  // placements pass the buyer flag.
+  const promo = read("../components/mobile/promo-carousel.tsx");
+  assert.match(promo, /!slide\.href\.startsWith\("\/requests"\)/);
+  assert.equal(
+    (shell.match(/showRequestSlide=\{currentUser\?\.role === "BUYER"\}/g) ?? [])
+      .length,
+    2,
+    "both carousel placements pass the buyer flag",
+  );
+
+  // Direct deep links stay behind the page-level guard.
+  const requestsPage = read("../app/requests/page.tsx");
+  assert.match(requestsPage, /AuthGuard allowedRoles=\{\["BUYER"\]\}/);
 });

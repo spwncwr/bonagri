@@ -30,6 +30,7 @@ import {
 import { buildImageUrl } from "../../lib/media";
 import AppHeader from "../mobile/app-header";
 import BuyerSidebar from "./buyer-sidebar";
+import CartDrawer from "../cart/cart-drawer";
 import CartScreen from "../mobile/cart-screen";
 import { getCategoryIcon } from "../mobile/category-icons";
 import CategoryRow from "../mobile/category-row";
@@ -80,6 +81,8 @@ type Address = {
   postalCode: string | null;
   country: string;
   isDefault: boolean;
+  lat: number | null;
+  lng: number | null;
 };
 
 type PublicProductRequest = {
@@ -299,6 +302,81 @@ const VIEW_PATHS: Record<ViewName, string> = {
   orders: "/orders",
 };
 
+// The marketplace footer, shared by both placements: guests keep it at the
+// end of the page (after the marketing close-out) while signed-in buyers get
+// it at the end of the shell content — inside the scrollable desktop column,
+// where it used to sit at the end of the page.
+function SiteFooter({
+  view,
+  selectedProduct,
+  role,
+}: {
+  view: ViewName;
+  selectedProduct: Product | null;
+  role?: AuthUser["role"];
+}) {
+  if (selectedProduct) return null;
+
+  // The cart screen keeps just a centered wordmark.
+  if (view === "cart") {
+    return (
+      <footer className="border-t border-[#dfe4dc] bg-[#f0f1ec]">
+        <div className="flex justify-center py-8">
+          <BrandLogo height={28} />
+        </div>
+      </footer>
+    );
+  }
+
+  return (
+    <footer className="border-t border-[#dfe4dc] bg-[#f0f1ec]">
+      <div className="mx-auto max-w-7xl px-6 py-10">
+        <div className="flex flex-col justify-between gap-8 md:flex-row">
+          <div>
+            <BrandLogo height={32} />
+
+            <p className="mt-4 max-w-sm text-sm leading-6 text-[#707a71]">
+              Agricultural trade, connected — from producers and suppliers to
+              buyers and markets.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-10 gap-y-2 text-sm font-semibold text-[#4d5a50] sm:grid-cols-3">
+            <a href="#marketplace" className="hover:text-[#17633a]">
+              Marketplace
+            </a>
+            {role === "BUYER" && view === "home" ? (
+              <a href="#requests" className="hover:text-[#17633a]">
+                Product Requests
+              </a>
+            ) : null}
+            <a href="#how-it-works" className="hover:text-[#17633a]">
+              How it works
+            </a>
+            <Link href="/apply" className="hover:text-[#17633a]">
+              Sell on BonAgri
+            </Link>
+            <Link href="/login" className="hover:text-[#17633a]">
+              Sign in
+            </Link>
+          </div>
+
+          <div className="text-sm text-[#69746b]">
+            <div className="font-black text-[#344238]">
+              Limpopo — A Home of Agriculture
+            </div>
+            <div className="mt-2">South Africa • Regional agricultural trade</div>
+          </div>
+        </div>
+
+        <div className="mt-10 border-t border-[#d8ddd5] pt-6 text-xs text-[#7b857c]">
+          © 2026 BonAgri. All rights reserved.
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 export default function HomeShell({
   initialView = "home",
   initialCategory = "",
@@ -433,6 +511,15 @@ export default function HomeShell({
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [cartError, setCartError] = useState("");
+  // Drawer states: `cartLoaded` gates the skeleton until the first fetch
+  // settles; `cartUpdating` (mirrored into a ref for a synchronous guard)
+  // blocks duplicate quantity/remove requests while one is in flight.
+  const [cartLoaded, setCartLoaded] = useState(false);
+  const [cartUpdating, setCartUpdating] = useState(false);
+  const cartUpdatingRef = useRef(false);
+  // Desktop (lg+) shell: the shopping column is the page's only scrollable
+  // region, so view/product switches reset it next to the window scroll.
+  const contentColumnRef = useRef<HTMLDivElement | null>(null);
   const [addingToCart, setAddingToCart] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
   // Mobile shell state: active tab, bell dropdown, quick-add confirmation.
@@ -754,6 +841,26 @@ export default function HomeShell({
     };
   }, [currentUser]);
 
+  // Silent refresh after a delivery pin is saved from the cart screen —
+  // keeps the selected address (only the rows are replaced).
+  async function refreshAddresses() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/addresses`, {
+        cache: "no-store",
+        headers: authHeaders(),
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setAddresses(data as Address[]);
+      }
+    } catch {
+      // A failed refresh leaves the current list in place — never fatal.
+    }
+  }
+
   // Facets power the filter sheet; one bounded read, no per-keystroke cost.
   useEffect(() => {
     let cancelled = false;
@@ -1030,6 +1137,7 @@ export default function HomeShell({
   const loadCart = useCallback(async () => {
     if (!currentUser || currentUser.role !== "BUYER") {
       setCartItems([]);
+      setCartLoaded(true);
       return;
     }
 
@@ -1048,6 +1156,8 @@ export default function HomeShell({
       setCartItems(Array.isArray(data) ? (data as CartItem[]) : []);
     } catch {
       // Silent: a stale cart badge is better than breaking the page.
+    } finally {
+      setCartLoaded(true);
     }
   }, [currentUser]);
 
@@ -1056,6 +1166,11 @@ export default function HomeShell({
   }, [loadCart]);
 
   async function patchCartItem(itemId: string, quantity: number) {
+    // Synchronous ref guard: a second click before the state round-trips
+    // must not fire a duplicate PATCH.
+    if (cartUpdatingRef.current) return;
+    cartUpdatingRef.current = true;
+    setCartUpdating(true);
     setCartError("");
 
     try {
@@ -1083,11 +1198,18 @@ export default function HomeShell({
       setCartError(
         error instanceof Error ? error.message : "Unable to update cart",
       );
+      // Re-sync with the server so a failed update never leaves stale totals.
       await loadCart();
+    } finally {
+      cartUpdatingRef.current = false;
+      setCartUpdating(false);
     }
   }
 
   async function removeCartItem(itemId: string) {
+    if (cartUpdatingRef.current) return;
+    cartUpdatingRef.current = true;
+    setCartUpdating(true);
     setCartError("");
 
     try {
@@ -1105,46 +1227,15 @@ export default function HomeShell({
       setCartError(
         error instanceof Error ? error.message : "Unable to remove item",
       );
-    }
-  }
-
-  async function clearCart() {
-    setCartError("");
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/cart`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-
-      if (!response.ok) {
-        throw new Error("Unable to clear cart");
-      }
-
-      await loadCart();
-    } catch (error) {
-      setCartError(
-        error instanceof Error ? error.message : "Unable to clear cart",
-      );
+    } finally {
+      cartUpdatingRef.current = false;
+      setCartUpdating(false);
     }
   }
 
   const cartCount = cartItems.reduce(
     (total, item) => total + item.quantity,
     0,
-  );
-  const cartTotal = cartItems.reduce(
-    (total, item) => total + Number(item.lineTotal),
-    0,
-  );
-  const cartSupplierGroups = Array.from(
-    cartItems.reduce((groups, item) => {
-      const key = item.product.supplierName;
-      const group = groups.get(key) ?? { supplierName: key, items: [] };
-      group.items.push(item);
-      groups.set(key, group);
-      return groups;
-    }, new Map<string, { supplierName: string; items: CartItem[] }>()).values(),
   );
 
   // Desktop header "Deliver to" chip — the address the buyer is actually
@@ -1325,6 +1416,7 @@ export default function HomeShell({
 
     if (nextView === view) {
       window.scrollTo({ top: 0, behavior: "smooth" });
+      contentColumnRef.current?.scrollTo({ top: 0, behavior: "smooth" });
       setNotificationsOpen(false);
       return;
     }
@@ -1339,6 +1431,7 @@ export default function HomeShell({
     setNotificationsOpen(false);
     setCartOpen(false);
     window.scrollTo({ top: 0 });
+    contentColumnRef.current?.scrollTo({ top: 0 });
     window.history.pushState(
       { bonagriView: nextView },
       "",
@@ -1365,6 +1458,7 @@ export default function HomeShell({
     resetReviewState();
     setSelectedProduct(product);
     window.scrollTo({ top: 0 });
+    contentColumnRef.current?.scrollTo({ top: 0 });
   }
 
   function openProduct(product: Product) {
@@ -1387,6 +1481,7 @@ export default function HomeShell({
       VIEW_PATHS[productReturnView],
     );
     window.scrollTo({ top: 0 });
+    contentColumnRef.current?.scrollTo({ top: 0 });
   }
 
   // Fetch a single product by id (used when a /products/:id link is refreshed
@@ -2033,6 +2128,21 @@ export default function HomeShell({
                           : ""}
                       </div>
                       <div>{selectedAddress.country}</div>
+                      <div className="mt-1.5">
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${
+                            selectedAddress.lat != null &&
+                            selectedAddress.lng != null
+                              ? "bg-[#e5f1e4] text-[#17633a]"
+                              : "bg-[#eee8c9] text-[#8a6d12]"
+                          }`}
+                        >
+                          {selectedAddress.lat != null &&
+                          selectedAddress.lng != null
+                            ? "Location confirmed"
+                            : "Needs location confirmation"}
+                        </span>
+                      </div>
                     </div>
                   );
                 })()}
@@ -2519,7 +2629,14 @@ export default function HomeShell({
   return (
     <main
       className={`relative isolate min-h-screen overflow-x-hidden bg-[#f7f6f0] text-[#17251b]${
-        appMode && !selectedProduct ? " pb-24 lg:pb-16" : ""
+        // Desktop (lg+) buyer shell: pin the page to the dynamic viewport so
+        // the header/sidebar/content split scrolls nothing but the listings.
+        // min-h-0 drops the min-h-screen floor (100vh) which would otherwise
+        // out-size 100dvh on browsers with dynamic toolbars and reintroduce a
+        // page scrollbar. Phones and guests keep the original page scroll.
+        appMode && !selectedProduct
+          ? " pb-24 lg:pb-0 lg:flex lg:flex-col lg:h-dvh lg:min-h-0 lg:overflow-hidden"
+          : ""
       }`}
     >
       {/* Marketing chrome (utility bar, nav, hero) — guests and the crawler
@@ -2760,7 +2877,7 @@ export default function HomeShell({
           </div>
 
           <div className="mx-auto max-w-2xl px-4 pt-4">
-            <PromoCarousel />
+            <PromoCarousel showRequestSlide={currentUser?.role === "BUYER"} />
           </div>
         </div>
       ) : null}
@@ -2967,6 +3084,15 @@ export default function HomeShell({
               promptSignIn("open your cart");
               return;
             }
+            // Desktop (lg+): slide the mini cart drawer over the current
+            // page. Mobile keeps the existing full-cart navigation.
+            if (
+              currentUser?.role === "BUYER" &&
+              window.matchMedia("(min-width: 1024px)").matches
+            ) {
+              setCartOpen(true);
+              return;
+            }
             goTo("cart");
           }}
           onToggleNotifications={() => {
@@ -2995,7 +3121,7 @@ export default function HomeShell({
       <div
         className={
           appMode && !selectedProduct
-            ? "mx-auto w-full max-w-[1600px] lg:flex lg:items-start lg:gap-6 lg:px-6"
+            ? "mx-auto w-full max-w-[1600px] lg:flex lg:items-start lg:gap-6 lg:px-6 lg:flex-1 lg:min-h-0"
             : ""
         }
       >
@@ -3019,13 +3145,16 @@ export default function HomeShell({
         ) : null}
 
         <div
+          ref={contentColumnRef}
           className={
-            appMode && !selectedProduct ? "lg:min-w-0 lg:flex-1" : ""
+            appMode && !selectedProduct
+              ? "lg:min-w-0 lg:flex-1 lg:self-stretch lg:min-h-0 lg:overflow-y-auto lg:overflow-x-hidden"
+              : ""
           }
         >
       {appMode && view === "home" ? (
         <div className="relative z-10 mx-auto max-w-2xl space-y-5 px-4 pt-4 lg:max-w-none lg:px-0">
-          <PromoCarousel />
+          <PromoCarousel showRequestSlide={currentUser?.role === "BUYER"} />
           <CategoryRow
             categories={CATEGORY_CARDS.map(([name]) => name)}
             active={activeCategory}
@@ -3057,6 +3186,7 @@ export default function HomeShell({
             onPatch={patchCartItem}
             onRemove={removeCartItem}
             onBrowse={() => goTo("explore")}
+            onAddressUpdated={() => void refreshAddresses()}
           />
         </div>
       ) : null}
@@ -3072,6 +3202,7 @@ export default function HomeShell({
               initialScreen={initialProfileScreen}
               onNavigate={goTo}
               onViewOrders={viewMyOrders}
+              onUserUpdated={setCurrentUser}
               onSignOut={() => {
                 clearAuth();
                 setCurrentUser(null);
@@ -3486,210 +3617,36 @@ export default function HomeShell({
           </>
         )}
 
-        {cartOpen && currentUser?.role === "BUYER" ? (
-          <div
-            className="fixed inset-0 z-[70] flex justify-end bg-black/40"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Shopping cart"
-            onClick={() => setCartOpen(false)}
-          >
-            <div
-              className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="flex items-center justify-between border-b border-[#dfe4dc] px-5 py-4">
-                <div>
-                  <div className="text-sm font-black text-[#17251b]">
-                    Your cart
-                  </div>
-                  <div className="mt-0.5 text-xs text-[#69756c]">
-                    {cartCount} {cartCount === 1 ? "item" : "items"} • R
-                    {cartTotal.toFixed(2)}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {cartItems.length > 0 ? (
-                    <button
-                      type="button"
-                      onClick={clearCart}
-                      className="text-xs font-bold text-[#7b867d] hover:text-red-600"
-                    >
-                      Clear
-                    </button>
-                  ) : null}
-
-                  <button
-                    type="button"
-                    onClick={() => setCartOpen(false)}
-                    className="text-lg font-bold text-[#7b867d] hover:text-[#344238]"
-                    aria-label="Close cart"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-
-              {cartError ? (
-                <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
-                  {cartError}
-                </div>
-              ) : null}
-
-              <div className="flex-1 overflow-y-auto px-5 py-4">
-                {cartItems.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-[#cbd5ca] p-8 text-center">
-                    <div className="text-sm font-black text-[#243229]">
-                      Your cart is empty
-                    </div>
-                    <div className="mt-1 text-xs leading-5 text-[#69756c]">
-                      Browse the marketplace and add produce to your cart.
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {cartSupplierGroups.map((group) => (
-                      <div
-                        key={group.supplierName}
-                        className="rounded-2xl border border-[#dce2d9] bg-[#fbfcf9] p-4"
-                      >
-                        <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#7b867d]">
-                          {group.supplierName}
-                        </div>
-
-                        <div className="mt-3 space-y-4">
-                          {group.items.map((item) => (
-                            <div
-                              key={item.id}
-                              className="border-b border-[#e9ede7] pb-3 last:border-b-0 last:pb-0"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <div className="truncate text-sm font-black text-[#17251b]">
-                                    {item.product.name}
-                                  </div>
-                                  <div className="mt-0.5 text-xs text-[#69756c]">
-                                    R{Number(item.product.price)}/
-                                    {item.product.unit} •{" "}
-                                    {item.availableQuantity} available
-                                  </div>
-                                  {!item.inStock ? (
-                                    <div className="mt-1 text-[10px] font-black uppercase tracking-wide text-red-600">
-                                      Only {item.availableQuantity} left —
-                                      reduce quantity to check out
-                                    </div>
-                                  ) : null}
-                                </div>
-
-                                <div className="text-right">
-                                  <div className="text-sm font-black text-[#17633a]">
-                                    R{Number(item.lineTotal).toFixed(2)}
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => removeCartItem(item.id)}
-                                    className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[#7b867d] hover:text-red-600"
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              </div>
-
-                              <div className="mt-2 flex items-center gap-2">
-                                <div className="flex items-center rounded-lg border border-[#cfd8ce] bg-white">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      patchCartItem(
-                                        item.id,
-                                        Math.max(1, item.quantity - 1),
-                                      )
-                                    }
-                                    disabled={item.quantity <= 1}
-                                    className="h-8 w-8 text-sm font-black text-[#17633a] disabled:opacity-40"
-                                    aria-label={`Decrease ${item.product.name} quantity`}
-                                  >
-                                    −
-                                  </button>
-                                  <span className="w-8 text-center text-xs font-black text-[#243229]">
-                                    {item.quantity}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      patchCartItem(item.id, item.quantity + 1)
-                                    }
-                                    disabled={
-                                      item.quantity >= item.availableQuantity
-                                    }
-                                    className="h-8 w-8 text-sm font-black text-[#17633a] disabled:opacity-40"
-                                    aria-label={`Increase ${item.product.name} quantity`}
-                                  >
-                                    +
-                                  </button>
-                                </div>
-
-                                <span className="text-[10px] font-bold uppercase tracking-wide text-[#7b867d]">
-                                  {item.product.unit}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t border-[#dfe4dc] px-5 py-4">
-                <div className="flex items-center justify-between text-sm font-black text-[#243229]">
-                  <span>Subtotal</span>
-                  <span className="text-[#17633a]">
-                    R{cartTotal.toFixed(2)}
-                  </span>
-                </div>
-
-                <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[#7b867d]">
-                  {cartSupplierGroups.length === 1
-                    ? "1 order"
-                    : `${cartSupplierGroups.length} orders`}{" "}
-                  will be placed — one per supplier
-                </div>
-
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCartOpen(false)}
-                    className="flex-1 rounded-xl border border-[#ccd5ca] px-4 py-3 text-xs font-black text-[#243229] hover:bg-[#f2f4ef]"
-                  >
-                    Continue shopping
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => router.push("/checkout")}
-                    disabled={cartItems.length === 0}
-                    className="flex-1 rounded-xl bg-[#17633a] px-4 py-3 text-xs font-black text-white hover:bg-[#0f4d2b] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Checkout
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        {/* Desktop mini cart drawer — slides over the current page instead
+            of navigating away. Below lg it never opens (the header icon
+            keeps the full-cart navigation), so mobile is untouched. */}
+        <CartDrawer
+          open={cartOpen && currentUser?.role === "BUYER"}
+          items={cartItems}
+          error={cartError}
+          loading={!cartLoaded}
+          busy={cartUpdating || addingToCart}
+          onPatch={patchCartItem}
+          onRemove={removeCartItem}
+          onClose={() => setCartOpen(false)}
+          onViewCart={() => {
+            setCartOpen(false);
+            goTo("cart");
+          }}
+          onCheckout={() => {
+            setCartOpen(false);
+            router.push("/checkout");
+          }}
+        />
 
         {orderSuccess && (
-          <div className="fixed bottom-6 right-6 z-[60] w-full max-w-sm rounded-2xl border border-[#cfe0cf] bg-white p-5 shadow-2xl">
+          <div className="fixed bottom-24 left-4 right-4 z-[60] rounded-2xl border border-[#cfe0cf] bg-white p-4 shadow-2xl sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-sm sm:p-5">
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e5f1e4] text-[#17633a]">
                 <CheckIcon className="h-4 w-4" strokeWidth={3} />
               </div>
 
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-sm font-black text-[#243229]">
                   Order placed
                 </div>
@@ -3707,7 +3664,7 @@ export default function HomeShell({
               <button
                 type="button"
                 onClick={() => setOrderSuccess(null)}
-                className="text-lg font-bold text-[#7b867d] hover:text-[#344238]"
+                className="shrink-0 rounded-full p-1 text-lg font-bold leading-none text-[#7b867d] transition hover:bg-[#f4f6f1] hover:text-[#344238]"
                 aria-label="Dismiss order confirmation"
               >
                 ×
@@ -3718,8 +3675,10 @@ export default function HomeShell({
 
       </section>
 
-      {/* Buyer requests — signed-in buyer home only, never on the guest page. */}
-      {appMode && view === "home" ? (
+      {/* Buyer requests — signed-in buyers only. The post-a-request feature
+          must never surface for guests or the supplier/admin/transporter
+          consoles; suppliers have their own demand board on /supplier. */}
+      {currentUser?.role === "BUYER" && view === "home" ? (
       <section id="requests" className="overflow-hidden border-y border-[#dfe4dc] bg-white">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:gap-12 sm:px-6 sm:py-16 lg:grid-cols-2 lg:items-center">
           <div className="min-w-0">
@@ -3738,15 +3697,7 @@ export default function HomeShell({
             </p>
 
             <button
-              onClick={() => {
-                if (!currentUser) {
-                  promptSignIn("post a product request");
-                  return;
-                }
-                router.push(
-                  currentUser.role === "BUYER" ? "/requests" : "/login",
-                );
-              }}
+              onClick={() => router.push("/requests")}
               className="mt-7 rounded-xl bg-[#17633a] px-6 py-3.5 text-sm font-black text-white hover:bg-[#0f4d2b]"
             >
               Post a product request
@@ -3844,16 +3795,10 @@ export default function HomeShell({
 
                         <button
                           type="button"
-                          onClick={() =>
-                            router.push(
-                              currentUser?.role === "SUPPLIER"
-                                ? `/requests?respond=${request.id}`
-                                : `/requests`,
-                            )
-                          }
+                          onClick={() => router.push("/requests")}
                           className="rounded-xl bg-[#17633a] px-3.5 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.98] sm:px-4 sm:py-2"
                         >
-                          {currentUser?.role === "SUPPLIER" ? "Offer" : "Respond"}
+                          Respond
                         </button>
                       </div>
                     </div>
@@ -3913,15 +3858,7 @@ export default function HomeShell({
 
                     <button
                       type="button"
-                      onClick={() => {
-                if (!currentUser) {
-                  promptSignIn("post a product request");
-                  return;
-                }
-                router.push(
-                  currentUser.role === "BUYER" ? "/requests" : "/login",
-                );
-              }}
+                      onClick={() => router.push("/requests")}
                       className="rounded-xl bg-[#17633a] px-3.5 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.98] sm:px-4 sm:py-2"
                     >
                       Post request
@@ -4019,13 +3956,15 @@ export default function HomeShell({
       {/* My Orders — signed-in buyers only; guests never see this section. */}
       {appMode && view === "orders" ? (
       <section id="orders" className="border-y border-[#dfe4dc] bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-16">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
+        {/* Mobile-first container matching the profile screen (max-w-2xl
+            px-4); scales up only once the viewport has room for it. */}
+        <div className="mx-auto max-w-2xl px-4 py-6 sm:max-w-3xl sm:px-6 sm:py-10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#17633a]">
                 Buyer workspace
               </div>
-              <h2 className="mt-2 text-3xl font-black tracking-tight text-[#17251b]">
+              <h2 className="mt-1.5 text-2xl font-black tracking-tight text-[#17251b] sm:text-3xl">
                 My Orders
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#69756c]">
@@ -4034,12 +3973,12 @@ export default function HomeShell({
               </p>
             </div>
 
-            <div className="rounded-xl border border-[#dce2d9] bg-[#f7f8f4] px-4 py-3 text-xs font-bold text-[#5d695f]">
+            <div className="w-fit rounded-full border border-[#dce2d9] bg-[#f7f8f4] px-3.5 py-1.5 text-xs font-black text-[#5d695f]">
               {orders.length} {orders.length === 1 ? "order" : "orders"}
             </div>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-6">
             {orderActionError ? (
               <div
                 role="alert"
@@ -4118,10 +4057,10 @@ export default function HomeShell({
                         return (
                           <article
                             key={order.id}
-                            className="rounded-3xl border border-[#e2e8df] bg-white p-5 shadow-sm transition hover:shadow-md"
+                            className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5"
                           >
                             {/* Top Row: Store/Product title + Status */}
-                            <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
                               <div className="min-w-0 flex-1">
                                 <h3 className="truncate text-base font-black text-[#17251b] sm:text-lg">
                                   {order.items[0]?.productName
@@ -4139,7 +4078,7 @@ export default function HomeShell({
                                 </div>
                               </div>
 
-                              <div className="shrink-0 text-right">
+                              <div className="ml-auto flex shrink-0 flex-col items-end text-right">
                                 <div
                                   className={`text-sm font-bold tracking-tight ${statusStyle.colorClass}`}
                                 >
@@ -4241,14 +4180,14 @@ export default function HomeShell({
                               <div className="flex flex-wrap items-center gap-2">
                                 <Link
                                   href={`/orders/${order.id}/invoice`}
-                                  className="rounded-xl bg-[#f4f6f2] px-4 py-2 text-xs font-bold text-[#344238] transition hover:bg-[#e8ece5] active:scale-[0.98]"
+                                  className="rounded-full bg-[#f4f6f2] px-4 py-2 text-xs font-bold text-[#344238] shadow-sm transition hover:bg-[#e8ece5] active:scale-[0.98]"
                                 >
                                   Receipt
                                 </Link>
 
                                 <Link
                                   href={`/orders/${order.id}`}
-                                  className="rounded-xl bg-[#17633a] px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.98]"
+                                  className="rounded-full bg-[#17633a] px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.98]"
                                 >
                                   View Order
                                 </Link>
@@ -4265,7 +4204,7 @@ export default function HomeShell({
                                           setPaymentRef(event.target.value)
                                         }
                                         placeholder="EFT reference"
-                                        className="w-36 rounded-xl border border-[#dce2d9] bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-[#17633a] focus:outline-none"
+                                        className="w-36 rounded-full border border-[#dce2d9] bg-white px-3.5 py-2 text-xs text-slate-900 outline-none transition focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
                                       />
                                       <button
                                         type="button"
@@ -4275,7 +4214,7 @@ export default function HomeShell({
                                         onClick={() =>
                                           void recordPayment(order.id)
                                         }
-                                        className="rounded-xl bg-[#17633a] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#0f4d2b] disabled:opacity-50"
+                                        className="rounded-full bg-[#17633a] px-3.5 py-2 text-xs font-black text-white shadow-sm transition hover:bg-[#0f4d2b] disabled:opacity-50"
                                       >
                                         {recordingPaymentId === order.id
                                           ? "..."
@@ -4291,7 +4230,7 @@ export default function HomeShell({
                                           setPaymentRef("");
                                           setOrderActionError("");
                                         }}
-                                        className="rounded-xl border border-[#dce2d9] px-2.5 py-1.5 text-xs font-bold text-[#5d695f] hover:bg-[#f4f6f2]"
+                                        className="rounded-full border border-[#dce2d9] bg-white px-3 py-2 text-xs font-bold text-[#5d695f] shadow-sm transition hover:bg-[#f4f6f2]"
                                       >
                                         Cancel
                                       </button>
@@ -4304,7 +4243,7 @@ export default function HomeShell({
                                         setPaymentRef("");
                                         setOrderActionError("");
                                       }}
-                                      className="rounded-xl border border-[#bcd6c0] px-3.5 py-2 text-xs font-bold text-[#17633a] transition hover:bg-[#eaf3ec]"
+                                      className="rounded-full border border-[#bcd6c0] bg-white px-3.5 py-2 text-xs font-black text-[#17633a] shadow-sm transition hover:bg-[#eaf3ec] active:scale-[0.98]"
                                     >
                                       {order.payment?.status === "FAILED"
                                         ? "Re-record EFT"
@@ -4323,7 +4262,7 @@ export default function HomeShell({
                                         order.orderNumber,
                                       )
                                     }
-                                    className="rounded-xl px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                                    className="rounded-full border border-red-200 bg-white px-3.5 py-2 text-xs font-black text-red-600 shadow-sm transition hover:bg-red-50 active:scale-[0.98] disabled:opacity-50"
                                   >
                                     {cancellingOrderId === order.id
                                       ? "Cancelling..."
@@ -4343,6 +4282,13 @@ export default function HomeShell({
           </div>
         </div>
       </section>
+      ) : null}
+
+      {/* Buyer shell: the footer lives inside the scrollable shopping column,
+          so it still ends the listings on desktop exactly as it ended the
+          page before the column became the scroll region. */}
+      {appMode ? (
+        <SiteFooter view={view} selectedProduct={selectedProduct} role={currentUser?.role} />
       ) : null}
         </div>
       </div>
@@ -4417,61 +4363,11 @@ export default function HomeShell({
         </>
       ) : null}
 
-      {/* Footer — the cart screen keeps just a centered wordmark. */}
-      {!selectedProduct ? (
-        view === "cart" ? (
-          <footer className="border-t border-[#dfe4dc] bg-[#f0f1ec]">
-            <div className="flex justify-center py-8">
-              <BrandLogo height={28} />
-            </div>
-          </footer>
-        ) : (
-      <footer className="border-t border-[#dfe4dc] bg-[#f0f1ec]">
-        <div className="mx-auto max-w-7xl px-6 py-10">
-          <div className="flex flex-col justify-between gap-8 md:flex-row">
-            <div>
-              <BrandLogo height={32} />
-
-              <p className="mt-4 max-w-sm text-sm leading-6 text-[#707a71]">
-                Agricultural trade, connected — from producers and suppliers to
-                buyers and markets.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-x-10 gap-y-2 text-sm font-semibold text-[#4d5a50] sm:grid-cols-3">
-              <a href="#marketplace" className="hover:text-[#17633a]">
-                Marketplace
-              </a>
-              {appMode && view === "home" ? (
-                <a href="#requests" className="hover:text-[#17633a]">
-                  Product Requests
-                </a>
-              ) : null}
-              <a href="#how-it-works" className="hover:text-[#17633a]">
-                How it works
-              </a>
-              <Link href="/apply" className="hover:text-[#17633a]">
-                Sell on BonAgri
-              </Link>
-              <Link href="/login" className="hover:text-[#17633a]">
-                Sign in
-              </Link>
-            </div>
-
-            <div className="text-sm text-[#69746b]">
-              <div className="font-black text-[#344238]">
-                Limpopo — A Home of Agriculture
-              </div>
-              <div className="mt-2">South Africa • Regional agricultural trade</div>
-            </div>
-          </div>
-
-          <div className="mt-10 border-t border-[#d8ddd5] pt-6 text-xs text-[#7b857c]">
-            © 2026 BonAgri. All rights reserved.
-          </div>
-        </div>
-      </footer>
-        )
+      {/* Footer — guests keep it after the marketing close-out; the buyer
+          shell renders it at the end of the scrollable column instead (see
+          the column's closing tag below). */}
+      {!appMode ? (
+        <SiteFooter view={view} selectedProduct={selectedProduct} role={currentUser?.role} />
       ) : null}
 
       {appMode && !selectedProduct ? (

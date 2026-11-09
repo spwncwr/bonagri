@@ -143,6 +143,11 @@ export default function BuyerSidebar({
     item.key === "cart" ? { ...item, badge: cartCount } : item,
   );
 
+  // Posting product requests is a buyer feature — other roles never see it.
+  const account = ACCOUNT.filter(
+    (item) => item.key !== "requests" || user?.role === "BUYER",
+  );
+
   return (
     <aside
       aria-label="Buyer navigation"
@@ -185,7 +190,7 @@ export default function BuyerSidebar({
         })}
       </Group>
 
-        <Group title="Your account">{ACCOUNT.map(renderItem)}</Group>
+        <Group title="Your account">{account.map(renderItem)}</Group>
       </nav>
 
       <div className="mt-4 border-t border-line pt-3">

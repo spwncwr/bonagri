@@ -11,6 +11,7 @@ describe("SignUploadDto (CP16a)", () => {
       "category",
       "banner",
       "promotion",
+      "avatar",
     ]) {
       const dto = plainToInstance(SignUploadDto, { kind });
       await expect(validate(dto)).resolves.toEqual([]);

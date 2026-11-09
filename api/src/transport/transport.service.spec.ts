@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -6,7 +7,11 @@ import {
 import { TransportService } from "./transport.service";
 
 type PrismaMock = {
-  transporterProfile: { findUnique: jest.Mock; findMany: jest.Mock };
+  transporterProfile: {
+    findUnique: jest.Mock;
+    findMany: jest.Mock;
+    update: jest.Mock;
+  };
   delivery: { findMany: jest.Mock; findUnique: jest.Mock; updateMany: jest.Mock };
 };
 
@@ -15,6 +20,7 @@ function makePrisma(): PrismaMock {
     transporterProfile: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      update: jest.fn(),
     },
     delivery: {
       findMany: jest.fn(),
@@ -87,6 +93,7 @@ describe("TransportService (CP14)", () => {
               },
             ],
             deliveryAddress: { city: "Tzaneen", province: "Limpopo" },
+            deliverySnapshot: null,
           },
         },
       ]);
@@ -104,6 +111,47 @@ describe("TransportService (CP14)", () => {
       ]);
       // The full address object must never leave the board endpoint.
       expect(JSON.stringify(jobs)).not.toContain("deliveryAddress");
+      expect(JSON.stringify(jobs)).not.toContain("deliverySnapshot");
+    });
+
+    it("shows the order's frozen dropoff city when the address changed later", async () => {
+      const prisma = makePrisma();
+      const { service } = makeService(prisma);
+
+      primeVerifiedProfile(prisma);
+      prisma.delivery.findMany.mockResolvedValue([
+        {
+          orderId: "order-1",
+          publishedAt: new Date("2026-10-19T09:00:00Z"),
+          order: {
+            orderNumber: "BON-20261019-111111",
+            createdAt: new Date(),
+            items: [
+              {
+                quantity: 1,
+                product: {
+                  supplier: { businessName: "Polokwane Fresh", city: "Polokwane" },
+                },
+              },
+            ],
+            deliveryAddress: { city: "Polokwane", province: "Limpopo" },
+            deliverySnapshot: {
+              addressId: "addr-1",
+              addressLine1: "1 Marula St",
+              city: "Tzaneen",
+              province: "Limpopo",
+              lat: -23.8333,
+              lng: 30.1667,
+              snapshottedAt: "2026-10-19T08:00:00.000Z",
+            },
+          },
+        },
+      ]);
+
+      const jobs = await service.getJobs("tp-user-1");
+
+      expect(jobs[0].dropoffCity).toBe("Tzaneen");
+      expect(jobs[0].dropoffProvince).toBe("Limpopo");
     });
 
     it("blocks unverified transporters (403)", async () => {
@@ -290,6 +338,63 @@ describe("TransportService (CP14)", () => {
       );
     });
 
+    it("serves the order's frozen destination to the claimed-job view", async () => {
+      const prisma = makePrisma();
+      const { service } = makeService(prisma);
+
+      primeVerifiedProfile(prisma);
+      prisma.delivery.findMany.mockResolvedValue([
+        {
+          orderId: "o-1",
+          status: "ASSIGNED",
+          order: {
+            deliverySnapshot: {
+              addressId: "addr-1",
+              label: "Home",
+              recipientName: "Thandi",
+              phone: "072 111 2222",
+              addressLine1: "1 Marula St",
+              addressLine2: null,
+              city: "Tzaneen",
+              province: "Limpopo",
+              postalCode: "0880",
+              country: "South Africa",
+              lat: -23.8333,
+              lng: 30.1667,
+              snapshottedAt: "2026-10-19T08:00:00.000Z",
+            },
+            deliveryAddress: {
+              id: "addr-1",
+              userId: "buyer-1",
+              label: "Home",
+              recipientName: "Thandi",
+              phone: null,
+              addressLine1: "Edited later",
+              addressLine2: null,
+              city: "Polokwane",
+              province: "Limpopo",
+              postalCode: null,
+              country: "South Africa",
+              isDefault: true,
+              lat: -23.9045,
+              lng: 29.4689,
+            },
+          },
+        },
+      ]);
+
+      const result = await service.getMyDeliveries("tp-user-1");
+
+      expect(result.active).toHaveLength(1);
+      expect(result.active[0].order.deliveryAddress).toMatchObject({
+        id: "addr-1",
+        addressLine1: "1 Marula St",
+        city: "Tzaneen",
+        lat: -23.8333,
+        lng: 30.1667,
+      });
+    });
+
     it("lets an unverified transporter see (an empty) history", async () => {
       const prisma = makePrisma();
       const { service } = makeService(prisma);
@@ -316,6 +421,98 @@ describe("TransportService (CP14)", () => {
       await expect(service.getMyDeliveries("buyer-1")).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe("updateMyProfile (account settings)", () => {
+    it("saves the business details the transporter edits", async () => {
+      const prisma = makePrisma();
+      const { service } = makeService(prisma);
+
+      prisma.transporterProfile.findUnique.mockResolvedValue({
+        id: "tp-1",
+        businessName: "Old Name",
+        verified: true,
+        serviceProvinces: ["Limpopo"],
+      });
+      prisma.transporterProfile.update.mockResolvedValue({ id: "tp-1" });
+
+      await service.updateMyProfile("tp-user-1", {
+        businessName: "  Bela Bela Hauliers ",
+        vehicleType: "3-ton truck",
+        phone: "072 000 0002",
+        email: "jobs@belabela.co.za",
+        city: "Bela Bela",
+        province: "Limpopo",
+        serviceProvinces: ["Limpopo", " North West ", "Limpopo"],
+      });
+
+      expect(prisma.transporterProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "tp-1" },
+          data: {
+            businessName: "Bela Bela Hauliers",
+            vehicleType: "3-ton truck",
+            phone: "072 000 0002",
+            email: "jobs@belabela.co.za",
+            city: "Bela Bela",
+            province: "Limpopo",
+            // trimmed and de-duplicated
+            serviceProvinces: ["Limpopo", "North West"],
+          },
+        }),
+      );
+    });
+
+    it("only touches the fields that were sent", async () => {
+      const prisma = makePrisma();
+      const { service } = makeService(prisma);
+
+      prisma.transporterProfile.findUnique.mockResolvedValue({
+        id: "tp-1",
+        businessName: "Bela Bela Hauliers",
+        verified: true,
+        serviceProvinces: ["Limpopo"],
+      });
+      prisma.transporterProfile.update.mockResolvedValue({ id: "tp-1" });
+
+      await service.updateMyProfile("tp-user-1", { phone: null });
+
+      expect(prisma.transporterProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { phone: null } }),
+      );
+      // verification is an admin decision — never writable from here
+      expect(
+        prisma.transporterProfile.update.mock.calls[0][0].data,
+      ).not.toHaveProperty("verified");
+    });
+
+    it("refuses to clear every service province", async () => {
+      const prisma = makePrisma();
+      const { service } = makeService(prisma);
+
+      prisma.transporterProfile.findUnique.mockResolvedValue({
+        id: "tp-1",
+        businessName: "Bela Bela Hauliers",
+        verified: true,
+        serviceProvinces: ["Limpopo"],
+      });
+
+      await expect(
+        service.updateMyProfile("tp-user-1", { serviceProvinces: ["  "] }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.transporterProfile.update).not.toHaveBeenCalled();
+    });
+
+    it("404s for a user without a transporter profile", async () => {
+      const prisma = makePrisma();
+      const { service } = makeService(prisma);
+
+      prisma.transporterProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateMyProfile("buyer-1", { phone: "072 000 0003" }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

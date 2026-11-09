@@ -7,9 +7,19 @@ export type UploadKind =
   | "supplier_logo"
   | "category"
   | "banner"
-  | "promotion";
+  | "promotion"
+  // Account settings: every role uploads exactly one kind of personal image,
+  // the display picture on their settings screen.
+  | "avatar";
 
 export class SignUploadDto {
-  @IsIn(["product", "supplier_logo", "category", "banner", "promotion"])
+  @IsIn([
+    "product",
+    "supplier_logo",
+    "category",
+    "banner",
+    "promotion",
+    "avatar",
+  ])
   kind!: UploadKind;
 }

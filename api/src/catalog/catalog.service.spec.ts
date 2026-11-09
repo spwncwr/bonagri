@@ -817,6 +817,97 @@ describe("CatalogService (CP16a media foundation)", () => {
     });
   });
 
+  describe("updateSupplierProfile (settings details)", () => {
+    it("saves the business details a vendor edits on its settings screen", async () => {
+      const { service, prisma } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-1",
+        logoPublicId: null,
+      });
+      prisma.supplierProfile.update.mockResolvedValue({ id: "sup-1" });
+
+      await service.updateSupplierProfile("supplier-user-1", {
+        businessName: "  Marula Fresh Produce ",
+        description: "  Leafy greens from Tzaneen  ",
+        phone: "015 000 0001",
+        email: "sales@marula.co.za",
+        address: "12 Market St",
+        city: "Tzaneen",
+        province: "Limpopo",
+      });
+
+      expect(prisma.supplierProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "sup-1" },
+          data: {
+            businessName: "Marula Fresh Produce",
+            description: "Leafy greens from Tzaneen",
+            phone: "015 000 0001",
+            email: "sales@marula.co.za",
+            address: "12 Market St",
+            city: "Tzaneen",
+            province: "Limpopo",
+          },
+        }),
+      );
+    });
+
+    it("stores blanked optional details as null", async () => {
+      const { service, prisma } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-1",
+        logoPublicId: null,
+      });
+      prisma.supplierProfile.update.mockResolvedValue({ id: "sup-1" });
+
+      await service.updateSupplierProfile("supplier-user-1", {
+        phone: "",
+        description: "   ",
+      });
+
+      expect(prisma.supplierProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { phone: null, description: null },
+        }),
+      );
+    });
+
+    it("refuses to blank the business name", async () => {
+      const { service, prisma } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-1",
+        logoPublicId: null,
+      });
+
+      await expect(
+        service.updateSupplierProfile("supplier-user-1", {
+          businessName: "   ",
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.supplierProfile.update).not.toHaveBeenCalled();
+    });
+
+    it("never lets an admin-owned field through", async () => {
+      const { service, prisma } = makeService();
+      prisma.supplierProfile.findUnique.mockResolvedValue({
+        id: "sup-1",
+        logoPublicId: null,
+      });
+      prisma.supplierProfile.update.mockResolvedValue({ id: "sup-1" });
+
+      await service.updateSupplierProfile("supplier-user-1", {
+        businessName: "Marula Fresh Produce",
+        registrationNo: "9999/000000/00",
+        verified: true,
+      } as never);
+
+      const data = prisma.supplierProfile.update.mock.calls[0][0].data;
+      expect(data).toEqual({ businessName: "Marula Fresh Produce" });
+      expect(data).not.toHaveProperty("registrationNo");
+      expect(data).not.toHaveProperty("verified");
+    });
+  });
+
   describe("getSupplierStorefront (promoted shop destination)", () => {
     it("returns only the public shop shape and its active products", async () => {
       const { service, prisma, reviews } = makeService();

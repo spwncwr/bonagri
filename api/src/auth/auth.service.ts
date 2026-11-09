@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
@@ -288,6 +289,7 @@ export class AuthService {
         firstName: true,
         lastName: true,
         phone: true,
+        avatarUrl: true,
         role: true,
         status: true,
         emailVerifiedAt: true,
@@ -302,6 +304,59 @@ export class AuthService {
       throw new UnauthorizedException(
         "Email address has not been verified",
       );
+    }
+
+    return user;
+  }
+
+  // GET /auth/me — everything the settings screens need in one call: the
+  // account row plus whichever role profile applies (both are null for a
+  // buyer). The JWT guard stays on the lean validateUser so ordinary
+  // requests never pay for the joins.
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        avatarUrl: true,
+        role: true,
+        status: true,
+        emailVerifiedAt: true,
+        supplierProfile: {
+          select: {
+            businessName: true,
+            description: true,
+            registrationNo: true,
+            phone: true,
+            email: true,
+            address: true,
+            city: true,
+            province: true,
+            logoUrl: true,
+            verified: true,
+          },
+        },
+        transporterProfile: {
+          select: {
+            businessName: true,
+            vehicleType: true,
+            phone: true,
+            email: true,
+            city: true,
+            province: true,
+            serviceProvinces: true,
+            verified: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException("Account not found");
     }
 
     return user;

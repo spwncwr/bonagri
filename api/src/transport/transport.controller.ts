@@ -1,10 +1,20 @@
-import { Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
 import type { Request } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { UserRole } from "../common/types";
 import { PrismaService } from "../prisma/prisma.service";
+import { UpdateTransporterProfileDto } from "./dto/update-transporter-profile.dto";
 import { TransportService } from "./transport.service";
 
 type AuthenticatedRequest = Request & {
@@ -49,6 +59,18 @@ export class TransportController {
   @UseGuards(RolesGuard)
   getMyDeliveries(@Req() request: AuthenticatedRequest) {
     return this.transportService.getMyDeliveries(request.user.id);
+  }
+
+  // Account settings: business name, contact, vehicle and the provinces this
+  // transporter serves. No admin field (verified) is accepted here.
+  @Patch("profile")
+  @Roles("TRANSPORTER")
+  @UseGuards(RolesGuard)
+  updateProfile(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateTransporterProfileDto,
+  ) {
+    return this.transportService.updateMyProfile(request.user.id, dto);
   }
 
   // Verified-transporter directory for the supplier's re-dispatch

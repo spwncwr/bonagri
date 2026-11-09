@@ -18,11 +18,13 @@ type AuthenticatedRequest = Request & {
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
-  // Buyers have nothing to upload (CP15b delivery photos are bytea evidence,
-  // not Cloudinary); transporters likewise. 503 when CLOUDINARY_* is unset.
+  // Product/branding uploads are vendor work; the "avatar" kind is the one
+  // personal image any signed-in account may upload from its settings screen
+  // (CP15b delivery photos stay bytea evidence, not Cloudinary). 503 when
+  // CLOUDINARY_* is unset.
   @Post("signature")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("SUPPLIER", "AGRO_DEALER", "ADMIN")
+  @Roles("BUYER", "SUPPLIER", "AGRO_DEALER", "TRANSPORTER", "ADMIN")
   signUpload(
     @Req() request: AuthenticatedRequest,
     @Body() dto: SignUploadDto,

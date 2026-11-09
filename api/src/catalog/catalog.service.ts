@@ -551,8 +551,9 @@ export class CatalogService {
     return updated;
   }
 
-  // CP16a: supplier storefront logo (the rest of the profile stays
-  // admin-seeded until a real settings page exists).
+  // CP16a: storefront logo, plus the business details a vendor maintains from
+  // its own settings screen. registrationNo and verified are admin-owned and
+  // are never accepted here.
   async updateSupplierProfile(userId: string, dto: UpdateSupplierProfileDto) {
     const profile = await this.prisma.supplierProfile.findUnique({
       where: { userId },
@@ -563,20 +564,77 @@ export class CatalogService {
       throw new NotFoundException("Supplier profile not found");
     }
 
+    const data: {
+      businessName?: string;
+      description?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?: string | null;
+      city?: string | null;
+      province?: string | null;
+      logoUrl?: string | null;
+      logoPublicId?: string | null;
+    } = {};
+
+    if (dto.businessName !== undefined) {
+      const businessName = dto.businessName.trim();
+      if (!businessName) {
+        throw new BadRequestException("Business name cannot be empty");
+      }
+      data.businessName = businessName;
+    }
+
+    if (dto.description !== undefined) {
+      const description = dto.description ? dto.description.trim() : "";
+      data.description = description || null;
+    }
+
+    if (dto.phone !== undefined) {
+      data.phone = dto.phone ? dto.phone.trim() : null;
+    }
+
+    if (dto.email !== undefined) {
+      data.email = dto.email ? dto.email.trim() : null;
+    }
+
+    if (dto.address !== undefined) {
+      const address = dto.address ? dto.address.trim() : "";
+      data.address = address || null;
+    }
+
+    if (dto.city !== undefined) {
+      const city = dto.city ? dto.city.trim() : "";
+      data.city = city || null;
+    }
+
+    if (dto.province !== undefined) {
+      const province = dto.province ? dto.province.trim() : "";
+      data.province = province || null;
+    }
+
     const nextLogoPublicId =
       dto.logoUrl === undefined
         ? undefined
         : this.mediaService.derivePublicId(dto.logoUrl);
 
+    if (dto.logoUrl !== undefined) {
+      data.logoUrl = dto.logoUrl;
+      data.logoPublicId = nextLogoPublicId;
+    }
+
     const updated = await this.prisma.supplierProfile.update({
       where: { id: profile.id },
-      data:
-        dto.logoUrl === undefined
-          ? {}
-          : { logoUrl: dto.logoUrl, logoPublicId: nextLogoPublicId },
+      data,
       select: {
         id: true,
         businessName: true,
+        description: true,
+        registrationNo: true,
+        phone: true,
+        email: true,
+        address: true,
+        city: true,
+        province: true,
         logoUrl: true,
         logoPublicId: true,
         verified: true,

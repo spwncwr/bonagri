@@ -17,6 +17,7 @@ import { TransportModule } from "./transport/transport.module";
 import { CheckpointsModule } from "./checkpoints/checkpoints.module";
 import { MediaModule } from "./media/media.module";
 import { PromotionsModule } from "./promotions/promotions.module";
+import { ProfileModule } from "./profile/profile.module";
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { PromotionsModule } from "./promotions/promotions.module";
     MediaModule,
     ReviewsModule,
     PromotionsModule,
+    ProfileModule,
   ],
 })
 export class AppModule {}

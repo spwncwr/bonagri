@@ -1,11 +1,17 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  materializeDeliveryAddress,
+  normalizeDeliverySnapshot,
+} from "../common/delivery-snapshot";
 import { NotificationsService } from "../notifications/notifications.service";
+import { UpdateTransporterProfileDto } from "./dto/update-transporter-profile.dto";
 
 @Injectable()
 export class TransportService {
@@ -38,6 +44,86 @@ export class TransportService {
     }
 
     return profile;
+  }
+
+  // CP: the transporter's own settings — business details, contact, vehicle
+  // and service area. verified stays admin-owned.
+  async updateMyProfile(userId: string, dto: UpdateTransporterProfileDto) {
+    const profile = await this.requireProfile(userId, false);
+
+    const data: {
+      businessName?: string;
+      vehicleType?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      city?: string | null;
+      province?: string | null;
+      serviceProvinces?: string[];
+    } = {};
+
+    if (dto.businessName !== undefined) {
+      const businessName = dto.businessName.trim();
+      if (!businessName) {
+        throw new BadRequestException("Business name cannot be empty");
+      }
+      data.businessName = businessName;
+    }
+
+    if (dto.vehicleType !== undefined) {
+      const vehicleType = dto.vehicleType ? dto.vehicleType.trim() : "";
+      data.vehicleType = vehicleType || null;
+    }
+
+    if (dto.phone !== undefined) {
+      data.phone = dto.phone ? dto.phone.trim() : null;
+    }
+
+    if (dto.email !== undefined) {
+      data.email = dto.email ? dto.email.trim() : null;
+    }
+
+    if (dto.city !== undefined) {
+      const city = dto.city ? dto.city.trim() : "";
+      data.city = city || null;
+    }
+
+    if (dto.province !== undefined) {
+      const province = dto.province ? dto.province.trim() : "";
+      data.province = province || null;
+    }
+
+    if (dto.serviceProvinces !== undefined) {
+      const serviceProvinces = [
+        ...new Set(
+          dto.serviceProvinces
+            .map((province) => province.trim())
+            .filter(Boolean),
+        ),
+      ];
+      // An empty list would silently hide every job from this transporter.
+      if (!serviceProvinces.length) {
+        throw new BadRequestException(
+          "Keep at least one service province selected",
+        );
+      }
+      data.serviceProvinces = serviceProvinces;
+    }
+
+    return this.prisma.transporterProfile.update({
+      where: { id: profile.id },
+      data,
+      select: {
+        id: true,
+        businessName: true,
+        vehicleType: true,
+        phone: true,
+        email: true,
+        city: true,
+        province: true,
+        serviceProvinces: true,
+        verified: true,
+      },
+    });
   }
 
   // CP14: the open job board. City-level only — the full delivery address
@@ -79,6 +165,7 @@ export class TransportService {
               },
             },
             deliveryAddress: { select: { city: true, province: true } },
+            deliverySnapshot: true,
           },
         },
       },
@@ -91,14 +178,25 @@ export class TransportService {
         0,
       );
 
+      // Claim-board card shows the order's frozen destination, not the
+      // live address row (the province filter above stays on the live
+      // relation — Prisma cannot filter on the JSON snapshot cheaply).
+      const snapshot = normalizeDeliverySnapshot(
+        delivery.order.deliverySnapshot,
+      );
+
       return {
         orderId: delivery.orderId,
         orderNumber: delivery.order.orderNumber,
         pickupCity: delivery.order.items[0]?.product?.supplier?.city ?? null,
         supplierBusinessName:
           delivery.order.items[0]?.product?.supplier?.businessName ?? null,
-        dropoffCity: delivery.order.deliveryAddress.city,
-        dropoffProvince: delivery.order.deliveryAddress.province,
+        dropoffCity: snapshot
+          ? snapshot.city
+          : delivery.order.deliveryAddress.city,
+        dropoffProvince: snapshot
+          ? snapshot.province
+          : delivery.order.deliveryAddress.province,
         itemCount,
         publishedAt: delivery.publishedAt,
       };
@@ -203,6 +301,7 @@ export class TransportService {
               },
             },
             deliveryAddress: true,
+            deliverySnapshot: true,
             user: {
               select: {
                 firstName: true,
@@ -218,8 +317,22 @@ export class TransportService {
 
     const activeStatuses = new Set(["ASSIGNED", "PICKED_UP", "IN_TRANSIT"]);
 
-    const active = deliveries.filter((d) => activeStatuses.has(d.status));
-    const history = deliveries.filter((d) => !activeStatuses.has(d.status));
+    // The claimed-job view serves the order's frozen destination — the
+    // buyer's confirmed pin at placement — via the shared materializer.
+    const withDestination = deliveries.map((delivery) => ({
+      ...delivery,
+      order: {
+        ...delivery.order,
+        deliveryAddress: materializeDeliveryAddress(delivery.order),
+      },
+    }));
+
+    const active = withDestination.filter((d) =>
+      activeStatuses.has(d.status),
+    );
+    const history = withDestination.filter(
+      (d) => !activeStatuses.has(d.status),
+    );
 
     return { active, history };
   }

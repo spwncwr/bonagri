@@ -120,6 +120,10 @@ model User {
   firstName       String
   lastName        String
   phone           String?
+  // Account settings: the display picture every role can set. The public id
+  // is kept alongside so replacing the photo can clean up the old asset.
+  avatarUrl       String?
+  avatarPublicId  String?
   emailVerifiedAt DateTime?
   role            UserRole         @default(BUYER)
   status          UserStatus       @default(ACTIVE)
@@ -295,6 +299,12 @@ model Order {
   deliveryFee       Decimal     @default(0) @db.Decimal(12, 2)
   total             Decimal     @db.Decimal(12, 2)
   notes             String?
+  // Immutable delivery-destination snapshot written at order creation from
+  // the validated address (text fields + optional lat/lng pin). Later edits
+  // to the saved address never change historical orders; readers materialize
+  // deliveryAddress from this when present (null only for pre-snapshot rows
+  // that the migration backfills).
+  deliverySnapshot  Json?
   user              User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   deliveryAddress   Address     @relation(fields: [deliveryAddressId], references: [id], onDelete: Restrict)
   items             OrderItem[]

@@ -38,11 +38,22 @@ export class VerificationDocumentDto {
   @IsIn(DOCUMENT_KINDS)
   kind!: VerificationDocumentKind;
 
+  // Exactly one of the two references (checked in the service):
+  //  - publicId: a fresh upload signed through /media/signature
+  //  - documentId: a row already on THIS application the applicant keeps
+  //    (corrections resubmission). Keeping the Cloudinary reference server-
+  //    side means the applicant never sees it.
+  @IsOptional()
   @IsString()
   @Matches(VERIFICATION_PUBLIC_ID, {
     message: "Invalid document reference",
   })
-  publicId!: string;
+  publicId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  documentId?: string;
 
   @IsOptional()
   @IsString()

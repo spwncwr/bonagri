@@ -652,6 +652,7 @@ export class VerificationService {
       existing.role,
       details,
       dto.documents,
+      existing.documents,
     );
     const removedPublicIds = existing.documents
       .map((doc) => doc.publicId)
@@ -1201,6 +1202,17 @@ export class VerificationService {
     role: "SUPPLIER" | "AGRO_DEALER",
     details: { licenceCategories: string[] } | null,
     documents: VerificationDocumentDto[],
+    // Rows already on the application being resubmitted. A payload may keep
+    // those by row id (documentId) instead of re-uploading — the stored
+    // publicId never travels to the client.
+    retained?: Array<{
+      id: string;
+      kind: VerificationDocumentKind;
+      publicId: string;
+      fileName: string | null;
+      mimeType: string | null;
+      sizeBytes: number | null;
+    }>,
   ): ApplicationDocumentInput[] {
     if (!documents || documents.length === 0) {
       throw new BadRequestException({
@@ -1212,21 +1224,9 @@ export class VerificationService {
     const allowed = allowedDocumentKinds(role);
     const required = requiredDocumentKinds(role, details);
     const seen = new Set<VerificationDocumentKind>();
+    const retainedById = new Map((retained ?? []).map((row) => [row.id, row]));
 
     for (const doc of documents) {
-      // Defence in depth: the DTO regex enforces this on the HTTP path, and
-      // the service re-checks so a crafted internal call cannot reference
-      // assets outside our private verification folder.
-      if (
-        !doc.publicId.startsWith("bonagri/verification/") ||
-        !/^bonagri\/verification\/[A-Za-z0-9_-]{8,128}$/.test(doc.publicId)
-      ) {
-        throw new BadRequestException({
-          message: "Invalid document reference",
-          code: "INVALID_DOCUMENT",
-        });
-      }
-
       if (!allowed.includes(doc.kind)) {
         throw new BadRequestException({
           message: "That document type is not accepted for this account",
@@ -1243,6 +1243,42 @@ export class VerificationService {
         });
       }
       seen.add(doc.kind);
+
+      // Exactly one reference: a fresh upload, or a row of THIS application
+      // kept from the previous submission.
+      if (doc.publicId && doc.documentId) {
+        throw new BadRequestException({
+          message: "Invalid document reference",
+          code: "INVALID_DOCUMENT",
+        });
+      }
+
+      if (doc.documentId) {
+        const row = retainedById.get(doc.documentId);
+        // Unknown id, or a kind swap under a kept id — both mean the payload
+        // is not describing the application it claims to.
+        if (!row || row.kind !== doc.kind) {
+          throw new BadRequestException({
+            message: "Invalid document reference",
+            code: "INVALID_DOCUMENT",
+          });
+        }
+        continue;
+      }
+
+      // Defence in depth: the DTO regex enforces this on the HTTP path, and
+      // the service re-checks so a crafted internal call cannot reference
+      // assets outside our private verification folder.
+      if (
+        !doc.publicId ||
+        !doc.publicId.startsWith("bonagri/verification/") ||
+        !/^bonagri\/verification\/[A-Za-z0-9_-]{8,128}$/.test(doc.publicId)
+      ) {
+        throw new BadRequestException({
+          message: "Invalid document reference",
+          code: "INVALID_DOCUMENT",
+        });
+      }
 
       if (doc.mimeType && !ALLOWED_DOCUMENT_MIME.test(doc.mimeType)) {
         throw new BadRequestException({
@@ -1279,12 +1315,25 @@ export class VerificationService {
       });
     }
 
-    return documents.map((doc) => ({
-      kind: doc.kind,
-      publicId: doc.publicId,
-      fileName: doc.fileName ?? null,
-      mimeType: doc.mimeType ?? null,
-      sizeBytes: doc.sizeBytes ?? null,
-    }));
+    return documents.map((doc) => {
+      if (doc.documentId) {
+        const row = retainedById.get(doc.documentId)!;
+        return {
+          kind: row.kind,
+          publicId: row.publicId,
+          fileName: row.fileName,
+          mimeType: row.mimeType,
+          sizeBytes: row.sizeBytes,
+        };
+      }
+
+      return {
+        kind: doc.kind,
+        publicId: doc.publicId!,
+        fileName: doc.fileName ?? null,
+        mimeType: doc.mimeType ?? null,
+        sizeBytes: doc.sizeBytes ?? null,
+      };
+    });
   }
 }

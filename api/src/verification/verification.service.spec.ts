@@ -569,6 +569,20 @@ describe("VerificationService (CP17 business applications)", () => {
       );
     });
 
+    it("rejects a kept-document id on a first submission (no rows yet)", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue(supplierUser);
+
+      await expect(
+        service.submitApplication("vendor-1", {
+          ...baseDto,
+          documents: [{ kind: "BUSINESS_REGISTRATION", documentId: "doc-1" }],
+        }),
+      ).rejects.toThrow("Invalid document reference");
+      expect(prisma.verificationApplication.create).not.toHaveBeenCalled();
+    });
+
     it("rejects documents outside the verification folder or over 5 MB", async () => {
       const { service, prisma } = makeService();
 
@@ -668,6 +682,114 @@ describe("VerificationService (CP17 business applications)", () => {
       expect((error as ConflictException).getResponse()).toMatchObject({
         code: "RESUBMIT_NOT_ALLOWED",
       });
+    });
+
+    // CP17: the applicant keeps unchanged documents by row id — the stored
+    // Cloudinary reference never travels to the client.
+    it("keeps a document referenced by its row id without re-upload", async () => {
+      const { service, prisma, tx, media } = makeService();
+
+      prisma.verificationApplication.findUnique.mockResolvedValue(
+        applicationRow({
+          status: "ACTION_REQUIRED",
+          documents: [
+            {
+              id: "doc-keep",
+              kind: "BUSINESS_REGISTRATION",
+              publicId: "bonagri/verification/kept-asset",
+              fileName: "cipc.pdf",
+              mimeType: "application/pdf",
+              sizeBytes: 1024,
+              createdAt: new Date(),
+            },
+          ],
+        }),
+      );
+      tx.verificationApplication.update.mockResolvedValue(
+        applicationRow({ status: "PENDING" }),
+      );
+      prisma.user.findUnique.mockResolvedValue({
+        email: supplierUser.email,
+        firstName: supplierUser.firstName,
+      });
+
+      const result = await service.resubmitApplication("vendor-1", "app-1", {
+        ...baseDto,
+        documents: [
+          {
+            kind: "BUSINESS_REGISTRATION",
+            documentId: "doc-keep",
+            fileName: "cipc.pdf",
+            mimeType: "application/pdf",
+            sizeBytes: 1024,
+          },
+        ],
+      });
+
+      expect(result).toMatchObject({ status: "PENDING" });
+      const created =
+        tx.verificationApplication.update.mock.calls[0][0].data.documents
+          .create;
+      expect(created).toEqual([
+        {
+          kind: "BUSINESS_REGISTRATION",
+          publicId: "bonagri/verification/kept-asset",
+          fileName: "cipc.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1024,
+        },
+      ]);
+      // A kept asset must not be destroyed during the swap.
+      expect(media.destroyAsset).not.toHaveBeenCalled();
+    });
+
+    it("rejects a kept-document id that is not on this application", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.verificationApplication.findUnique.mockResolvedValue(
+        applicationRow({
+          status: "ACTION_REQUIRED",
+          documents: [],
+        }),
+      );
+
+      const error = await service
+        .resubmitApplication("vendor-1", "app-1", {
+          ...baseDto,
+          documents: [
+            {
+              kind: "BUSINESS_REGISTRATION",
+              documentId: "someone-elses-row",
+            },
+          ],
+        })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "INVALID_DOCUMENT",
+      });
+    });
+
+    it("rejects a payload carrying both references for one document", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.verificationApplication.findUnique.mockResolvedValue(
+        applicationRow({ status: "ACTION_REQUIRED" }),
+      );
+
+      await expect(
+        service.resubmitApplication("vendor-1", "app-1", {
+          ...baseDto,
+          documents: [
+            {
+              kind: "BUSINESS_REGISTRATION",
+              publicId: "bonagri/verification/bbb12345",
+              documentId: "doc-keep",
+            },
+          ],
+        }),
+      ).rejects.toThrow("Invalid document reference");
     });
 
     it("hides other users' applications behind a 404", async () => {

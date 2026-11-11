@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { authHeaders, type AuthUser } from "../../lib/auth";
 import { MediaNotConfiguredError, uploadImage } from "../../lib/media";
 import { ThemeSwitch } from "../theme/theme-switch";
+import PhoneVerificationCard from "../verification/phone-verification-card";
 import type { MobileView } from "./tab-bar";
 import {
   ArrowLeftIcon,
@@ -499,6 +500,9 @@ export default function ProfileScreen({
           </div>
           <ChevronRightIcon className="h-4 w-4 text-[#9aa49b]" />
         </button>
+
+        {/* CP17: phone verification — the checkout gate lives here. */}
+        <PhoneVerificationCard />
 
         {/* Group 1: Notifications & General Settings */}
         <GroupCard>

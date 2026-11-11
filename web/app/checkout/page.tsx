@@ -57,6 +57,9 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [placing, setPlacing] = useState(false);
   const [placedOrders, setPlacedOrders] = useState<PlacedOrder[] | null>(null);
+  // CP17: machine-readable gate code from a 403 checkout — routes the buyer
+  // to the right verification screen instead of showing a dead-end error.
+  const [blockedCode, setBlockedCode] = useState<string | null>(null);
 
   // True back: return to the screen the buyer came from (usually the cart).
   // Fresh deep links fall back to the cart — see lib/navigation.ts.
@@ -179,6 +182,7 @@ export default function CheckoutPage() {
 
     setPlacing(true);
     setError("");
+    setBlockedCode(null);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/cart/checkout`, {
@@ -196,6 +200,9 @@ export default function CheckoutPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        const code =
+          typeof data?.code === "string" ? (data.code as string) : null;
+        setBlockedCode(response.status === 403 ? code : null);
         throw new Error(
           Array.isArray(data?.message)
             ? data.message.join(", ")
@@ -203,6 +210,7 @@ export default function CheckoutPage() {
         );
       }
 
+      setBlockedCode(null);
       setPlacedOrders(
         Array.isArray(data?.orders) ? (data.orders as PlacedOrder[]) : [],
       );
@@ -321,7 +329,23 @@ export default function CheckoutPage() {
         </header>
 
         <div className="mx-auto max-w-2xl space-y-4 px-4 py-6">
-          {error ? (
+          {/* CP17: a verification gate replaces the generic error with an
+              action — the buyer clears it without hunting through settings. */}
+          {error && blockedCode === "PHONE_VERIFICATION_REQUIRED" ? (
+            <div
+              role="alert"
+              className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+            >
+              <p className="font-black">Verify your phone to place orders</p>
+              <p className="mt-1 leading-6">{error}</p>
+              <Link
+                href="/settings"
+                className="mt-2 inline-block rounded-lg bg-[#17633a] px-3 py-1.5 text-xs font-black text-white transition hover:bg-[#12512f]"
+              >
+                Verify now
+              </Link>
+            </div>
+          ) : error ? (
             <div
               role="alert"
               className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"

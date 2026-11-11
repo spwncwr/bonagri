@@ -225,7 +225,7 @@ export default function SupplierSettingsPage() {
             </h2>
             {verified ? (
               <span className="rounded-full bg-[#e8f1e6] px-2.5 py-1 text-[10px] font-bold text-[#17633a]">
-                VERIFIED
+                BUSINESS VERIFIED
               </span>
             ) : (
               <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700">

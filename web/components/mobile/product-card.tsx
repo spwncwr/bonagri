@@ -80,7 +80,7 @@ export default function ProductCard({ product, onOpen, onAdd }: ProductCardProps
             <span
               className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#1877f2] shadow-sm ring-2 ring-white"
               role="img"
-              aria-label="Verified supplier"
+              aria-label="Business verified supplier"
             >
               <CheckIcon className="h-3 w-3 text-white" strokeWidth={3} />
             </span>

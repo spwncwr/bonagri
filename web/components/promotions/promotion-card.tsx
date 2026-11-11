@@ -525,7 +525,9 @@ function CampaignBody({
           >
             {promotion.shop?.name}
           </span>
-          {promotion.shop?.verified ? <Chip tone="accent">Verified</Chip> : null}
+          {promotion.shop?.verified ? (
+            <Chip tone="accent">Business verified</Chip>
+          ) : null}
           {promotion.shop?.city ? (
             <span
               className={`text-[10px] ${

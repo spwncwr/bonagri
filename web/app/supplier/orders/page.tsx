@@ -165,6 +165,9 @@ function OrdersContent() {
     trackingNumber: "",
   });
   const [error, setError] = useState("");
+  // CP17: set when accepting an order is refused for lack of business
+  // verification (supplier/dealer CONFIRMED gate).
+  const [gateCode, setGateCode] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [transporters, setTransporters] = useState<VerifiedTransporter[]>([]);
   const [jobActionId, setJobActionId] = useState<string | null>(null);
@@ -270,6 +273,7 @@ function OrdersContent() {
   ) => {
     setUpdatingOrderId(orderId);
     setError("");
+    setGateCode(null);
 
     try {
       const response = await fetch(
@@ -299,6 +303,11 @@ function OrdersContent() {
       const data = await response.json();
 
       if (!response.ok) {
+        // CP17: accepting an order is gated on business verification.
+        if (response.status === 403 && data?.code) {
+          setGateCode(data.code);
+        }
+
         throw new Error(data?.message ?? "Unable to update order");
       }
 
@@ -548,14 +557,30 @@ function OrdersContent() {
           ))}
         </div>
 
-        {error && (
+        {gateCode === "BUSINESS_VERIFICATION_REQUIRED" && error ? (
+          <div
+            role="alert"
+            className="mt-5 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          >
+            <p className="font-black">
+              Business verification needed to accept orders
+            </p>
+            <p className="mt-1 leading-6">{error}</p>
+            <Link
+              href="/supplier/verification"
+              className="mt-2 inline-block rounded-lg bg-[#17633a] px-3 py-1.5 text-xs font-black text-white transition hover:bg-[#12512f]"
+            >
+              Open Verification Centre
+            </Link>
+          </div>
+        ) : error ? (
           <div
             role="alert"
             className="mt-5 rounded-2xl border border-danger-soft bg-danger-soft px-4 py-3 text-sm text-danger-bright"
           >
             {error}
           </div>
-        )}
+        ) : null}
 
         {jobNotice && (
           <div className="mt-5 rounded-2xl border border-success-soft bg-success-soft px-4 py-3 text-sm text-success-bright">

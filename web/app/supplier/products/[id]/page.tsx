@@ -48,6 +48,9 @@ export default function EditProductPage() {
   const [status, setStatus] = useState<"DRAFT" | "ACTIVE" | "INACTIVE">("DRAFT");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // CP17: set when publishing (status → ACTIVE) is refused for lack of
+  // business verification.
+  const [gateCode, setGateCode] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -106,6 +109,7 @@ export default function EditProductPage() {
   async function save() {
     setSaving(true);
     setError("");
+    setGateCode(null);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
@@ -130,7 +134,12 @@ export default function EditProductPage() {
       if (!response.ok) {
         const data = (await response.json().catch(() => null)) as {
           message?: string | string[];
+          code?: string;
         } | null;
+
+        if (response.status === 403 && data?.code) {
+          setGateCode(data.code);
+        }
 
         throw new Error(
           data?.message
@@ -182,7 +191,23 @@ export default function EditProductPage() {
               }}
               className="rounded-3xl border border-line bg-surface p-4 sm:p-6"
             >
-              {error ? (
+              {gateCode === "BUSINESS_VERIFICATION_REQUIRED" ? (
+                <div
+                  role="alert"
+                  className="mb-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+                >
+                  <p className="font-black">
+                    Business verification needed to publish
+                  </p>
+                  <p className="mt-1 leading-6">{error}</p>
+                  <Link
+                    href="/supplier/verification"
+                    className="mt-2 inline-block rounded-lg bg-[#17633a] px-3 py-1.5 text-xs font-black text-white transition hover:bg-[#12512f]"
+                  >
+                    Open Verification Centre
+                  </Link>
+                </div>
+              ) : error ? (
                 <div
                   role="alert"
                   className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"

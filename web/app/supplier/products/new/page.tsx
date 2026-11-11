@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ImageUpload from "../../../../components/media/image-upload";
@@ -48,6 +49,8 @@ export default function NewProductPage() {
   const [quantity, setQuantity] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // CP17: set when the API refuses to publish for lack of verification.
+  const [gateCode, setGateCode] = useState<string | null>(null);
   const [unitPreset, setUnitPreset] = useState<"Produce" | "Tools">("Produce");
 
   function selectUnitPreset(preset: "Produce" | "Tools") {
@@ -91,6 +94,7 @@ export default function NewProductPage() {
   async function submitListing(status: "DRAFT" | "ACTIVE") {
     setSubmitting(true);
     setError("");
+    setGateCode(null);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/products`, {
@@ -116,7 +120,14 @@ export default function NewProductPage() {
       if (!response.ok) {
         const data = (await response.json().catch(() => null)) as {
           message?: string | string[];
+          code?: string;
         } | null;
+
+        // CP17: publishing is gated on business verification — surface the
+        // machine-readable code so the form can offer the fix.
+        if (response.status === 403 && data?.code) {
+          setGateCode(data.code);
+        }
 
         throw new Error(
           data?.message
@@ -148,7 +159,33 @@ export default function NewProductPage() {
             }}
             className="rounded-3xl border border-line bg-surface p-4 sm:p-6"
           >
-            {error ? (
+            {gateCode === "BUSINESS_VERIFICATION_REQUIRED" ? (
+              <div
+                role="alert"
+                className="mb-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+              >
+                <p className="font-black">
+                  Business verification needed to publish
+                </p>
+                <p className="mt-1 leading-6">{error}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Link
+                    href="/supplier/verification"
+                    className="rounded-lg bg-[#17633a] px-3 py-1.5 text-xs font-black text-white transition hover:bg-[#12512f]"
+                  >
+                    Open Verification Centre
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => void submitListing("DRAFT")}
+                    disabled={submitting}
+                    className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-black text-amber-900 transition hover:bg-amber-100 disabled:opacity-50"
+                  >
+                    Save as draft instead
+                  </button>
+                </div>
+              </div>
+            ) : error ? (
               <div
                 role="alert"
                 className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"

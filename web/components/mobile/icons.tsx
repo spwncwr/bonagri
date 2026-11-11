@@ -80,6 +80,8 @@ export const ArrowRightIcon = wrap(ArrowRightGlyph, "h-4 w-4");
 export const ArrowLeftIcon = wrap(ArrowLeftGlyph, "h-4 w-4");
 export const CloseIcon = wrap(CloseGlyph, "h-4 w-4");
 export const CheckIcon = wrap(CheckGlyph, "h-4 w-4");
+// CP17: verification centre glyph — same check, sized like the rail icons.
+export const VerifiedIcon = wrap(CheckGlyph, "h-5 w-5");
 export const TrashIcon = wrap(TrashGlyph, "h-4 w-4");
 export const MapPinIcon = wrap(MapPinGlyph, "h-4 w-4");
 export const BoxIcon = wrap(BoxGlyph, "h-5 w-5");

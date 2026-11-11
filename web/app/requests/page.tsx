@@ -653,7 +653,7 @@ export default function RequestsPage() {
                                     </p>
                                     {response.supplier.verified ? (
                                       <span className="rounded-full bg-[#e8f1e6] px-2 py-0.5 text-[9px] font-bold text-[#17633a]">
-                                        VERIFIED
+                                        BUSINESS VERIFIED
                                       </span>
                                     ) : null}
                                     <span

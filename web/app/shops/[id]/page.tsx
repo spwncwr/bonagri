@@ -98,7 +98,7 @@ export default async function ShopPage({
                 </h1>
                 {shop.verified ? (
                   <span className="rounded-full bg-[#dcf0e2] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-[#17633a]">
-                    Verified
+                    Business verified
                   </span>
                 ) : null}
               </div>

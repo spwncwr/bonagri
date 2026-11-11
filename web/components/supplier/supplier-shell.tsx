@@ -25,6 +25,7 @@ import {
   ShieldIcon,
   SlidersIcon,
   TruckIcon,
+  VerifiedIcon,
 } from "../mobile/icons";
 import {
   clearAuth,
@@ -50,6 +51,7 @@ const NAV: NavItem[] = [
   { key: "inventory", label: "Inventory", icon: BasketIcon, href: "/supplier/inventory" },
   { key: "new", label: "New listing", icon: PlusIcon, href: "/supplier/products/new" },
   { key: "demand", label: "Demand board", icon: MegaphoneIcon, href: "/supplier/demand" },
+  { key: "verify", label: "Verification", icon: VerifiedIcon, href: "/supplier/verification" },
   { key: "disputes", label: "Disputes", icon: ShieldIcon, href: "/supplier/disputes" },
   { key: "market", label: "Marketplace", icon: GlobeIcon, href: "/" },
 ];

@@ -302,7 +302,7 @@ test("no new endpoints were invented to support the redesign", () => {
 test("the queue keeps its lifecycle controls and gains per-status counts", () => {
   const pills = block(
     "-mx-1 flex gap-2 overflow-x-auto",
-    "{error &&",
+    "{gateCode ===",
     ordersPage,
   );
   assert.match(pills, /\["READY_FOR_DELIVERY", "Ready"\]/);

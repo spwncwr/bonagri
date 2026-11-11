@@ -1940,7 +1940,7 @@ export default function HomeShell({
             {product.verified ? (
               <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-[#17633a]">
                 <CheckIcon className="h-3 w-3" strokeWidth={3} />
-                Verified supplier
+                Business verified
               </div>
             ) : null}
 
@@ -1960,7 +1960,7 @@ export default function HomeShell({
               {product.verified ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#e7f1e6] px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#17633a]">
                   <CheckIcon className="h-3 w-3" strokeWidth={3} />
-                  Verified
+                  Business verified
                 </span>
               ) : null}
             </div>
@@ -2047,7 +2047,7 @@ export default function HomeShell({
                 {product.verified ? (
                   <span className="inline-flex items-center gap-1">
                     <CheckIcon className="h-3 w-3" strokeWidth={3} />
-                    Verified supplier
+                    Business verified
                   </span>
                 ) : (
                   "Supplier profile"
@@ -2410,7 +2410,7 @@ export default function HomeShell({
                 {product.verified ? (
                   <span className="inline-flex items-center gap-1">
                     <CheckIcon className="h-3 w-3" strokeWidth={3} />
-                    Verified supplier
+                    Business verified
                   </span>
                 ) : (
                   "Supplier profile"

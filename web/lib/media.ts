@@ -30,7 +30,11 @@ export type UploadKind =
   | "banner"
   | "promotion"
   // Account settings: the display picture any signed-in account may upload.
-  | "avatar";
+  | "avatar"
+  // CP17: business verification evidence — a Cloudinary *private* asset in
+  // bonagri/verification/. No public URL is kept; the API serves it through
+  // a signed short-lived delivery link instead.
+  | "verification_document";
 
 type UploadSignature = {
   cloudName: string;
@@ -39,7 +43,29 @@ type UploadSignature = {
   timestamp: number;
   signature: string;
   publicId: string;
+  // Present only for private (verification_document) uploads — must be
+  // echoed back in the form so Cloudinary stores the asset private.
+  type?: "private";
 };
+
+// CP17: document rules mirror the API's validation — JPEG/PNG/WebP/AVIF or
+// PDF, 5 MB max (same ceiling as images).
+export const ACCEPTED_DOCUMENT_TYPES = [
+  ...ACCEPTED_IMAGE_TYPES,
+  "application/pdf",
+];
+
+export function validateVerificationDocument(file: File): string | null {
+  if (!ACCEPTED_DOCUMENT_TYPES.includes(file.type)) {
+    return "Use a JPEG, PNG, WebP, AVIF image or a PDF.";
+  }
+
+  if (file.size > MAX_IMAGE_BYTES) {
+    return "Each document must be 5 MB or smaller.";
+  }
+
+  return null;
+}
 
 // The API answers 503 when CLOUDINARY_* env vars are absent — that is a
 // configuration state, not a user error, so callers surface a hint instead
@@ -163,6 +189,11 @@ async function uploadToCloudinary(
   form.append("timestamp", String(signature.timestamp));
   form.append("signature", signature.signature);
   form.append("public_id", signature.publicId);
+  // Private uploads (CP17 verification documents) sign `type=private` —
+  // Cloudinary requires the same field in the form to honour it.
+  if (signature.type) {
+    form.append("type", signature.type);
+  }
 
   const response = await fetch(signature.uploadUrl, {
     method: "POST",
@@ -191,4 +222,20 @@ export async function uploadImage(
 ): Promise<string> {
   const signature = await requestUploadSignature(kind);
   return uploadToCloudinary(file, signature);
+}
+
+// CP17: verification documents never store a URL — the API re-derives the
+// asset from its server-issued publicId and serves it through a signed
+// delivery link. Upload errors surface the same way as images.
+export async function uploadVerificationDocument(
+  file: File,
+): Promise<{ publicId: string }> {
+  const problem = validateVerificationDocument(file);
+  if (problem) {
+    throw new Error(problem);
+  }
+
+  const signature = await requestUploadSignature("verification_document");
+  await uploadToCloudinary(file, signature);
+  return { publicId: signature.publicId };
 }

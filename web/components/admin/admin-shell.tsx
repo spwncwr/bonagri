@@ -27,6 +27,7 @@ import {
   StoreIcon,
   TruckIcon,
   UserIcon,
+  VerifiedIcon,
 } from "../mobile/icons";
 import { clearAuth, fetchCurrentUser, type AuthUser } from "../../lib/auth";
 import { AppearanceSection } from "../theme/theme-switch";
@@ -41,6 +42,7 @@ const NAV: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: HomeIcon },
   { href: "/admin/users", label: "Users", icon: UserIcon },
   { href: "/admin/suppliers", label: "Suppliers", icon: StoreIcon },
+  { href: "/admin/verification", label: "Verification", icon: VerifiedIcon },
   { href: "/admin/transporters", label: "Transporters", icon: TruckIcon },
   { href: "/admin/categories", label: "Categories", icon: BoxIcon },
   { href: "/admin/banners", label: "Banners", icon: CameraIcon },

@@ -108,15 +108,18 @@ cd "$API"
 CAPTURE_FILE="$ROOT/.e2e/verification-url.txt"
 DISPUTE_CAPTURE_FILE="$ROOT/.e2e/dispute-resolution.txt"
 NOTIFY_CAPTURE_FILE="$ROOT/.e2e/notifications.txt"
+OTP_CAPTURE_FILE="$ROOT/.e2e/phone-otp.txt"
 mkdir -p "$ROOT/.e2e"
 rm -f "$CAPTURE_FILE"
 rm -f "$DISPUTE_CAPTURE_FILE"
 rm -f "$NOTIFY_CAPTURE_FILE"
+rm -f "$OTP_CAPTURE_FILE"
 
 E2E_CAPTURE_MAIL=true \
 E2E_MAIL_CAPTURE_FILE="$CAPTURE_FILE" \
 E2E_DISPUTE_CAPTURE_FILE="$DISPUTE_CAPTURE_FILE" \
 E2E_NOTIFY_CAPTURE_FILE="$NOTIFY_CAPTURE_FILE" \
+E2E_OTP_CAPTURE_FILE="$OTP_CAPTURE_FILE" \
 npm run start:dev >"$LOG_DIR/api.log" 2>&1 &
 API_PID=$!
 
@@ -2858,6 +2861,467 @@ echo "OK Late response on a withdrawn request rejected (409)"
 
 echo
 echo "✓ REQUEST RESPONSE FLOW ACCEPTANCE PASSED"
+
+echo
+echo "VERIFICATION GATES (CP17)"
+echo "========================================"
+
+# CP17: browsing stays open, moving money is gated. The main smoke buyer is
+# registered fresh (never phone-verified), so cart checkout must refuse
+# until the emailed OTP is confirmed — the same flow the web checkout uses.
+
+echo
+echo "[V1/8] Cart checkout refuses an unverified phone number..."
+
+V_TS="$(date +%s)"
+V_SLUG="cp17-verify-$V_TS"
+V_SKU="BON-CP17-$V_TS"
+
+V_PRODUCT_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-product.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/products" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"categoryId\":\"$SMOKE_CATEGORY_ID\",\"name\":\"CP17 Verify Tomato\",\"slug\":\"$V_SLUG\",\"sku\":\"$V_SKU\",\"price\":9,\"unit\":\"kg\",\"quantity\":5,\"status\":\"ACTIVE\"}")"
+
+if [[ "$V_PRODUCT_HTTP" != "200" && "$V_PRODUCT_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/v-product.json"
+  fail "Verification-section product creation failed. HTTP $V_PRODUCT_HTTP"
+fi
+
+V_PRODUCT_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/v-product.json")"
+
+rm -f "$OTP_CAPTURE_FILE"
+
+V_ADD_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/items" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"productId\":\"$V_PRODUCT_ID\",\"quantity\":1}")"
+
+if [[ "$V_ADD_HTTP" != "201" ]]; then
+  fail "Adding the verification product to cart failed. HTTP $V_ADD_HTTP"
+fi
+
+V_GATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-gate.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/checkout" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"notes\":\"CP17 phone gate\"}")"
+
+if [[ "$V_GATE_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/v-gate.json"
+  fail "Checkout without a verified phone should be 403, got HTTP $V_GATE_HTTP"
+fi
+
+python3 - "$LOG_DIR/v-gate.json" <<'PYJSON'
+import json
+import sys
+
+body = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if body.get("code") != "PHONE_VERIFICATION_REQUIRED":
+    raise SystemExit("ERROR: expected PHONE_VERIFICATION_REQUIRED, got {}".format(body.get("code")))
+
+print("✓ Checkout refused with PHONE_VERIFICATION_REQUIRED (403)")
+PYJSON
+
+echo
+echo "[V2/8] OTP send -> emailed code -> cooldown guard -> confirm..."
+
+V_SEND_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-send.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/verification/phone/send" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"phone":"+2771234567"}')"
+
+if [[ "$V_SEND_HTTP" != "200" && "$V_SEND_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/v-send.json"
+  fail "Phone OTP send failed. HTTP $V_SEND_HTTP"
+fi
+
+for _ in $(seq 1 30); do
+  if [[ -s "$OTP_CAPTURE_FILE" ]]; then
+    break
+  fi
+  sleep 0.5
+done
+
+if [[ ! -s "$OTP_CAPTURE_FILE" ]]; then
+  fail "Phone OTP was not captured at $OTP_CAPTURE_FILE"
+fi
+
+V_OTP_CODE="$(tr -dc '0-9' < "$OTP_CAPTURE_FILE")"
+
+if [[ "${#V_OTP_CODE}" -ne 6 ]]; then
+  fail "Captured OTP is not a 6-digit code: '$V_OTP_CODE'"
+fi
+
+echo "✓ 6-digit OTP captured from the mail capture file"
+
+# A resend inside the 60s per-user cooldown is refused before the live code
+# is invalidated, so this must not disturb the code we just captured.
+V_COOLDOWN_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-cooldown.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/verification/phone/send" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"phone":"+2771234567"}')"
+
+if [[ "$V_COOLDOWN_HTTP" != "429" ]]; then
+  cat "$LOG_DIR/v-cooldown.json"
+  fail "OTP resend inside the cooldown should be 429, got HTTP $V_COOLDOWN_HTTP"
+fi
+
+python3 - "$LOG_DIR/v-cooldown.json" <<'PYJSON'
+import json
+import sys
+
+body = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if body.get("code") != "OTP_COOLDOWN":
+    raise SystemExit("ERROR: expected OTP_COOLDOWN, got {}".format(body.get("code")))
+
+print("✓ Resend inside cooldown refused (429 OTP_COOLDOWN)")
+PYJSON
+
+V_CONFIRM_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-confirm.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/verification/phone/confirm" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"code\":\"$V_OTP_CODE\"}")"
+
+if [[ "$V_CONFIRM_HTTP" != "200" && "$V_CONFIRM_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/v-confirm.json"
+  fail "Phone OTP confirm failed. HTTP $V_CONFIRM_HTTP"
+fi
+
+curl -sS "$API_URL$API_PREFIX/verification/me" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/v-me.json"
+
+python3 - "$LOG_DIR/v-me.json" <<'PYJSON'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+phone = data.get("phone") or {}
+business = data.get("business") or {}
+
+if not phone.get("verified"):
+    raise SystemExit("ERROR: summary still reports an unverified phone")
+
+if business.get("status") != "NOT_STARTED":
+    raise SystemExit("ERROR: buyer business status should stay NOT_STARTED, got {}".format(business.get("status")))
+
+print("✓ Summary: phone verified, business status untouched (NOT_STARTED)")
+PYJSON
+
+echo
+echo "[V3/8] The same checkout now succeeds..."
+
+V_CHECKOUT_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-checkout.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/cart/checkout" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"notes\":\"CP17 phone gate open\"}")"
+
+if [[ "$V_CHECKOUT_HTTP" != "200" && "$V_CHECKOUT_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/v-checkout.json"
+  fail "Checkout after phone confirmation failed. HTTP $V_CHECKOUT_HTTP"
+fi
+
+echo "✓ Checkout succeeded once the phone was verified"
+
+# CP17 business verification: the promoted applicant from the glue flow is a
+# SUPPLIER whose business verification has never been reviewed. Drafts stay
+# free; publishing, accepting orders and the admin review path are all
+# refused until an admin approves an application.
+if [ -n "${PROMOTED_TOKEN:-}" ]; then
+
+echo
+echo "[V4/8] Unverified supplier: drafts are free, publishing is refused..."
+
+V_DRAFT_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-draft.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/products" \
+    -H "Authorization: Bearer $PROMOTED_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"categoryId\":\"$SMOKE_CATEGORY_ID\",\"name\":\"CP17 Legacy Listing\",\"slug\":\"cp17-legacy-$V_TS\",\"sku\":\"BON-CP17-L-$V_TS\",\"price\":7,\"unit\":\"kg\",\"quantity\":5,\"status\":\"DRAFT\"}")"
+
+if [[ "$V_DRAFT_HTTP" != "200" && "$V_DRAFT_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/v-draft.json"
+  fail "Draft creation for an unverified supplier failed. HTTP $V_DRAFT_HTTP"
+fi
+
+V_DRAFT_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/v-draft.json")"
+
+V_PUBLISH_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-publish.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/products" \
+    -H "Authorization: Bearer $PROMOTED_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"categoryId\":\"$SMOKE_CATEGORY_ID\",\"name\":\"CP17 Publish Refused\",\"slug\":\"cp17-publish-$V_TS\",\"sku\":\"BON-CP17-P-$V_TS\",\"price\":7,\"unit\":\"kg\",\"quantity\":5,\"status\":\"ACTIVE\"}")"
+
+if [[ "$V_PUBLISH_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/v-publish.json"
+  fail "ACTIVE create by an unverified supplier should be 403, got HTTP $V_PUBLISH_HTTP"
+fi
+
+python3 - "$LOG_DIR/v-publish.json" <<'PYJSON'
+import json
+import sys
+
+body = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if body.get("code") != "BUSINESS_VERIFICATION_REQUIRED":
+    raise SystemExit("ERROR: expected BUSINESS_VERIFICATION_REQUIRED, got {}".format(body.get("code")))
+
+print("✓ ACTIVE create refused with BUSINESS_VERIFICATION_REQUIRED (403)")
+PYJSON
+
+# Model the CP17 rollout case: a listing that is already live because the
+# account predates the verification system (no production migration ran, so
+# legacy owners stay NOT_STARTED). Flip the draft straight to ACTIVE in the
+# database — the API would (correctly) refuse to do it for this owner.
+psql "${E2E_PSQL_TARGET:-bonagri}" -v ON_ERROR_STOP=1 -q \
+  -v pid="$V_DRAFT_ID" <<'SQL'
+UPDATE "Product" SET "status" = 'ACTIVE' WHERE id = :'pid';
+SQL
+
+echo "✓ Legacy listing simulated (DRAFT -> ACTIVE in the database)"
+
+echo
+echo "[V5/8] Accepting an order and reaching the admin path stay refused..."
+
+V_ORDER_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-order.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"productId\":\"$V_DRAFT_ID\",\"quantity\":1,\"notes\":\"CP17 business gate\"}")"
+
+if [[ "$V_ORDER_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/v-order.json"
+  fail "Buyer order on the legacy listing failed. HTTP $V_ORDER_HTTP"
+fi
+
+V_ORDER_ID="$(
+  python3 -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); o=d.get("order") if isinstance(d.get("order"),dict) else d; print(o.get("id",""))' "$LOG_DIR/v-order.json")"
+
+if [[ -z "$V_ORDER_ID" ]]; then
+  fail "Order id missing from the order creation response."
+fi
+
+V_ACCEPT_GATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-accept-gate.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$V_ORDER_ID/status" \
+    -H "Authorization: Bearer $PROMOTED_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"CONFIRMED"}')"
+
+if [[ "$V_ACCEPT_GATE_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/v-accept-gate.json"
+  fail "Accept by an unverified supplier should be 403, got HTTP $V_ACCEPT_GATE_HTTP"
+fi
+
+python3 - "$LOG_DIR/v-accept-gate.json" <<'PYJSON'
+import json
+import sys
+
+body = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if body.get("code") != "BUSINESS_VERIFICATION_REQUIRED":
+    raise SystemExit("ERROR: expected BUSINESS_VERIFICATION_REQUIRED, got {}".format(body.get("code")))
+
+print("✓ Order accept refused with BUSINESS_VERIFICATION_REQUIRED (403)")
+PYJSON
+
+# The applicant can never approve itself: the admin queue is unreachable
+# from a supplier token (JWT + ADMIN role guard).
+V_SELF_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-self.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $PROMOTED_TOKEN" \
+    "$API_URL$API_PREFIX/admin/verification/applications")"
+
+if [[ "$V_SELF_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/v-self.json"
+  fail "Supplier reading the admin verification queue should be 403, got HTTP $V_SELF_HTTP"
+fi
+
+echo "✓ Applicant cannot reach the admin review path (403)"
+
+echo
+echo "[V6/8] Supplier submits a business application with documents..."
+
+V_SUBMIT_PAYLOAD="$(printf '%s' "{\"businessName\":\"CP17 Smoke Traders\",\"contactPhone\":\"+2771234567\",\"physicalAddress\":\"1 Smoke Street, Polokwane, 0700\",\"representativeName\":\"Smoke Tester\",\"documents\":[{\"kind\":\"BUSINESS_REGISTRATION\",\"publicId\":\"bonagri/verification/cp17-smoke-doc-01\",\"fileName\":\"cipc-certificate.pdf\",\"mimeType\":\"application/pdf\",\"sizeBytes\":2048}]}")"
+
+V_SUBMIT_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-submit.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/verification/applications" \
+    -H "Authorization: Bearer $PROMOTED_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$V_SUBMIT_PAYLOAD")"
+
+if [[ "$V_SUBMIT_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/v-submit.json"
+  fail "Verification application submission failed. HTTP $V_SUBMIT_HTTP"
+fi
+
+V_APP_ID="$(
+  python3 -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); assert d.get("status")=="PENDING", d.get("status"); print(d.get("id",""))' "$LOG_DIR/v-submit.json")"
+
+if [[ -z "$V_APP_ID" ]]; then
+  fail "Application id missing from the submission response."
+fi
+
+echo "✓ Application submitted (PENDING, id $V_APP_ID)"
+
+# An application already in progress must block a second one — the guard
+# reads the User-side LatestApplication link written during submission.
+V_DUP_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-dup.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/verification/applications" \
+    -H "Authorization: Bearer $PROMOTED_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$V_SUBMIT_PAYLOAD")"
+
+if [[ "$V_DUP_HTTP" != "409" ]]; then
+  cat "$LOG_DIR/v-dup.json"
+  fail "Second application while one is active should be 409, got HTTP $V_DUP_HTTP"
+fi
+
+python3 - "$LOG_DIR/v-dup.json" <<'PYJSON'
+import json
+import sys
+
+body = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if body.get("code") != "APPLICATION_EXISTS":
+    raise SystemExit("ERROR: expected APPLICATION_EXISTS, got {}".format(body.get("code")))
+
+print("✓ Duplicate application refused (409 APPLICATION_EXISTS)")
+PYJSON
+
+echo
+echo "[V7/8] Admin starts the review and approves..."
+
+V_REVIEW_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-review.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/verification/applications/$V_APP_ID/actions" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"action":"start_review"}')"
+
+if [[ "$V_REVIEW_HTTP" != "200" && "$V_REVIEW_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/v-review.json"
+  fail "start_review failed. HTTP $V_REVIEW_HTTP"
+fi
+
+V_REVIEW_STATUS="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("status",""))' "$LOG_DIR/v-review.json")"
+
+if [[ "$V_REVIEW_STATUS" != "UNDER_REVIEW" ]]; then
+  fail "Expected UNDER_REVIEW after start_review, got '$V_REVIEW_STATUS'"
+fi
+
+echo "✓ PENDING -> UNDER_REVIEW"
+
+V_APPROVE_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-approve.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/verification/applications/$V_APP_ID/actions" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"action":"approve","notes":"Runtime smoke approval"}')"
+
+if [[ "$V_APPROVE_HTTP" != "200" && "$V_APPROVE_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/v-approve.json"
+  fail "approve failed. HTTP $V_APPROVE_HTTP"
+fi
+
+V_APPROVE_STATUS="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("status",""))' "$LOG_DIR/v-approve.json")"
+
+if [[ "$V_APPROVE_STATUS" != "VERIFIED" ]]; then
+  fail "Expected VERIFIED after approve, got '$V_APPROVE_STATUS'"
+fi
+
+echo "✓ UNDER_REVIEW -> VERIFIED (summary + badge synced in the same transaction)"
+
+echo
+echo "[V8/8] Approval opens both marketplace gates..."
+
+curl -sS "$API_URL$API_PREFIX/verification/me" \
+  -H "Authorization: Bearer $PROMOTED_TOKEN" > "$LOG_DIR/v-me-promoted.json"
+
+python3 - "$LOG_DIR/v-me-promoted.json" <<'PYJSON'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+business = data.get("business") or {}
+
+if business.get("status") != "VERIFIED":
+    raise SystemExit("ERROR: business status expected VERIFIED, got {}".format(business.get("status")))
+
+if business.get("badge") is not True:
+    raise SystemExit("ERROR: supplier badge expected true after approval")
+
+if (business.get("latestApplication") or {}).get("status") != "VERIFIED":
+    raise SystemExit("ERROR: latest application did not reach VERIFIED")
+
+print("✓ Summary reports VERIFIED + badge, latest application VERIFIED")
+PYJSON
+
+V_PUBLISHED_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-published.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/products" \
+    -H "Authorization: Bearer $PROMOTED_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"categoryId\":\"$SMOKE_CATEGORY_ID\",\"name\":\"CP17 Approved Listing\",\"slug\":\"cp17-approved-$V_TS\",\"sku\":\"BON-CP17-A-$V_TS\",\"price\":8,\"unit\":\"kg\",\"quantity\":5,\"status\":\"ACTIVE\"}")"
+
+if [[ "$V_PUBLISHED_HTTP" != "200" && "$V_PUBLISHED_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/v-published.json"
+  fail "ACTIVE create after approval failed. HTTP $V_PUBLISHED_HTTP"
+fi
+
+echo "✓ ACTIVE product create now succeeds"
+
+V_ACCEPT_HTTP="$(
+  curl -sS -o "$LOG_DIR/v-accept.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$V_ORDER_ID/status" \
+    -H "Authorization: Bearer $PROMOTED_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"CONFIRMED"}')"
+
+if [[ "$V_ACCEPT_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/v-accept.json"
+  fail "Order accept after approval failed. HTTP $V_ACCEPT_HTTP"
+fi
+
+V_ACCEPTED_STATUS="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("status",""))' "$LOG_DIR/v-accept.json")"
+
+if [[ "$V_ACCEPTED_STATUS" != "CONFIRMED" ]]; then
+  fail "Expected CONFIRMED after accept, got '$V_ACCEPTED_STATUS'"
+fi
+
+echo "✓ Order accept now succeeds (PENDING -> CONFIRMED)"
+
+echo
+echo "✓ VERIFICATION GATE FLOW ACCEPTANCE PASSED"
+
+else
+
+echo "⚠ Business verification gate checks SKIPPED: no admin credentials (glue section skipped)."
+
+fi
 
 echo
 echo "CART & MULTI-ITEM CHECKOUT FLOW"

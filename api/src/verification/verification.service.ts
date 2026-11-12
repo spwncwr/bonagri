@@ -600,6 +600,16 @@ export class VerificationService {
       });
 
       await this.syncSummary(tx, user.id, "PENDING", new Date());
+
+      // The LatestApplication one-to-one is owned by User (FK on our side),
+      // so Prisma never points it for us. Without this link the summary's
+      // latestApplication is always null and the duplicate-application
+      // guards never see the row we just created.
+      await tx.user.update({
+        where: { id: user.id },
+        data: { latestApplicationId: created.id },
+      });
+
       return created;
     });
 
@@ -696,6 +706,14 @@ export class VerificationService {
       });
 
       await this.syncSummary(tx, userId, "PENDING", new Date());
+
+      // Re-point (or repair) the User-side link so the summary and the
+      // duplicate guards always resolve THIS application after a resubmit.
+      await tx.user.update({
+        where: { id: userId },
+        data: { latestApplicationId: applicationId },
+      });
+
       return row;
     });
 

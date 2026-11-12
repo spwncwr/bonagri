@@ -432,6 +432,14 @@ describe("VerificationService (CP17 business applications)", () => {
           data: expect.objectContaining({ businessStatus: "PENDING" }),
         }),
       );
+      // The User-side LatestApplication link is written in the same
+      // transaction — otherwise getMe().latestApplication stays null and
+      // the duplicate-application guards can never fire.
+      expect(tx.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ latestApplicationId: "app-1" }),
+        }),
+      );
       expect(tx.supplierProfile.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({ data: { verified: false } }),
       );
@@ -659,6 +667,12 @@ describe("VerificationService (CP17 business applications)", () => {
       // The replaced asset is cleaned up after the row commits.
       expect(media.destroyAsset).toHaveBeenCalledWith(
         "bonagri/verification/old",
+      );
+      // The User-side LatestApplication link is re-pointed at this row.
+      expect(tx.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ latestApplicationId: "app-1" }),
+        }),
       );
       expect(tx.supplierProfile.updateMany).toHaveBeenCalled();
       expect(notifications.onVerificationSubmitted).toHaveBeenCalledWith(

@@ -6858,6 +6858,158 @@ echo "✓ MARKETPLACE PROMOTIONS FLOW ACCEPTANCE PASSED"
 
 fi
 
+if [ -z "${ADMIN_TOKEN:-}" ]; then
+  echo "⚠ Near-you section SKIPPED: admin login did not run."
+else
+
+echo
+echo "[NEAR 1/3] Admin lights up a Near you campaign..."
+
+# A dev-farm product: section N pinned that supplier, so geolocation
+# matching has coordinates to measure from, and its city (Tzaneen) covers
+# the city-match path.
+NEAR_PRODUCT_ID="$(
+  request GET "$API_URL$API_PREFIX/products" "" | python3 -c '
+import json, sys
+products = json.load(sys.stdin)
+for product in products:
+    supplier = product.get("supplier") or {}
+    inventory = product.get("inventory") or {}
+    sellable = inventory.get("quantity", 0) - inventory.get("reservedQuantity", 0)
+    if (
+        supplier.get("businessName") == "BonAgri Farm"
+        and supplier.get("city") == "Tzaneen"
+        and sellable > 0
+    ):
+        print(product["id"])
+        break
+else:
+    raise SystemExit("ERROR: no sellable BonAgri Farm product for the near-you flow")
+'
+)"
+
+NEAR_NAME="Smoke Near You $(date +%s)"
+
+NEAR_PAYLOAD="$(
+  python3 -c '
+import json, sys
+print(json.dumps({
+    "name": sys.argv[1],
+    "headline": "Smoke test nearby harvest",
+    "description": "Created by the runtime smoke test.",
+    "type": "NEAR_YOU",
+    "status": "ACTIVE",
+    "layout": "BANNER",
+    "placement": "HOME_MID",
+    "priority": 1000,
+    "ctaText": "Shop nearby",
+    "destinationType": "NONE",
+    "products": [{"productId": sys.argv[2]}],
+}))
+' "$NEAR_NAME" "$NEAR_PRODUCT_ID"
+)"
+
+NEAR_CREATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/near-create.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/admin/promotions" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$NEAR_PAYLOAD"
+)"
+
+if [[ "$NEAR_CREATE_HTTP" != "201" && "$NEAR_CREATE_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/near-create.json"
+  fail "Near-you campaign creation failed. HTTP $NEAR_CREATE_HTTP"
+fi
+
+NEAR_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("id",""))' "$LOG_DIR/near-create.json")"
+
+if [[ -z "$NEAR_ID" ]]; then
+  cat "$LOG_DIR/near-create.json"
+  fail "Near-you campaign id could not be extracted."
+fi
+
+echo "✓ Near-you campaign $NEAR_ID created"
+
+echo
+echo "[NEAR 2/3] The public feed asks for a location, then matches coords and city..."
+
+request GET "$API_URL$API_PREFIX/promotions?placement=HOME_MID&limit=10" "" > "$LOG_DIR/near-nolocation.json"
+request GET "$API_URL$API_PREFIX/promotions?placement=HOME_MID&limit=10&lat=-23.88&lng=29.45" "" > "$LOG_DIR/near-coords.json"
+request GET "$API_URL$API_PREFIX/promotions?placement=HOME_MID&limit=10&city=Tzaneen" "" > "$LOG_DIR/near-city.json"
+
+python3 - "$LOG_DIR/near-nolocation.json" "$LOG_DIR/near-coords.json" "$LOG_DIR/near-city.json" "$NEAR_ID" <<'PYJSON'
+import json, sys
+
+nolocation, coords, city = (
+    json.load(open(path, encoding="utf-8")) for path in sys.argv[1:4]
+)
+campaign_id = sys.argv[4]
+
+def find(campaigns):
+    return next((c for c in campaigns if c.get("id") == campaign_id), None)
+
+waiting = find(nolocation)
+if waiting is None:
+    raise SystemExit("ERROR: near-you card missing from the location-less feed")
+near_you = waiting.get("nearYou") or {}
+if near_you.get("needsLocation") is not True:
+    raise SystemExit("ERROR: near-you card should ask for a location, got: " + json.dumps(near_you))
+if "Tzaneen" not in near_you.get("locationOptions", []):
+    raise SystemExit("ERROR: location options should offer Tzaneen, got: " + json.dumps(near_you.get("locationOptions")))
+if waiting.get("products"):
+    raise SystemExit("ERROR: a waiting near-you card must not show products yet")
+
+by_coords = find(coords)
+if by_coords is None:
+    raise SystemExit("ERROR: near-you card missing for the coordinates query")
+coord_products = by_coords.get("products") or []
+if not coord_products:
+    raise SystemExit("ERROR: coordinates query returned no nearby products")
+if not isinstance(coord_products[0].get("distanceKm"), (int, float)):
+    raise SystemExit("ERROR: nearby products should carry a numeric distanceKm, got: " + json.dumps(coord_products[0].get("distanceKm")))
+if (by_coords.get("nearYou") or {}).get("needsLocation") is not False:
+    raise SystemExit("ERROR: coordinates query should satisfy the location request")
+
+by_city = find(city)
+if by_city is None:
+    raise SystemExit("ERROR: near-you card missing for the city query")
+if not (by_city.get("products") or []):
+    raise SystemExit("ERROR: city=Tzaneen query returned no nearby products")
+if (by_city.get("nearYou") or {}).get("needsLocation") is not False:
+    raise SystemExit("ERROR: city query should satisfy the location request")
+
+print("✓ Near-you card prompts, then matches by distance and by city")
+PYJSON
+
+echo
+echo "[NEAR 3/3] The campaign can be removed again..."
+
+NEAR_DELETE_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X DELETE "$API_URL$API_PREFIX/admin/promotions/$NEAR_ID" \
+    -H "Authorization: Bearer $ADMIN_TOKEN"
+)"
+
+if [[ "$NEAR_DELETE_HTTP" != "200" ]]; then
+  fail "Near-you campaign cleanup failed. HTTP $NEAR_DELETE_HTTP"
+fi
+
+request GET "$API_URL$API_PREFIX/promotions?placement=HOME_MID&limit=10" "" > "$LOG_DIR/near-deleted.json"
+
+python3 - "$LOG_DIR/near-deleted.json" "$NEAR_ID" <<'PYJSON'
+import json, sys
+
+campaigns = json.load(open(sys.argv[1], encoding="utf-8"))
+campaign_id = sys.argv[2]
+if any(c.get("id") == campaign_id for c in campaigns):
+    raise SystemExit("ERROR: deleted near-you campaign is still public")
+
+print("✓ Deleted near-you campaign removed from the public feed")
+PYJSON
+
+fi
+
 echo
 echo "RATE LIMITING FLOW"
 echo "========================================"

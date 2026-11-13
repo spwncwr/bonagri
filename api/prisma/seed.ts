@@ -257,6 +257,10 @@ async function main(): Promise<void> {
       email: "dev@bonagri.co.za",
       city: "Tzaneen",
       province: "Limpopo",
+      // Tzaneen town coordinates so the NEAR_YOU card can offer distance
+      // matching (city matching works without these).
+      lat: -23.8767,
+      lng: 30.1714,
       verified: true,
     },
     create: {
@@ -267,6 +271,8 @@ async function main(): Promise<void> {
       email: "dev@bonagri.co.za",
       city: "Tzaneen",
       province: "Limpopo",
+      lat: -23.8767,
+      lng: 30.1714,
       verified: true,
     },
   });
@@ -314,6 +320,10 @@ async function main(): Promise<void> {
       email: "dealer@bonagri.co.za",
       city: "Polokwane",
       province: "Limpopo",
+      // Polokwane coordinates: gives the NEAR_YOU card a second location
+      // for distance matching.
+      lat: -23.9045,
+      lng: 29.4689,
       verified: true,
     },
     create: {
@@ -324,6 +334,8 @@ async function main(): Promise<void> {
       email: "dealer@bonagri.co.za",
       city: "Polokwane",
       province: "Limpopo",
+      lat: -23.9045,
+      lng: 29.4689,
       verified: true,
     },
   });
@@ -669,6 +681,54 @@ async function main(): Promise<void> {
   console.log(
     `Demo product reviews ready: ${demoReviews.length} reviews from ${reviewers.length} dev buyers.`,
   );
+
+  // ---------------------------------------------------------------------------
+  // "Near you" promotion — lights up the NEAR_YOU card out of the box.
+  // Idempotent: only created when no campaign of that name exists yet.
+  // ---------------------------------------------------------------------------
+  const nearYouName = "Near you: Limpopo farms";
+  const existingNearYou = await prisma.promoCampaign.findFirst({
+    where: { name: nearYouName },
+    select: { id: true },
+  });
+
+  if (!existingNearYou) {
+    const nearYouProducts = await prisma.product.findMany({
+      where: { supplierId: { in: [supplier.id, dealer.id] }, status: "ACTIVE" },
+      select: { id: true },
+      orderBy: { createdAt: "asc" },
+      take: 6,
+    });
+
+    if (nearYouProducts.length > 0) {
+      await prisma.promoCampaign.create({
+        data: {
+          name: nearYouName,
+          headline: "Fresh from Limpopo farms",
+          description:
+            "Active listings from suppliers near Tzaneen and Polokwane.",
+          type: "NEAR_YOU",
+          status: "ACTIVE",
+          layout: "BANNER",
+          placement: "HOME_MID",
+          priority: 5,
+          ctaText: "Shop nearby",
+          destinationType: "NONE",
+          products: {
+            create: nearYouProducts.map((product, index) => ({
+              productId: product.id,
+              sortOrder: index,
+            })),
+          },
+        },
+        select: { id: true },
+      });
+
+      console.log(
+        `Near-you campaign ready with ${nearYouProducts.length} linked products.`,
+      );
+    }
+  }
 
   console.log(
     "BonAgri development seed completed: categories, accounts, supplier/dealer profiles, products and inventory.",

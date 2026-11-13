@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { buildImageUrl } from "../../lib/media";
 import { mapApiProduct, type ApiProduct, type Product } from "../../lib/catalog";
-import { authHeaders } from "../../lib/auth";
+import { authHeaders, getAccessToken } from "../../lib/auth";
 import RatingStarsGlyphs from "../mobile/rating-stars";
 import { ProductRailSkeleton } from "./skeletons";
 
@@ -39,16 +39,32 @@ export default function ProductRail({
       ? `${API_BASE_URL}/api/products/picks?take=12`
       : `${API_BASE_URL}/api/products?sort=${sort}&take=12`;
 
-    fetch(url, {
-      signal: controller.signal,
-      ...(isPicks ? { headers: authHeaders() } : {}),
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`Rail request failed: ${response.status}`);
-        const data: ApiProduct[] = await response.json();
+    // No token means a guest: resolve to an empty list without firing a
+    // request that would only come back 401 and clutter the console. The
+    // async wrapper keeps the setState out of the effect body itself.
+    const load = async (): Promise<ApiProduct[]> => {
+      if (isPicks && !getAccessToken()) return [];
+
+      const response = await fetch(url, {
+        signal: controller.signal,
+        ...(isPicks ? { headers: authHeaders() } : {}),
+      });
+      if (!response.ok) {
+        throw new Error(`Rail request failed: ${response.status}`);
+      }
+      return response.json();
+    };
+
+    load()
+      .then((data) => {
         if (!cancelled) setProducts(data.map(mapApiProduct));
       })
-      .catch(() => {
+      .catch((error) => {
+        // Aborts are the effect's own cleanup (StrictMode double-invoke or
+        // navigation); only genuine failures deserve a log + empty state.
+        if (error?.name !== "AbortError") {
+          console.error(`Product rail (${sort}/${source}) failed to load:`, error);
+        }
         if (!cancelled) setProducts([]);
       });
 

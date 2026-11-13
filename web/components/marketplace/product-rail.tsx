@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { buildImageUrl } from "../../lib/media";
 import { mapApiProduct, type ApiProduct, type Product } from "../../lib/catalog";
+import { authHeaders } from "../../lib/auth";
 import RatingStarsGlyphs from "../mobile/rating-stars";
 import { ProductRailSkeleton } from "./skeletons";
 
@@ -12,13 +13,18 @@ const API_BASE_URL =
 // A sideways-scrollable marketplace section (Alibaba/Amazon-style rail).
 // Loads its own slice of the catalog; renders nothing when the API fails or
 // the category has no products, so it can never break the page around it.
+// `source="picks"` switches to the personalized GET /products/picks feed:
+// guests (401) and buyers without order history get an empty list, so the
+// rail simply hides instead of showing fake personalization.
 export default function ProductRail({
   title,
   sort,
+  source = "catalog",
   onOpen,
 }: {
   title: string;
   sort: "trending" | "newest";
+  source?: "catalog" | "picks";
   onOpen: (product: Product) => void;
 }) {
   const [products, setProducts] = useState<Product[] | null>(null);
@@ -27,9 +33,15 @@ export default function ProductRail({
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
+    const isPicks = source === "picks";
 
-    fetch(`${API_BASE_URL}/api/products?sort=${sort}&take=12`, {
+    const url = isPicks
+      ? `${API_BASE_URL}/api/products/picks?take=12`
+      : `${API_BASE_URL}/api/products?sort=${sort}&take=12`;
+
+    fetch(url, {
       signal: controller.signal,
+      ...(isPicks ? { headers: authHeaders() } : {}),
     })
       .then(async (response) => {
         if (!response.ok) throw new Error(`Rail request failed: ${response.status}`);
@@ -44,7 +56,7 @@ export default function ProductRail({
       cancelled = true;
       controller.abort();
     };
-  }, [sort]);
+  }, [sort, source]);
 
   if (products !== null && products.length === 0) return null;
 

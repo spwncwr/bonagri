@@ -6858,6 +6858,153 @@ echo "✓ MARKETPLACE PROMOTIONS FLOW ACCEPTANCE PASSED"
 
 fi
 
+echo
+echo "LISTINGS SIGNALS FLOW"
+echo "========================================"
+
+# Real-signature checks for the three marketplace rails: trending ranking
+# (unit-tested in Jest), personalized picks, and the NEAR_YOU card.
+# Runs before section L on purpose — registering a fresh buyer here must not
+# collide with the login-burst rate-limit assertions below.
+
+echo
+echo "[PICKS 1/4] Personalized picks require a signed-in account..."
+
+PICKS_ANON_HTTP="$(
+  curl -sS -o "$LOG_DIR/picks-anon.json" -w "%{http_code}" \
+    "$API_URL$API_PREFIX/products/picks?take=12"
+)"
+
+if [[ "$PICKS_ANON_HTTP" != "401" ]]; then
+  cat "$LOG_DIR/picks-anon.json"
+  fail "Anonymous picks request returned HTTP $PICKS_ANON_HTTP, expected 401"
+fi
+
+echo "✓ Anonymous picks rejected (401)"
+
+echo
+echo "[PICKS 2/4] A fresh buyer with no order history gets no fake picks..."
+
+rm -f "$CAPTURE_FILE"
+PICKS_EMAIL="picks_buyer_$(date +%s)@bonagri.local"
+
+PICKS_REGISTER_HTTP="$(
+  curl -sS -o "$LOG_DIR/picks-register.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/register" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$PICKS_EMAIL\",\"password\":\"$TEST_PASSWORD\",\"firstName\":\"Picks\",\"lastName\":\"Buyer\"}"
+)"
+
+if [[ "$PICKS_REGISTER_HTTP" != "201" && "$PICKS_REGISTER_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/picks-register.json"
+  fail "Picks buyer registration failed. HTTP $PICKS_REGISTER_HTTP"
+fi
+
+for _ in $(seq 1 30); do
+  if [[ -s "$CAPTURE_FILE" ]]; then
+    break
+  fi
+  sleep 0.5
+done
+
+if [[ ! -s "$CAPTURE_FILE" ]]; then
+  fail "Verification URL was not captured for the picks buyer account."
+fi
+
+PICKS_VERIFICATION_URL="$(cat "$CAPTURE_FILE")"
+PICKS_VERIFY_TOKEN="${PICKS_VERIFICATION_URL##*token=}"
+
+if [[ -z "$PICKS_VERIFY_TOKEN" ]]; then
+  fail "Picks buyer verification token could not be extracted."
+fi
+
+PICKS_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/picks-verify.json" -w "%{http_code}" \
+    --get \
+    --data-urlencode "token=$PICKS_VERIFY_TOKEN" \
+    "$API_URL$API_PREFIX/auth/verify-email"
+)"
+
+if [[ "$PICKS_VERIFY_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/picks-verify.json"
+  fail "Picks buyer email verification failed. HTTP $PICKS_VERIFY_HTTP"
+fi
+
+PICKS_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/picks-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$PICKS_EMAIL\",\"password\":\"$TEST_PASSWORD\"}"
+)"
+
+if [[ "$PICKS_LOGIN_HTTP" != "201" && "$PICKS_LOGIN_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/picks-login.json"
+  fail "Picks buyer login failed. HTTP $PICKS_LOGIN_HTTP"
+fi
+
+PICKS_BUYER_TOKEN="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("accessToken",""))' < "$LOG_DIR/picks-login.json")"
+
+request GET "$API_URL$API_PREFIX/products/picks?take=12" "" "$PICKS_BUYER_TOKEN" > "$LOG_DIR/picks-fresh.json"
+
+python3 - "$LOG_DIR/picks-fresh.json" <<'PYJSON'
+import json, sys
+
+picks = json.load(open(sys.argv[1], encoding="utf-8"))
+if not isinstance(picks, list) or picks != []:
+    raise SystemExit("ERROR: fresh buyer should receive an empty picks list, got: " + json.dumps(picks)[:200])
+
+print("✓ Fresh buyer received no fake picks")
+PYJSON
+
+echo
+echo "[PICKS 3/4] The main buyer's picks come from their own order history..."
+
+request GET "$API_URL$API_PREFIX/products/picks?take=12" "" "$ACCESS_TOKEN" > "$LOG_DIR/picks-buyer.json"
+
+PICKS_ORDERED_IDS="$(
+  psql "${E2E_PSQL_TARGET:-bonagri}" -v ON_ERROR_STOP=1 -At \
+    -v email="$TEST_EMAIL" <<'SQL'
+SELECT oi."productId" FROM "OrderItem" oi
+JOIN "Order" o ON o.id = oi."orderId"
+JOIN "User" u ON u.id = o."userId"
+WHERE u.email = :'email' AND o.status <> 'CANCELLED';
+SQL
+)"
+
+python3 - "$LOG_DIR/picks-buyer.json" "$PICKS_ORDERED_IDS" <<'PYJSON'
+import json, sys
+
+picks = json.load(open(sys.argv[1], encoding="utf-8"))
+ordered = set(sys.argv[2].split())
+
+if not isinstance(picks, list) or not picks:
+    raise SystemExit("ERROR: main buyer should receive picks, got: " + json.dumps(picks)[:200])
+
+overlap = [pick["id"] for pick in picks if pick["id"] in ordered]
+if overlap:
+    raise SystemExit("ERROR: picks repeat already-ordered products: " + ", ".join(overlap))
+
+print(f"✓ {len(picks)} personalized picks, none already ordered")
+PYJSON
+
+echo
+echo "[PICKS 4/4] The picks rail payload maps onto marketplace cards..."
+
+python3 - "$LOG_DIR/picks-buyer.json" <<'PYJSON'
+import json, sys
+
+picks = json.load(open(sys.argv[1], encoding="utf-8"))
+required = {"id", "slug", "name", "price", "unit", "status", "category", "supplier"}
+for pick in picks:
+    missing = required - set(pick)
+    if missing:
+        raise SystemExit(f"ERROR: pick {pick.get('id', '?')} is missing fields: {', '.join(sorted(missing))}")
+    if pick.get("status") != "ACTIVE":
+        raise SystemExit(f"ERROR: pick {pick['id']} is not ACTIVE")
+
+print("✓ Picks carry the full public product shape and are all ACTIVE")
+PYJSON
+
 if [ -z "${ADMIN_TOKEN:-}" ]; then
   echo "⚠ Near-you section SKIPPED: admin login did not run."
 else
@@ -7009,6 +7156,9 @@ print("✓ Deleted near-you campaign removed from the public feed")
 PYJSON
 
 fi
+
+echo
+echo "✓ LISTINGS SIGNALS FLOW ACCEPTANCE PASSED"
 
 echo
 echo "RATE LIMITING FLOW"

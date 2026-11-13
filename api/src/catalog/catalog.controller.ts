@@ -17,6 +17,7 @@ import { RolesGuard } from "../auth/guards/roles.guard";
 import { UserRole } from "../common/types";
 import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
+import { ListPicksDto } from "./dto/list-picks.dto";
 import { ListProductsDto } from "./dto/list-products.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { UpdateInventoryDto } from "./dto/update-inventory.dto";
@@ -62,6 +63,19 @@ export class CatalogController {
   @Get("products/facets")
   getProductFacets() {
     return this.catalogService.getProductFacets();
+  }
+
+  // Personalized rail for any signed-in account. No @Roles: picks are derived
+  // from (and filtered against) the caller's own history, so every role gets
+  // the same safe, self-scoped read. Declared before products/:id so "picks"
+  // is never parsed as a product id.
+  @Get("products/picks")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  getPicks(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: ListPicksDto,
+  ) {
+    return this.catalogService.getPersonalPicks(request.user.id, query.take);
   }
 
   // Promoted shop destination: public, unguarded, and deliberately limited to

@@ -3302,11 +3302,21 @@ export default function HomeShell({
                 ) : null}
 
                 {view === "home" ? (
-                  <ProductRail
-                    title="Trending now"
-                    sort="trending"
-                    onOpen={openProduct}
-                  />
+                  <>
+                    <ProductRail
+                      title="Trending now"
+                      sort="trending"
+                      onOpen={openProduct}
+                    />
+                    {/* Personalized: self-hides for guests and buyers with
+                        no order history. */}
+                    <ProductRail
+                      title="Picked for you"
+                      sort="trending"
+                      source="picks"
+                      onOpen={openProduct}
+                    />
+                  </>
                 ) : null}
 
                 {loading ? (
@@ -3499,6 +3509,15 @@ export default function HomeShell({
         <ProductRail
           title="Trending now"
           sort="trending"
+          onOpen={openProduct}
+        />
+
+        {/* Personalized: self-hides for guests and buyers with no order
+            history. */}
+        <ProductRail
+          title="Picked for you"
+          sort="trending"
+          source="picks"
           onOpen={openProduct}
         />
 

@@ -351,6 +351,80 @@ export class CatalogService {
     );
   }
 
+  // "Picked for you": category affinity from the caller's own order history
+  // (units ordered per category, top 3), then ACTIVE in-stock listings in
+  // those categories that the buyer has not already ordered and that do not
+  // come from their own shop. No history means no picks — never a generic
+  // fallback that pretends to be personal.
+  async getPersonalPicks(userId: string, take: number) {
+    const [history, ownSuppliers] = await Promise.all([
+      this.prisma.orderItem.findMany({
+        where: { order: { userId, status: { notIn: ["CANCELLED"] } } },
+        select: {
+          quantity: true,
+          productId: true,
+          product: { select: { categoryId: true } },
+        },
+      }),
+      this.prisma.supplierProfile.findMany({
+        where: { userId },
+        select: { id: true },
+      }),
+    ]);
+
+    if (history.length === 0) {
+      return [];
+    }
+
+    const affinity = new Map<string, number>();
+    const orderedProductIds = new Set<string>();
+
+    for (const item of history) {
+      orderedProductIds.add(item.productId);
+      affinity.set(
+        item.product.categoryId,
+        (affinity.get(item.product.categoryId) ?? 0) + item.quantity,
+      );
+    }
+
+    const categoryRank = new Map(
+      [...affinity.entries()]
+        .sort(([, left], [, right]) => right - left)
+        .slice(0, 3)
+        .map(([categoryId], index) => [categoryId, index] as const),
+    );
+
+    const candidates = await this.prisma.product.findMany({
+      where: {
+        status: "ACTIVE",
+        categoryId: { in: [...categoryRank.keys()] },
+        id: { notIn: [...orderedProductIds] },
+        supplierId: { notIn: ownSuppliers.map((supplier) => supplier.id) },
+        inventory: { is: { quantity: { gt: 0 } } },
+      },
+      include: {
+        category: true,
+        supplier: true,
+        inventory: true,
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: 100,
+    });
+
+    const rows = candidates
+      .filter((product) => isAvailable(product))
+      .sort(
+        (left, right) =>
+          (categoryRank.get(left.categoryId) ?? 0) -
+            (categoryRank.get(right.categoryId) ?? 0) ||
+          right.createdAt.getTime() - left.createdAt.getTime() ||
+          left.id.localeCompare(right.id),
+      )
+      .slice(0, take);
+
+    return this.reviewsService.attachSummaries(rows);
+  }
+
   // Public storefront for a promoted shop. Only ACTIVE listings are returned
   // and supplier contact details that the app already exposes (city/province,
   // logo) are selected — no emails or account fields.

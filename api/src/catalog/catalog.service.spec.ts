@@ -1141,3 +1141,78 @@ describe("CatalogService (CP16a media foundation)", () => {
     });
   });
 });
+
+describe("CatalogService (picked-for-you rail)", () => {
+  it("returns no picks when the buyer has no order history", async () => {
+    const { service, prisma } = makeService();
+
+    prisma.orderItem.findMany.mockResolvedValue([]);
+
+    const result = await service.getPersonalPicks("buyer-1", 12);
+
+    expect(result).toEqual([]);
+    expect(prisma.product.findMany).not.toHaveBeenCalled();
+  });
+
+  it("ranks the top affinity categories and filters to buyable, un-ordered picks", async () => {
+    const { service, prisma } = makeService();
+
+    // Units ordered: seeds 10 > vegetables 6 > tools 2 > misc 1, so the
+    // affinity top 3 excludes "misc" entirely.
+    prisma.orderItem.findMany.mockResolvedValue([
+      { quantity: 10, productId: "ordered-seeds", product: { categoryId: "seeds" } },
+      { quantity: 4, productId: "ordered-veg-1", product: { categoryId: "veg" } },
+      { quantity: 2, productId: "ordered-veg-2", product: { categoryId: "veg" } },
+      { quantity: 2, productId: "ordered-tools", product: { categoryId: "tools" } },
+      { quantity: 1, productId: "ordered-misc", product: { categoryId: "misc" } },
+    ]);
+    prisma.supplierProfile.findMany.mockResolvedValue([{ id: "own-shop" }]);
+    prisma.product.findMany.mockResolvedValue([
+      // Dead stock: sellable trim must drop it before the slice.
+      makeProduct({ id: "dead", categoryId: "seeds", inventory: { quantity: 1, reservedQuantity: 1 } }),
+      makeProduct({ id: "p-tools", categoryId: "tools", createdAt: new Date("2026-09-01") }),
+      makeProduct({ id: "p-veg-old", categoryId: "veg", createdAt: new Date("2026-01-01") }),
+      makeProduct({ id: "p-veg-new", categoryId: "veg", createdAt: new Date("2026-06-01") }),
+      makeProduct({ id: "p-seeds", categoryId: "seeds", createdAt: new Date("2025-01-01") }),
+    ]);
+
+    const result = await service.getPersonalPicks("buyer-1", 3);
+
+    // Affinity rank beats recency (oldest seeds pick still ranks first),
+    // recency breaks ties inside a category, and the take cap holds.
+    expect(result.map((product) => product.id)).toEqual([
+      "p-seeds",
+      "p-veg-new",
+      "p-veg-old",
+    ]);
+
+    const args = prisma.product.findMany.mock.calls[0][0] as {
+      where: Record<string, unknown>;
+    };
+    expect(args.where.status).toBe("ACTIVE");
+    expect(args.where.categoryId).toEqual({ in: ["seeds", "veg", "tools"] });
+    expect(args.where.id).toEqual({
+      notIn: ["ordered-seeds", "ordered-veg-1", "ordered-veg-2", "ordered-tools", "ordered-misc"],
+    });
+    expect(args.where.supplierId).toEqual({ notIn: ["own-shop"] });
+    expect(args.where.inventory).toEqual({ is: { quantity: { gt: 0 } } });
+  });
+
+  it("never suggests the caller's own listings", async () => {
+    const { service, prisma } = makeService();
+
+    prisma.orderItem.findMany.mockResolvedValue([
+      { quantity: 3, productId: "ordered-1", product: { categoryId: "veg" } },
+    ]);
+    // The buyer IS a supplier with a shop.
+    prisma.supplierProfile.findMany.mockResolvedValue([{ id: "my-shop" }]);
+    prisma.product.findMany.mockResolvedValue([]);
+
+    await service.getPersonalPicks("my-user", 12);
+
+    const args = prisma.product.findMany.mock.calls[0][0] as {
+      where: { supplierId: { notIn: string[] } };
+    };
+    expect(args.where.supplierId).toEqual({ notIn: ["my-shop"] });
+  });
+});

@@ -101,6 +101,16 @@ SELECT 1;
 SQL
 echo "✓ Database reachable"
 
+# The suite must own the ports: a stray dev server would answer the
+# readiness probe below with the wrong environment (no mail capture) while
+# our own API dies silently with EADDRINUSE behind it.
+for probe in "$API_URL" "$WEB_URL"; do
+  if curl -sS -o /dev/null --max-time 2 "$probe" 2>/dev/null; then
+    echo "ERROR: $probe is already serving; stop that server before running the smoke." >&2
+    exit 1
+  fi
+done
+
 echo
 echo "[2/12] Starting API..."
 cd "$API"

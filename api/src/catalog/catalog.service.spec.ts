@@ -30,6 +30,18 @@ function makeService() {
       update: jest.fn(),
     },
     inventory: { update: jest.fn() },
+    // Trending rank reads sales + review signals; empty defaults keep the
+    // non-trending tests untouched and let ranking tests override per call.
+    order: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    orderItem: {
+      findMany: jest.fn().mockResolvedValue([]),
+      groupBy: jest.fn().mockResolvedValue([]),
+    },
+    productReview: {
+      groupBy: jest.fn().mockResolvedValue([]),
+    },
   };
 
   // CP16a: Cloudinary interaction is mocked — derive is pure URL parsing,
@@ -337,9 +349,100 @@ describe("CatalogService (CP1 listings)", () => {
       expect(prisma.product.findMany).toHaveBeenNthCalledWith(
         4,
         expect.objectContaining({
-          orderBy: [{ reviews: { _count: "desc" } }, { id: "asc" }],
+          orderBy: [{ createdAt: "desc" }, { id: "asc" }],
         }),
       );
+      // An empty window short-circuits before any signal query runs.
+      expect(prisma.order.findMany).not.toHaveBeenCalled();
+    });
+
+    it("ranks trending by sales, reviews and recency", async () => {
+      const { service, prisma } = makeService();
+      const now = Date.now();
+      const longAgo = new Date(now - 200 * 24 * 60 * 60 * 1000);
+
+      prisma.product.findMany.mockResolvedValue([
+        makeProduct({ id: "quiet", createdAt: longAgo }),
+        makeProduct({ id: "fresh", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000) }),
+        makeProduct({ id: "seller", createdAt: longAgo }),
+        makeProduct({ id: "reviewed", createdAt: longAgo }),
+        makeProduct({ id: "lapsed", createdAt: longAgo }),
+      ]);
+
+      // One order in the last 7 days (so the 7d and 30d id sets match).
+      prisma.order.findMany.mockResolvedValue([
+        { id: "o-recent", createdAt: new Date(now - 24 * 60 * 60 * 1000) },
+      ]);
+      // 1st call = last 7 days, 2nd call = last 30 days.
+      prisma.orderItem.groupBy
+        .mockResolvedValueOnce([
+          { productId: "seller", _sum: { quantity: 5 } },
+        ])
+        .mockResolvedValueOnce([
+          { productId: "seller", _sum: { quantity: 5 } },
+          { productId: "lapsed", _sum: { quantity: 6 } },
+        ]);
+      prisma.productReview.groupBy.mockResolvedValue([
+        { productId: "reviewed", _count: { _all: 3 } },
+      ]);
+
+      const result = await service.getProducts({ sort: "trending" });
+
+      // Scores: reviewed = 3 reviews x2 = 6; seller = 5 recent units;
+      // fresh = +4 newness; lapsed = 6 units x0.5 (days 8-30) = 3; quiet = 0.
+      expect(result.map((product) => product.id)).toEqual([
+        "reviewed",
+        "seller",
+        "fresh",
+        "lapsed",
+        "quiet",
+      ]);
+      // The whole candidate window is fetched before the page is sliced.
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 500 }),
+      );
+    });
+
+    it("counts only non-cancelled orders inside the 30-day window", async () => {
+      const { service, prisma } = makeService();
+      const before = Date.now();
+
+      prisma.product.findMany.mockResolvedValue([
+        makeProduct({ id: "only" }),
+      ]);
+
+      await service.getProducts({ sort: "trending" });
+
+      expect(prisma.order.findMany).toHaveBeenCalledTimes(1);
+      const args = prisma.order.findMany.mock.calls[0][0] as {
+        where: { status: { notIn: string[] }; createdAt: { gte: Date } };
+      };
+      expect(args.where.status).toEqual({ notIn: ["CANCELLED"] });
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      expect(args.where.createdAt.gte.getTime()).toBeGreaterThanOrEqual(
+        before - thirtyDaysMs - 5000,
+      );
+      expect(args.where.createdAt.gte.getTime()).toBeLessThanOrEqual(Date.now() - thirtyDaysMs + 5000);
+    });
+
+    it("breaks trending ties by newest then id", async () => {
+      const { service, prisma } = makeService();
+
+      // Equal (zero) signals for all three: order must fall back to the
+      // window's recency order, then id ascending.
+      prisma.product.findMany.mockResolvedValue([
+        makeProduct({ id: "z-old", createdAt: new Date("2025-06-01") }),
+        makeProduct({ id: "b-tied", createdAt: new Date("2026-01-01") }),
+        makeProduct({ id: "a-tied", createdAt: new Date("2026-01-01") }),
+      ]);
+
+      const result = await service.getProducts({ sort: "trending" });
+
+      expect(result.map((product) => product.id)).toEqual([
+        "a-tied",
+        "b-tied",
+        "z-old",
+      ]);
     });
 
     it("caps live-search suggestions after ranking", async () => {

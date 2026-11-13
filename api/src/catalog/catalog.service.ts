@@ -53,6 +53,39 @@ function relevanceScore(product: ListedProduct, term: string) {
   return 7;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Pre-aggregated per-product signals for the trending score: units sold in
+// the last 7 / 30 days (non-cancelled orders) and lifetime review count.
+type TrendingSignals = {
+  sales7d: Map<string, number>;
+  sales30d: Map<string, number>;
+  reviews: Map<string, number>;
+};
+
+// Trending = recent demand, validated by reviews, nudged by newness. Sales
+// dominate (last 7 days at full weight, days 8-30 at half), each review
+// adds a fixed trust bump, and fresh listings get a decaying boost so new
+// suppliers can surface before they have sales history.
+function trendingScore(
+  product: { id: string; createdAt: Date },
+  signals: TrendingSignals,
+  now: number,
+): number {
+  const recent = signals.sales7d.get(product.id) ?? 0;
+  const month = signals.sales30d.get(product.id) ?? 0;
+
+  let score = recent + (month - recent) * 0.5;
+  score += (signals.reviews.get(product.id) ?? 0) * 2;
+
+  const ageDays = (now - product.createdAt.getTime()) / DAY_MS;
+  if (ageDays <= 7) score += 4;
+  else if (ageDays <= 30) score += 2;
+  else if (ageDays <= 90) score += 1;
+
+  return score;
+}
+
 function orderByFor(
   sort: ProductSort | undefined,
   hasSearch: boolean,
@@ -65,9 +98,10 @@ function orderByFor(
     case "newest":
       return [{ createdAt: "desc" }, { id: "asc" }];
     case "trending":
-      // Marketplace rails: most-reviewed first. Prisma's relation-aggregate
-      // orderBy only supports _count, so rating is not a server tiebreaker.
-      return [{ reviews: { _count: "desc" } }, { id: "asc" }];
+      // Trending is scored in JS from sales/review/recency signals (see
+      // sortTrending), so the database only supplies a recency-ordered
+      // candidate window to score over.
+      return [{ createdAt: "desc" }, { id: "asc" }];
     default:
       return hasSearch
         ? [{ name: "asc" }, { id: "asc" }]
@@ -200,9 +234,14 @@ export class CatalogService {
     // JS because Prisma cannot compare two columns, so the database must not
     // skip rows itself: fetch a bounded window large enough to cover the
     // requested page after trimming, then slice the result.
-    const dbTake = query.take
-      ? Math.min((query.skip ?? 0) + query.take * 4, 200)
-      : undefined;
+    // Trending needs a wider window than a single page: the score is computed
+    // over the whole candidate pool before the page is sliced.
+    const dbTake =
+      query.sort === "trending"
+        ? 500
+        : query.take
+          ? Math.min((query.skip ?? 0) + query.take * 4, 200)
+          : undefined;
 
     const products = await this.prisma.product.findMany({
       where,
@@ -219,6 +258,10 @@ export class CatalogService {
       query.inStock !== false
         ? products.filter((product) => isAvailable(product))
         : products;
+
+    if (query.sort === "trending") {
+      rows = await this.sortTrending(rows);
+    }
 
     if (search && (!query.sort || query.sort === "relevance")) {
       rows = rows
@@ -241,6 +284,71 @@ export class CatalogService {
 
     // CP17: cards show the real average + count alongside the price.
     return this.reviewsService.attachSummaries(rows);
+  }
+
+  // Trending rank: aggregate sales (7d full weight, days 8-30 half),
+  // reviews and newness over the candidate window, then order by score.
+  // Ties fall back to the window's recency order (createdAt desc, id asc).
+  private async sortTrending<
+    T extends { id: string; createdAt: Date },
+  >(products: T[]): Promise<T[]> {
+    if (products.length === 0) {
+      return products;
+    }
+
+    const now = Date.now();
+    const since7d = new Date(now - 7 * DAY_MS);
+    const since30d = new Date(now - 30 * DAY_MS);
+
+    // Order rows are light (id + createdAt) and the window is bounded to
+    // 30 days, so pulling ids first keeps the sales groupBys on plain
+    // scalar filters (no relation filter inside groupBy).
+    const orders = await this.prisma.order.findMany({
+      where: { createdAt: { gte: since30d }, status: { notIn: ["CANCELLED"] } },
+      select: { id: true, createdAt: true },
+    });
+
+    const recentOrderIds = orders
+      .filter((order) => order.createdAt >= since7d)
+      .map((order) => order.id);
+    const monthOrderIds = orders.map((order) => order.id);
+
+    const [recentSales, monthSales, reviewCounts] = await Promise.all([
+      this.prisma.orderItem.groupBy({
+        by: ["productId"],
+        where: { orderId: { in: recentOrderIds } },
+        _sum: { quantity: true },
+      }),
+      this.prisma.orderItem.groupBy({
+        by: ["productId"],
+        where: { orderId: { in: monthOrderIds } },
+        _sum: { quantity: true },
+      }),
+      this.prisma.productReview.groupBy({
+        by: ["productId"],
+        _count: { _all: true },
+      }),
+    ]);
+
+    const toMap = (entries: Array<{ productId: string; _sum: { quantity: number | null } }>) =>
+      new Map(entries.map((entry) => [entry.productId, entry._sum.quantity ?? 0] as const));
+
+    const signals: TrendingSignals = {
+      sales7d: toMap(recentSales),
+      sales30d: toMap(monthSales),
+      reviews: new Map(
+        reviewCounts.map(
+          (entry) => [entry.productId, entry._count._all] as const,
+        ),
+      ),
+    };
+
+    return [...products].sort(
+      (left, right) =>
+        trendingScore(right, signals, now) - trendingScore(left, signals, now) ||
+        right.createdAt.getTime() - left.createdAt.getTime() ||
+        left.id.localeCompare(right.id),
+    );
   }
 
   // Public storefront for a promoted shop. Only ACTIVE listings are returned

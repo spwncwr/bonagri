@@ -39,7 +39,7 @@ record actuals in §3).
 
 ## 2. Checkpoint register
 
-| HP | Phase | Date | Status |
+| ID | Phase | Date | Status |
 |---|---|---|---|
 | HP1 | Buyer payment-method selection screen | 2026-11-14 | done (3ede15d, 2026-11-14) |
 | HP2 | Admin 2FA (mandatory TOTP) + sign-in alerts | — | pending |
@@ -47,9 +47,14 @@ record actuals in §3).
 | HP4 | Password reset / account recovery | — | pending |
 | HP5 | Session hardening (refresh rotation, no storage token) | — | pending |
 | HP6 | Security hygiene + admin runbook | — | pending |
+| F1 | Quote → checkout (agreed price → payment screen) | — | pending |
+| F2 | Order-scoped messaging (buyer/supplier/transporter) | — | pending |
+| F3 | Payment-after-acceptance timing (optional) | — | pending |
 
 Update the Status column (`pending` → `in progress` → `done (commit, date)`) as
 work proceeds; a phase that stalls goes back to `pending` with a note in §3.
+F-phases are product work added 2026-11-14 (plan §6); default order
+**F1 → F2 → F3 after HP6** — reorder only by explicit user call.
 
 ## 3. Per-checkpoint log
 
@@ -144,6 +149,30 @@ Fill each entry when the phase lands. Template:
 **Live journey**: —
 **Residue / follow-ups**: —
 
+### F1 — Quote → checkout (agreed price → payment screen)
+**Status**: pending
+**Shipped**: —
+**Deviations from plan**: —
+**Gates**: —
+**Live journey**: —
+**Residue / follow-ups**: —
+
+### F2 — Order-scoped messaging (buyer/supplier/transporter)
+**Status**: pending
+**Shipped**: —
+**Deviations from plan**: —
+**Gates**: —
+**Live journey**: —
+**Residue / follow-ups**: —
+
+### F3 — Payment-after-acceptance timing (optional)
+**Status**: pending
+**Shipped**: —
+**Deviations from plan**: —
+**Gates**: —
+**Live journey**: —
+**Residue / follow-ups**: —
+
 ---
 
 ## 4. Running notes
@@ -151,6 +180,12 @@ Fill each entry when the phase lands. Template:
 Cross-phase observations (baseline drift, decisions confirmed mid-flight,
 environment issues). Newest first.
 
+- 2026-11-14 — Product review outcome: added **F1–F3** (quote→checkout,
+  order-scoped messaging, payment-after-acceptance option) to plan §6 + this
+  register after answering the payment-timing/chat questions from code (EFT is
+  recordable only while PENDING today; quotes dead-end; no messaging tables
+  exist). Decision: catalog checkout stays instant — chat is coordination, not
+  a paywall. Execution order unchanged: **HP2 → … → HP6, then F1 → F2 → F3**.
 - 2026-11-14 — HP1 done (`3ede15d`); web test baseline drifts 81 → **85** (+4
   checkout-payment). API untouched (453 unchanged). Dev servers used for the
   live journey, not the deployed stack — HP2+ journeys should re-check Render.

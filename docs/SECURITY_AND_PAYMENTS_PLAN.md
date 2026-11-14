@@ -1,6 +1,8 @@
 # BonAgri — Security & Payments Implementation Plan
 
-Status: **approved for planning — awaiting Phase 1 (HP1) start**
+Status: **in progress — HP1 done (3ede15d, 2026-11-14); HP2 next** —
+follow-on product phases **F1–F3** appended in §6 (2026-11-14 review: deal
+agreement → payment, buyer/supplier/transporter messaging)
 Companion document: `docs/SECURITY_AND_PAYMENTS_PROGRESS.md` (checkpoint register —
 **update it after every phase**)
 Gates reference: `docs/CHECKPOINT_PLAN.md` §1 (universal gates)
@@ -19,6 +21,11 @@ running app, in six independently shippable phases:
 
 Each phase ends at a checkpoint (**HP1–HP6**): buildable, testable, demo-able,
 committed, and recorded in the progress document before the next phase starts.
+
+§6 appends three **product** phases (**F1–F3**, added 2026-11-14) that came out
+of the same review: wiring accepted quotes into checkout ("agree the deal, then
+pay"), order-scoped buyer/supplier/transporter messaging, and the optional
+payment-timing change. They are tracked in the same progress register.
 
 ## 2. Investigation findings (ground truth, verified 2026-11-14)
 
@@ -258,3 +265,71 @@ finished state.
    cold-start P1002 → redeploy warm.
 6. **Baseline drift** — api/web test counts move between phases; record the
    actual numbers in the progress doc each time rather than assuming.
+7. **F2 messaging scope creep** — chat can balloon (real-time infra, media,
+   moderation, read receipts). Mitigation: MVP is polling-only, text-only,
+   order-scoped threads reusing existing notifications as pings; WebSocket and
+   media are explicitly out of scope for F2.
+
+## 6. Follow-on product phases (F1–F3) — added 2026-11-14
+
+Raised in the 2026-11-14 review ("payment after the deal is agreed?", a chat
+screen for buyer↔supplier, mid-journey buyer↔transporter conversation).
+Nothing here was in the original HP scope — recorded so it is tracked.
+**Default order: F1 → F2 → F3, running after HP6** (user may reorder).
+
+Ground truth verified 2026-11-14:
+
+- The "agree the deal" primitive already exists — CP7 product requests with
+  vendor **quotes** (`quotedPrice`, buyer ACCEPT/DECLINE) — but **accepting a
+  quote dead-ends**: it never reaches checkout, and checkout prices from
+  product rows server-side, so the agreed price is lost.
+- **No messaging exists anywhere** (no message/thread tables in the schema);
+  comms primitives are in-app notifications + email only. `IMPLEMENTATION_PLAN`
+  D6 explicitly deferred threaded dispute messages as v1-overscope.
+- Transport structure is ready for comms (CP12/CP14/CP15: jobs board, claim,
+  driver name/phone, checkpoints, step notifications) — but no conversation.
+- Payment timing today: EFT can be recorded **only while PENDING** (before
+  supplier acceptance), and no transition is ever gated on payment —
+  "payment is evidence, not authority" (CP11).
+- How this compares to the market (decision context): buy-now catalogs
+  (Takealot/Jumia/Amazon) charge at checkout with no chat; negotiated/P2P
+  marketplaces (FB Marketplace, OLX) chat first then pay; B2B RFQ platforms
+  mirror the existing requests flow. Recommendation recorded in F1/F3 below:
+  **do not gate the catalog checkout behind chat** — chat is coordination, not
+  a paywall.
+
+### F1 — Quote → checkout (agreed price → payment screen)
+
+- Wire the accepted-quote flow into checkout so the buyer proceeds to HP1's
+  payment screen at the **quoted price**. Server-side pricing means the quote
+  must be trusted by the API — investigate the cheapest mechanism at phase
+  start (accepted-quote checkout token vs. creating the order directly from
+  the accepted quote); today's `POST /api/cart/checkout` prices from product
+  rows and cannot honour a quote.
+- Catalog (fixed-price) checkout stays exactly as it is — chat/quotes are an
+  additional path, never a paywall (see §6 rationale).
+- **Exit criteria**: buyer accepts a vendor quote → checkout shows the agreed
+  price → order placed → existing CP11 EFT flow unchanged; smoke extended.
+
+### F2 — Order-scoped messaging (buyer ↔ supplier ↔ transporter)
+
+- One thread per order; participants = buyer, owning supplier(s), assigned
+  transporter (once claimed), admin read-only. Optional pre-order product
+  inquiry room if it falls out cheaply — decide at phase start.
+- MVP scope: **polling only** (no WebSocket), text-only, unread badge,
+  notifications reused as pings, per-route rate limits, 404-no-leak on foreign
+  orders. Media, read receipts, WebSocket push: explicitly out.
+- **Exit criteria**: buyer ↔ supplier exchange messages on a live order in the
+  browser; buyer ↔ assigned transporter during OUT_FOR_DELIVERY; foreign order
+  → 404; unit tests cover participant matrix + leak guards.
+
+### F3 — Payment-after-acceptance timing (optional — decide at start)
+
+- The user's mental model: agree → **then** pay. Catalog orders today ask for
+  the EFT while PENDING (before acceptance). F3 decides between:
+  - **UX-only**: the prominent "record EFT" step moves to after `CONFIRMED`
+    (early recording stays allowed, no API change), sequence reads accept →
+    pay; or
+  - **Hard gate**: `recordPayment` rejects until `CONFIRMED` (API change +
+    smoke + copy updates across buyer/supplier screens).
+- May fold into F1 (both touch the payment sequence) — decide when it starts.

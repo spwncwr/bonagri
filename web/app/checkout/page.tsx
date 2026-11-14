@@ -9,6 +9,14 @@ import { CHECKOUT_NOTES_KEY } from "../../components/mobile/cart-screen";
 import { ArrowLeftIcon, CheckIcon } from "../../components/mobile/icons";
 import { authHeaders } from "../../lib/auth";
 import { goBackOr } from "../../lib/navigation";
+import {
+  CHECKOUT_PAYMENT_METHOD_KEY,
+  DEFAULT_PAYMENT_METHOD,
+  PAYMENT_METHODS,
+  isSelectablePaymentMethod,
+  paymentMethodLabel,
+  type PaymentMethodId,
+} from "../../lib/payment-methods";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -53,6 +61,9 @@ export default function CheckoutPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [notes, setNotes] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>(
+    DEFAULT_PAYMENT_METHOD,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [placing, setPlacing] = useState(false);
@@ -123,6 +134,17 @@ export default function CheckoutPage() {
           setNotes(storedNotes);
           window.sessionStorage.removeItem(CHECKOUT_NOTES_KEY);
         }
+
+        // HP1: restore the payment-method choice (same hand-off pattern as
+        // notes). A stale/unknown value falls back to the default.
+        const storedMethod = window.sessionStorage.getItem(
+          CHECKOUT_PAYMENT_METHOD_KEY,
+        );
+        if (isSelectablePaymentMethod(storedMethod)) {
+          setPaymentMethod(storedMethod);
+        } else {
+          setPaymentMethod(DEFAULT_PAYMENT_METHOD);
+        }
       } catch (requestError) {
         if (!cancelled) {
           setError(
@@ -177,6 +199,13 @@ export default function CheckoutPage() {
   const canPlace =
     cartItems.length > 0 && allInStock && Boolean(selectedAddressId) && !placing;
 
+  function choosePaymentMethod(id: PaymentMethodId) {
+    setPaymentMethod(id);
+    // Persist so the choice survives a refresh and can be echoed on the
+    // success screen; the API body is intentionally unchanged (plan D1).
+    window.sessionStorage.setItem(CHECKOUT_PAYMENT_METHOD_KEY, id);
+  }
+
   async function placeOrders() {
     if (!canPlace) return;
 
@@ -211,6 +240,10 @@ export default function CheckoutPage() {
       }
 
       setBlockedCode(null);
+      // HP1: record the method that was actually in effect for these orders —
+      // the default selection never touches choosePaymentMethod(), and the
+      // order-detail echo reads this hand-off (sessionStorage, plan D1).
+      window.sessionStorage.setItem(CHECKOUT_PAYMENT_METHOD_KEY, paymentMethod);
       setPlacedOrders(
         Array.isArray(data?.orders) ? (data.orders as PlacedOrder[]) : [],
       );
@@ -245,6 +278,12 @@ export default function CheckoutPage() {
               <p className="mt-2 text-sm leading-6 text-[#69756c]">
                 Each supplier received their order. Track every one of them
                 from your orders list.
+              </p>
+
+              {/* HP1: echo the chosen method — the orders themselves carry no
+                  payment field yet (the CP11 EFT evidence flow owns that). */}
+              <p className="mt-3 text-sm font-bold text-[#243229]">
+                Payment method: {paymentMethodLabel(paymentMethod)}
               </p>
 
               <div className="mt-6 space-y-3 text-left">
@@ -458,6 +497,76 @@ export default function CheckoutPage() {
                       ))}
                     </div>
                   )}
+                </section>
+
+                {/* HP1: payment method — Manual EFT is the only live option;
+                    PayFast/Ozow are honest "Coming soon" placeholders (plan D1:
+                    selection is UI-only, the checkout API body is unchanged). */}
+                <section
+                  aria-label="Payment method"
+                  className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5"
+                >
+                  <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[#7b867d]">
+                    Payment method
+                  </h2>
+
+                  <div className="mt-4 space-y-2">
+                    {PAYMENT_METHODS.map((method) => {
+                      const selected = paymentMethod === method.id;
+
+                      if (!method.available) {
+                        return (
+                          <div
+                            key={method.id}
+                            aria-disabled="true"
+                            className="flex cursor-not-allowed items-start gap-3 rounded-xl border border-dashed border-[#cfd8ce] bg-[#fbfcf9] px-4 py-3 opacity-70"
+                          >
+                            <span className="mt-1 h-4 w-4 shrink-0 rounded-full border-2 border-[#cfd8ce]" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-bold text-[#7b867d]">
+                                {method.label}
+                                <span className="ml-2 rounded-full bg-[#eee8c9] px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#8a6d12]">
+                                  Coming soon
+                                </span>
+                              </span>
+                              <span className="mt-0.5 block text-xs leading-5 text-[#9aa49b]">
+                                {method.detail}
+                              </span>
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <label
+                          key={method.id}
+                          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
+                            selected
+                              ? "border-[#17633a] bg-[#f0f7f1]"
+                              : "border-[#dce2d9] hover:bg-[#f7f8f4]"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="payment-method"
+                            value={method.id}
+                            checked={selected}
+                            onChange={() => choosePaymentMethod(method.id)}
+                            className="mt-1 shrink-0 accent-[#17633a]"
+                          />
+
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-bold text-[#17251b]">
+                              {method.label}
+                            </span>
+                            <span className="mt-0.5 block text-xs leading-5 text-[#69756c]">
+                              {method.detail}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </section>
 
                 {/* Per-supplier order preview */}

@@ -11,6 +11,12 @@ import {
   fetchCurrentUser,
   type UserRole,
 } from "../../../lib/auth";
+import {
+  CHECKOUT_PAYMENT_METHOD_KEY,
+  isSelectablePaymentMethod,
+  paymentMethodLabel,
+  type PaymentMethodId,
+} from "../../../lib/payment-methods";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -199,6 +205,11 @@ export default function OrderDetailPage() {
   const [paymentRef, setPaymentRef] = useState("");
   const [submittingPayment, setSubmittingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  // HP1: the method chosen at checkout (sessionStorage hand-off). UI-only —
+  // the order payload carries no payment-method field yet (plan D1).
+  const [checkoutMethod, setCheckoutMethod] = useState<PaymentMethodId | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -236,6 +247,15 @@ export default function OrderDetailPage() {
 
         if (!cancelled) {
           setOrder(data);
+        }
+
+        // HP1: echo the checkout-time method choice when this session made
+        // one; older orders (no stored value) simply show nothing extra.
+        const storedMethod = window.sessionStorage.getItem(
+          CHECKOUT_PAYMENT_METHOD_KEY,
+        );
+        if (!cancelled && isSelectablePaymentMethod(storedMethod)) {
+          setCheckoutMethod(storedMethod);
         }
       } catch (err) {
         if (!cancelled) {
@@ -836,10 +856,19 @@ export default function OrderDetailPage() {
                       )}
                     </div>
                   ) : (
-                    <p className="mt-4 text-sm text-[#69756c]">
-                      Pay by EFT using your bank app, then record the reference
-                      below — the supplier verifies it against their statement.
-                    </p>
+                    <div className="mt-4 space-y-1.5 text-sm text-[#69756c]">
+                      {checkoutMethod ? (
+                        <p className="font-bold text-[#243229]">
+                          Payment method:{" "}
+                          {paymentMethodLabel(checkoutMethod)}
+                        </p>
+                      ) : null}
+                      <p>
+                        Pay by EFT using your bank app, then record the
+                        reference below — the supplier verifies it against
+                        their statement.
+                      </p>
+                    </div>
                   )}
 
                   {viewerRole === "BUYER" &&

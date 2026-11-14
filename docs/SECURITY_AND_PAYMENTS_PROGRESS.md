@@ -41,7 +41,7 @@ record actuals in §3).
 
 | HP | Phase | Date | Status |
 |---|---|---|---|
-| HP1 | Buyer payment-method selection screen | — | pending |
+| HP1 | Buyer payment-method selection screen | 2026-11-14 | done (3ede15d, 2026-11-14) |
 | HP2 | Admin 2FA (mandatory TOTP) + sign-in alerts | — | pending |
 | HP3 | Step-up confirmation + admin audit trail | — | pending |
 | HP4 | Password reset / account recovery | — | pending |
@@ -69,12 +69,40 @@ Fill each entry when the phase lands. Template:
 ---
 
 ### HP1 — Buyer payment-method selection screen
-**Status**: pending
-**Shipped**: —
-**Deviations from plan**: —
-**Gates**: —
-**Live journey**: —
-**Residue / follow-ups**: —
+**Status**: done (3ede15d, 2026-11-14)
+**Shipped**:
+- `web/lib/payment-methods.ts` (new): method registry — `MANUAL_EFT` selectable,
+  `PAYFAST`/`OZOW` honest "Coming soon" placeholders; `isSelectablePaymentMethod`
+  guard rejects stale/unknown stored ids; `CHECKOUT_PAYMENT_METHOD_KEY` hand-off.
+- `web/app/checkout/page.tsx`: "Payment method" card between the address picker
+  and the per-supplier order preview; real radio for Manual EFT (default),
+  `aria-disabled` tiles for the placeholders; sessionStorage persist on select
+  **and** at place-time; success screen echoes `Payment method: Manual EFT`.
+- `web/app/orders/[id]/page.tsx`: `checkoutMethod` read from the hand-off in the
+  async loader; echo in the Payment section's no-payment branch (once a `Payment`
+  row exists, CP11's "Manual EFT · …" line takes over).
+- `web/tests/checkout-payment.test.mjs` (new, 4 source-assertion tests).
+**Deviations from plan**: none (plan D1 — checkout API body unchanged, no
+  migration; only one live method). One implementation bug found & fixed during
+  the live journey: the default selection never fires `onChange`, so sessionStorage
+  was never written — added a place-time `setItem(CHECKOUT_PAYMENT_METHOD_KEY, paymentMethod)`.
+**Gates**: api build ✓ · api lint ✓ · api test 453 (unchanged, no api change) ·
+  web build ✓ · web lint ✓ · web test 85 (+4) · smoke not run (no new endpoint;
+  checkout API body untouched — smoke section unchanged)
+**Live journey**: local dev stack (web :3001 / api :3000). Buyer login →
+  `/checkout`: card at `Deliver to → Payment method → Your orders (1)`, radio
+  `MANUAL_EFT` checked, 2 `aria-disabled` tiles with "Coming soon" badges; clicking
+  both tiles leaves selection `MANUAL_EFT` (verified in DOM). Place order
+  `BON-20261114-622918` (Fresh Tomatoes R18) without touching the radio → success
+  screen echoes "Payment method: Manual EFT"; sessionStorage holds `MANUAL_EFT`;
+  order detail `/orders/fec5d020…` Payment section echoes "Payment method: Manual
+  EFT" above the EFT instructions. 0 console errors. Screenshot captured
+  (payment card: EFT selected/green, Card + Instant EFT dashed "Coming soon").
+**Residue / follow-ups**: PayFast/Ozow remain placeholders until a gateway phase;
+  the checkout-time choice is not persisted server-side (per D1) — HP5/gateway
+  work may revisit storing it on the order; two local test orders left in the dev
+  DB (`BON-20261114-521092`, `BON-20261114-622918`) — acceptable residue, smoke
+  not touched.
 
 ### HP2 — Admin 2FA (mandatory TOTP) + sign-in alerts
 **Status**: pending
@@ -123,4 +151,7 @@ Fill each entry when the phase lands. Template:
 Cross-phase observations (baseline drift, decisions confirmed mid-flight,
 environment issues). Newest first.
 
+- 2026-11-14 — HP1 done (`3ede15d`); web test baseline drifts 81 → **85** (+4
+  checkout-payment). API untouched (453 unchanged). Dev servers used for the
+  live journey, not the deployed stack — HP2+ journeys should re-check Render.
 - 2026-11-14 — Plan written; both documents committed; HP1 not yet started.

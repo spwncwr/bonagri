@@ -42,7 +42,7 @@ record actuals in §3).
 | ID | Phase | Date | Status |
 |---|---|---|---|
 | HP1 | Buyer payment-method selection screen | 2026-11-14 | done (3ede15d, 2026-11-14) |
-| HP2 | Admin 2FA (mandatory TOTP) + sign-in alerts | — | pending |
+| HP2 | Admin 2FA (mandatory TOTP) + sign-in alerts | 2026-11-15 | done (518cf66, 2026-11-15) |
 | HP3 | Step-up confirmation + admin audit trail | — | pending |
 | HP4 | Password reset / account recovery | — | pending |
 | HP5 | Session hardening (refresh rotation, no storage token) | — | pending |
@@ -110,12 +110,69 @@ Fill each entry when the phase lands. Template:
   not touched.
 
 ### HP2 — Admin 2FA (mandatory TOTP) + sign-in alerts
-**Status**: pending
-**Shipped**: —
-**Deviations from plan**: —
-**Gates**: —
-**Live journey**: —
-**Residue / follow-ups**: —
+**Status**: done (518cf66, 2026-11-15)
+**Shipped**:
+- Migration `20261114052359_add_admin_2fa` + regenerated Prisma client:
+  `twoFactorSecret/Enabled/EnabledAt/RecoveryCodes` on `User` plus single-use
+  pre-auth columns `twoFactorPreAuthHash/Exp` (7 new User columns total).
+- `api/src/auth/totp.ts` (new): dependency-free RFC 6238 TOTP — HMAC-SHA1,
+  30s, 6 digits, ±1 step drift window, base32 secret gen; pinned by RFC 6238
+  test vectors in `totp.spec.ts`.
+- Auth service/controller: `POST /auth/2fa/{setup,enable,verify,disable}`
+  (10/min each, `two-factor-setup.guard.ts` + 3 DTOs); pre-auth JWT on
+  `sha256(JWT_SECRET + ":2fa-preauth")` with `jti`, 5-min TTL, single-use;
+  ADMIN login never yields an access token pre-verification; enable issues 10
+  recovery codes stored as SHA-256 hashes (single-use); disable accepts a TOTP
+  code or a recovery code; `JwtAuthGuard` rejects pre-auth tokens on normal
+  routes; `MailService.sendAdminLoginAlert` on every completed admin login.
+- `web/app/login/page.tsx`: two-step login — password → 6-digit code with a
+  "Use a recovery code instead" toggle → access token, or hand-off to
+  `/admin/security` when enrolment is required.
+- `web/app/admin/security/page.tsx` (new): enrolment wizard (QR via
+  `qrcode.react@4.2.0` + manual key), codes-shown-once gate, ON status card,
+  disable with password + code/recovery code, post-disable re-enrolment;
+  `AuthGuard` `preAuthHandoff` mode; `saveAuth` clears the pre-auth token;
+  Security nav entry.
+- `scripts/runtime-smoke.sh` section **T** (T1–T6: enrol, verify, wrong code,
+  recovery-code login, disable, re-enrol) + `admin_login`/`admin_totp`
+  helpers caching `{secret, recoveryCodes}` in `.runtime-test/` (gitignored);
+  `web/tests/admin-two-factor.test.mjs` (new, 7 tests).
+**Deviations from plan**: smoke section is **T**, not the plan's N, and runs
+before the rate-limit section L; T0 opens with `sleep 61` so the shared login
+bucket (15/min per IP) has drained, and T3/T4 assert distinct HTTP statuses
+(429 vs 401) instead of just failure. `User` gained 2 more columns than the
+plan sketched (the pre-auth hash/exp pair). `AuthGuard` needed a third
+`preAuthHandoff` mode for the enrolment hand-off. Three product bugs found &
+fixed during the live journey: (1) login branch guard now tests
+`"preAuthToken" in data` (the setup reply omits `twoFactorRequired`);
+(2) `clearAuth()` before the pre-auth hand-off (a stale buyer token made
+AuthGuard bounce enrolment to `/`); (3) `setupRequestRef` memoisation —
+StrictMode's dev double-invoke POSTed `/2fa/setup` twice and could desync the
+displayed QR from the stored secret (every code would then be rejected); only
+the post-disable re-enrol may mint a fresh secret directly. One journey-only
+defect (not product): the injected TOTP used `sig[15]` as the truncation
+offset — SHA-1 digests are 20 bytes, so the RFC offset byte is the *last*
+digest byte (`sig[sig.length-1]`, as `totp.ts` and `admin_totp` both do);
+the product code was correct throughout.
+**Gates**: api build ✓ · api lint ✓ (4 warnings, 3 pre-existing) · api test
+473 (+20: totp vectors + two-factor service/e2e suite) · web build ✓ ·
+web lint ✓ · web test 92 (+7) · smoke `runtime-smoke.sh` exit 0, **21 flows**
+(section T green, rate-limit intact after it)
+**Live journey**: local dev stack (web :3001 / api :3000). Admin login →
+enrolment wizard (exactly **1** `POST /2fa/setup` 201; DB secret verified
+byte-identical to the displayed key) → TOTP enable **201** with in-page RFC
+vector self-check passing → recovery-codes view (10 codes, shown once) →
+tick → Continue → **"Two-factor authentication is ON"** → sign out → password
+→ **2-step** code screen → recovery-code toggle (both directions) → fresh
+TOTP **201** with access token → `/admin` dashboard. Screenshots shown for
+every state; **0 console errors**. Sign-in alert email captured at
+`.e2e/admin-login-alert.txt`. Recovery-codes state reconciled to
+`.runtime-test/admin-2fa-state.json` (all 10 hashes verified against the DB).
+**Residue / follow-ups**: Render/deployed-stack walkthrough for HP2 still
+owed (HP1 note: re-check Render on HP2+); the seed admin is enrolled in the
+dev DB — next smoke run consumes 1 of the 10 cached recovery codes (T6
+asserts ≥9 remain); login rate-limit bucket stays shared per IP (accepted);
+`.e2e/` + `.runtime-test/` artifacts stay gitignored.
 
 ### HP3 — Step-up confirmation + admin audit trail
 **Status**: pending
@@ -180,6 +237,10 @@ Fill each entry when the phase lands. Template:
 Cross-phase observations (baseline drift, decisions confirmed mid-flight,
 environment issues). Newest first.
 
+- 2026-11-15 — HP2 done (`518cf66`); test baselines drift api 453 → **473**
+  (+20: totp vectors + two-factor suite), web 85 → **92** (+7 admin-2fa
+  source assertions). Smoke grew to **21 flows** (new section T). Local dev
+  stack used for the journey; Render re-check still owed.
 - 2026-11-14 — Product review outcome: added **F1–F3** (quote→checkout,
   order-scoped messaging, payment-after-acceptance option) to plan §6 + this
   register after answering the payment-timing/chat questions from code (EFT is

@@ -173,6 +173,18 @@ model User {
   latestApplicationId String?  @unique
   role            UserRole         @default(BUYER)
   status          UserStatus       @default(ACTIVE)
+  // HP2: mandatory admin 2FA (plan D2). The TOTP secret is stored base32 —
+  // documented threat model: DB access is already game over. Recovery codes
+  // are SHA-256 hashes of the codes shown once at enrolment.
+  twoFactorEnabled       Boolean   @default(false)
+  twoFactorSecret        String?
+  twoFactorRecoveryCodes String?
+  twoFactorEnabledAt     DateTime?
+  // HP2: hash + expiry of the single-use 5-minute pre-auth token the login
+  // flow issues instead of a JWT (latest login wins) — makes /auth/2fa/verify
+  // replay-proof while still allowing retries inside the TTL.
+  twoFactorPreAuthHash String?
+  twoFactorPreAuthExp  DateTime?
   supplierProfile SupplierProfile?
   addresses       Address[]
   emailVerificationTokens EmailVerificationToken[]

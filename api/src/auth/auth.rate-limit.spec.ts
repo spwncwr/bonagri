@@ -16,11 +16,13 @@ describe("Auth rate limiting (ThrottlerGuard)", () => {
   const authServiceMock = {
     login: jest.fn().mockResolvedValue({ accessToken: "token" }),
     register: jest.fn().mockResolvedValue({ user: { id: "u1" } }),
+    verify2fa: jest.fn().mockResolvedValue({ accessToken: "token" }),
   };
 
   beforeEach(async () => {
     authServiceMock.login.mockClear();
     authServiceMock.register.mockClear();
+    authServiceMock.verify2fa.mockClear();
 
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -94,5 +96,25 @@ describe("Auth rate limiting (ThrottlerGuard)", () => {
       .expect(201);
 
     expect(authServiceMock.register).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows 10 two-factor verifications per minute, then blocks with 429", async () => {
+    // HP2: /auth/2fa/verify is the code-guessing surface — its budget is a
+    // security number (10/min), tighter than login's 15/min.
+    for (let attempt = 1; attempt <= 10; attempt += 1) {
+      await request(app.getHttpServer())
+        .post("/auth/2fa/verify")
+        .set("Authorization", "Bearer pre-auth-token")
+        .send({ code: "123456" })
+        .expect(201);
+    }
+
+    await request(app.getHttpServer())
+      .post("/auth/2fa/verify")
+      .set("Authorization", "Bearer pre-auth-token")
+      .send({ code: "123456" })
+      .expect(429);
+
+    expect(authServiceMock.verify2fa).toHaveBeenCalledTimes(10);
   });
 });

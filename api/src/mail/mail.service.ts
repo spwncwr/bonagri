@@ -341,4 +341,83 @@ export class MailService {
       throw error;
     }
   }
+
+  // HP2: sign-in alert for every completed admin login (IP + time). Its own
+  // capture file keeps the smoke assertion deterministic — other sections
+  // overwrite .e2e/notifications.txt. Best-effort by contract: the caller
+  // swallows errors so a failed alert never blocks a sign-in.
+  async sendAdminLoginAlert(
+    email: string,
+    firstName: string,
+    ip: string | null,
+  ) {
+    const signedInAt = new Date().toISOString();
+
+    if (
+      process.env.E2E_CAPTURE_MAIL === "true" &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      const captureFile =
+        process.env.E2E_ADMIN_LOGIN_CAPTURE_FILE ??
+        ".e2e/admin-login-alert.txt";
+
+      const { mkdir, writeFile } = await import("node:fs/promises");
+      const { dirname } = await import("node:path");
+
+      await mkdir(dirname(captureFile), { recursive: true });
+      await writeFile(
+        captureFile,
+        JSON.stringify({ email, ip, signedInAt }),
+        "utf8",
+      );
+
+      // Capture mode short-circuits: E2E runs must never hit real SMTP.
+      return;
+    }
+
+    if (!this.transporter) {
+      throw new ServiceUnavailableException(
+        "Email delivery is not configured",
+      );
+    }
+
+    const from =
+      process.env.SMTP_FROM ??
+      process.env.SMTP_USER;
+
+    try {
+      await this.transporter.sendMail({
+        from,
+        to: email,
+        subject: "New sign-in to your BonAgri admin account",
+        text: [
+          `Hello ${firstName},`,
+          "",
+          "A sign-in to your BonAgri admin account was recorded:",
+          "",
+          `Time: ${signedInAt}`,
+          `IP: ${ip ?? "unknown"}`,
+          "",
+          "If this was not you, change your password immediately and",
+          "contact support — your account protects supplier and buyer data.",
+          "",
+          "BonAgri",
+          "Agricultural trade, connected.",
+        ].join("\n"),
+        html: `
+          <div style="font-family:Arial,sans-serif;line-height:1.6;max-width:600px;margin:auto">
+            <h2>New sign-in to your admin account</h2>
+            <p>Hello ${firstName},</p>
+            <p>A sign-in to your BonAgri admin account was recorded:</p>
+            <p>Time: ${signedInAt}<br />IP: ${ip ?? "unknown"}</p>
+            <p>If this was not you, change your password immediately and contact support — your account protects supplier and buyer data.</p>
+            <p>BonAgri<br />Agricultural trade, connected.</p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.error("BonAgri SMTP delivery error:", error);
+      throw error;
+    }
+  }
 }

@@ -50,6 +50,10 @@ export type AuthUser = {
   avatarUrl: string | null;
   role: UserRole;
   status: "ACTIVE" | "SUSPENDED" | "PENDING";
+  // HP2: /auth/me reports admin 2FA enrolment — /admin/security reads it to
+  // choose between the enrolment wizard and the enabled status. Absent or
+  // false for every other role (only ADMIN can enrol).
+  twoFactorEnabled?: boolean;
   // Only a supplier/agro dealer carries the first, only a transporter the
   // second; both are null for a buyer.
   supplierProfile?: SupplierAccount | null;
@@ -70,6 +74,9 @@ export function saveAuth(
 
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  // Any live session supersedes the two-step bridge — a stale pre-auth
+  // hand-off must never linger in the tab after sign-in completes.
+  clearPreAuthToken();
 
   const storage = rememberMe ? localStorage : sessionStorage;
 
@@ -107,7 +114,29 @@ export function clearAuth() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REMEMBER_ME_KEY);
   sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  clearPreAuthToken();
   setThemeScope(null);
+}
+
+// HP2: the password-verified pre-auth token bridges the two login steps and
+// the mandatory first-admin-enrolment hand-off (login → /admin/security).
+// sessionStorage keeps it in the tab that earned it; the API owns the real
+// security — 5-minute TTL, single use, superseded by any newer login.
+const PREAUTH_KEY = "bonagri_2fa_preauth";
+
+export function savePreAuthToken(token: string) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(PREAUTH_KEY, token);
+}
+
+export function readPreAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(PREAUTH_KEY);
+}
+
+export function clearPreAuthToken() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(PREAUTH_KEY);
 }
 
 export function authHeaders(): Record<string, string> {

@@ -677,10 +677,6 @@ export type SupplierProfileUncheckedUpdateOneWithoutUserNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SupplierProfileUpdateToOneWithWhereWithoutUserInput, Prisma.SupplierProfileUpdateWithoutUserInput>, Prisma.SupplierProfileUncheckedUpdateWithoutUserInput>
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
 export type NullableFloatFieldUpdateOperationsInput = {
   set?: number | null
   increment?: number

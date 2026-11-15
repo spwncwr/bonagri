@@ -86,6 +86,151 @@ request() {
   fi
 }
 
+# HP2: admin sign-in is two-step (mandatory TOTP). This helper enrols the
+# admin on first contact and caches {secret, recoveryCodes} in .runtime-test
+# (persists across runs) so later admin logins just mint a fresh code.
+# Everything except the access token is written to $LOG_DIR files — the token
+# is the ONLY thing on stdout, so `TOKEN="$(admin_login …)"` cannot be
+# polluted by progress output. The TOTP below is an INDEPENDENT RFC 6238
+# implementation: if it ever disagrees with the API's own totp.ts, verify
+# fails loudly instead of silently passing.
+# fail() writes to stdout — inside `TOKEN="$(admin_login …)"` that output
+# would be swallowed by the substitution, so the helper's failures go to
+# stderr and still abort via set -e (plus the callers' empty-token guard).
+admin_fail() {
+  echo >&2
+  echo "❌ RUNTIME TEST FAILED" >&2
+  echo "$1" >&2
+  echo >&2
+  exit 1
+}
+
+ADMIN_2FA_STATE="$LOG_DIR/admin-2fa-state.json"
+
+admin_totp() {
+  node -e '
+    const crypto = require("crypto");
+    const secret = String(process.argv[1]).toUpperCase().replace(/\s+/g, "");
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    let bits = 0, value = 0;
+    const bytes = [];
+    for (const ch of secret) {
+      const idx = alphabet.indexOf(ch);
+      if (idx < 0) { console.error("bad base32 secret"); process.exit(2); }
+      value = (value << 5) | idx;
+      bits += 5;
+      if (bits >= 8) { bytes.push((value >>> (bits - 8)) & 255); bits -= 8; }
+    }
+    const buf = Buffer.alloc(8);
+    buf.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 1000 / 30)));
+    const hmac = crypto.createHmac("sha1", Buffer.from(bytes)).update(buf).digest();
+    const off = hmac[hmac.length - 1] & 0xf;
+    const code = (((hmac[off] & 0x7f) << 24 | hmac[off + 1] << 16 | hmac[off + 2] << 8 | hmac[off + 3]) % 1e6);
+    process.stdout.write(String(code).padStart(6, "0"));
+  ' "$1"
+}
+
+admin_login() {
+  local email="$1"
+  local password="$2"
+  local login_file="$LOG_DIR/admin-login.json"
+  local http kind pre
+
+  http="$(
+    curl -sS -o "$login_file" -w "%{http_code}" \
+      -X POST "$API_URL$API_PREFIX/auth/login" \
+      -H "Content-Type: application/json" \
+      -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$email" "$password")"
+  )"
+  if [ "$http" != "201" ]; then
+    cat "$login_file" >&2
+    admin_fail "Admin login failed (check SEED_ADMIN_* env and that the seed ran). HTTP $http"
+  fi
+
+  kind="$(python3 -c '
+import json,sys
+d=json.load(open(sys.argv[1],encoding="utf-8"))
+if d.get("twoFactorSetupRequired"): print("setup")
+elif d.get("twoFactorRequired"): print("verify")
+elif d.get("accessToken"): print("plain")
+else: print("unknown")
+' "$login_file")"
+  pre="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("preAuthToken",""))' "$login_file")"
+
+  if [ "$kind" = "plain" ]; then
+    printf '%s' "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["accessToken"])' "$login_file")"
+    return 0
+  fi
+
+  if [ "$kind" = "unknown" ] || [ -z "$pre" ]; then
+    admin_fail "Admin login returned neither a session nor a pre-auth token"
+  fi
+
+  if [ "$kind" = "setup" ]; then
+    # Unenrolled admin (fresh DB or first run after HP2): enrol for real.
+    local setup_file="$LOG_DIR/admin-2fa-setup.json"
+    local enable_file="$LOG_DIR/admin-2fa-enable.json"
+    local secret code
+
+    http="$(
+      curl -sS -o "$setup_file" -w "%{http_code}" \
+        -X POST "$API_URL$API_PREFIX/auth/2fa/setup" \
+        -H "Authorization: Bearer $pre"
+    )"
+    if [ "$http" != "201" ]; then
+      cat "$setup_file" >&2
+      admin_fail "Admin 2FA setup failed. HTTP $http"
+    fi
+    secret="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["secret"])' "$setup_file")"
+
+    code="$(admin_totp "$secret")"
+    http="$(
+      curl -sS -o "$enable_file" -w "%{http_code}" \
+        -X POST "$API_URL$API_PREFIX/auth/2fa/enable" \
+        -H "Authorization: Bearer $pre" \
+        -H "Content-Type: application/json" \
+        -d "$(python3 -c 'import json,sys; print(json.dumps({"code":sys.argv[1]}))' "$code")"
+    )"
+    if [ "$http" != "201" ]; then
+      cat "$enable_file" >&2
+      admin_fail "Admin 2FA enable failed (TOTP mismatch between smoke and API?). HTTP $http"
+    fi
+
+    python3 - "$enable_file" "$secret" "$ADMIN_2FA_STATE" <<'PYSTATE'
+import json, sys
+enable = json.load(open(sys.argv[1], encoding="utf-8"))
+state = {"secret": sys.argv[2], "recoveryCodes": enable.get("recoveryCodes", [])}
+with open(sys.argv[3], "w", encoding="utf-8") as f:
+    json.dump(state, f, indent=2)
+PYSTATE
+
+    printf '%s' "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["accessToken"])' "$enable_file")"
+    return 0
+  fi
+
+  # kind = verify: enrolled admin — fresh TOTP from the cached secret.
+  if [ ! -f "$ADMIN_2FA_STATE" ]; then
+    admin_fail "Admin is enrolled in 2FA but $ADMIN_2FA_STATE is missing — restore it or disable 2FA for the seed admin in the DB."
+  fi
+
+  local verify_file="$LOG_DIR/admin-2fa-verify.json"
+  local vcode
+  vcode="$(admin_totp "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["secret"])' "$ADMIN_2FA_STATE")")"
+  http="$(
+    curl -sS -o "$verify_file" -w "%{http_code}" \
+      -X POST "$API_URL$API_PREFIX/auth/2fa/verify" \
+      -H "Authorization: Bearer $pre" \
+      -H "Content-Type: application/json" \
+      -d "$(python3 -c 'import json,sys; print(json.dumps({"code":sys.argv[1]}))' "$vcode")"
+  )"
+  if [ "$http" != "201" ]; then
+    cat "$verify_file" >&2
+    admin_fail "Admin 2FA verify failed (clock drift or stale state file?). HTTP $http"
+  fi
+
+  printf '%s' "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["accessToken"])' "$verify_file")"
+}
+
 echo "========================================"
 echo "BONAGRI RUNTIME SMOKE TEST"
 echo "========================================"
@@ -119,17 +264,22 @@ CAPTURE_FILE="$ROOT/.e2e/verification-url.txt"
 DISPUTE_CAPTURE_FILE="$ROOT/.e2e/dispute-resolution.txt"
 NOTIFY_CAPTURE_FILE="$ROOT/.e2e/notifications.txt"
 OTP_CAPTURE_FILE="$ROOT/.e2e/phone-otp.txt"
+# HP2: admin sign-in alert — its own file so section T's assertion cannot be
+# clobbered by other notification mail.
+ADMIN_LOGIN_CAPTURE_FILE="$ROOT/.e2e/admin-login-alert.txt"
 mkdir -p "$ROOT/.e2e"
 rm -f "$CAPTURE_FILE"
 rm -f "$DISPUTE_CAPTURE_FILE"
 rm -f "$NOTIFY_CAPTURE_FILE"
 rm -f "$OTP_CAPTURE_FILE"
+rm -f "$ADMIN_LOGIN_CAPTURE_FILE"
 
 E2E_CAPTURE_MAIL=true \
 E2E_MAIL_CAPTURE_FILE="$CAPTURE_FILE" \
 E2E_DISPUTE_CAPTURE_FILE="$DISPUTE_CAPTURE_FILE" \
 E2E_NOTIFY_CAPTURE_FILE="$NOTIFY_CAPTURE_FILE" \
 E2E_OTP_CAPTURE_FILE="$OTP_CAPTURE_FILE" \
+E2E_ADMIN_LOGIN_CAPTURE_FILE="$ADMIN_LOGIN_CAPTURE_FILE" \
 npm run start:dev >"$LOG_DIR/api.log" 2>&1 &
 API_PID=$!
 
@@ -1760,27 +1910,14 @@ PYJSON
 echo
 echo "[E2/3] Admin resolves with a note; buyer sees the outcome; email captured..."
 
-ADMIN_LOGIN_E_HTTP="$(
-  curl -sS -o "$LOG_DIR/dispute-admin-login.json" -w "%{http_code}" \
-    -X POST "$API_URL$API_PREFIX/auth/login" \
-    -H "Content-Type: application/json" \
-    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
-)"
-
-if [[ "$ADMIN_LOGIN_E_HTTP" != "201" ]]; then
-  cat "$LOG_DIR/dispute-admin-login.json"
-  fail "Admin login for the dispute flow failed. HTTP $ADMIN_LOGIN_E_HTTP"
-fi
-
-ADMIN_TOKEN="$(
-  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("accessToken",""))' "$LOG_DIR/dispute-admin-login.json"
-)"
+# HP2: two-step sign-in (password → pre-auth → TOTP) via the shared helper.
+ADMIN_TOKEN="$(admin_login "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
 
 if [[ -z "$ADMIN_TOKEN" ]]; then
   fail "Admin login for the dispute flow returned no access token"
 fi
 
-echo "✓ Admin login succeeded"
+echo "✓ Admin login succeeded (two-step 2FA)"
 
 curl -sS "$API_URL$API_PREFIX/disputes" \
   -H "Authorization: Bearer $ADMIN_TOKEN" > "$LOG_DIR/dispute-admin-list.json"
@@ -6099,32 +6236,14 @@ else
 echo
 echo "[A1/3] Admin login + platform stats..."
 
-ADMIN_LOGIN_HTTP="$(
-  curl -sS -o "$LOG_DIR/admin-login.json" -w "%{http_code}" \
-    -X POST "$API_URL$API_PREFIX/auth/login" \
-    -H "Content-Type: application/json" \
-    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
-)"
-
-if [[ "$ADMIN_LOGIN_HTTP" != "201" ]]; then
-  cat "$LOG_DIR/admin-login.json"
-  fail "Admin login failed (check SEED_ADMIN_* env and that the seed ran). HTTP $ADMIN_LOGIN_HTTP"
-fi
-
-ADMIN_TOKEN="$(
-  python3 -c '
-import json,sys
-with open(sys.argv[1]) as f:
-    data=json.load(f)
-print(data.get("accessToken",""))
-' "$LOG_DIR/admin-login.json"
-)"
+# HP2: two-step sign-in (password → pre-auth → TOTP) via the shared helper.
+ADMIN_TOKEN="$(admin_login "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
 
 if [ -z "$ADMIN_TOKEN" ]; then
   fail "Admin login returned no access token"
 fi
 
-echo "✓ Admin login succeeded"
+echo "✓ Admin login succeeded (two-step 2FA)"
 
 request GET "$API_URL$API_PREFIX/admin/stats" "" "$ADMIN_TOKEN" > "$LOG_DIR/admin-stats.json"
 
@@ -7169,6 +7288,305 @@ fi
 
 echo
 echo "✓ LISTINGS SIGNALS FLOW ACCEPTANCE PASSED"
+
+echo
+echo "ADMIN 2FA FLOW"
+echo "========================================"
+
+# HP2: mandatory admin TOTP (plan §HP2). Runs BEFORE the rate-limiting
+# section on purpose — L hammers /auth/login and this flow performs several
+# real logins itself (bucket: 15/min, T spends 5). Same guarded admin
+# credentials as the dispute/admin sections; enrolment state for the next
+# run is cached in .runtime-test/admin-2fa-state.json by admin_login.
+
+if [ -z "${ADMIN_E2E_PASSWORD:-}" ]; then
+  echo "⚠ Admin 2FA section SKIPPED: no SEED_ADMIN_PASSWORD in api/.env and no ADMIN_E2E_PASSWORD env var."
+else
+
+# The login bucket is 15/min shared per IP, and T performs 4 real logins in
+# quick succession right after other sections logged in. Wait out any recent
+# burst FIRST so T always starts with a full window (same discipline L relies
+# on with its own sleep) — otherwise T3's login can come back 429 and look
+# like a missing pre-auth token.
+echo
+echo "[T0] Waiting out the login throttle window..."
+sleep 61
+echo "✓ Login window clear"
+
+echo
+echo "[T1/6] Disable 2FA with password + TOTP, then prove the login mandate..."
+
+T_TOKEN="$(admin_login "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
+if [ -z "$T_TOKEN" ]; then
+  fail "Admin 2FA section: login returned no token"
+fi
+
+T_SECRET="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["secret"])' "$ADMIN_2FA_STATE")"
+T_CODE="$(admin_totp "$T_SECRET")"
+
+T_DISABLE_HTTP="$(
+  curl -sS -o "$LOG_DIR/t-disable.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/2fa/disable" \
+    -H "Authorization: Bearer $T_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"password":sys.argv[1],"code":sys.argv[2]}))' "$ADMIN_E2E_PASSWORD" "$T_CODE")"
+)"
+if [ "$T_DISABLE_HTTP" != "201" ]; then
+  cat "$LOG_DIR/t-disable.json"
+  fail "2FA disable (password + TOTP) failed. HTTP $T_DISABLE_HTTP"
+fi
+echo "✓ 2FA disabled with password + TOTP"
+
+T_LOGIN_FILE="$LOG_DIR/t-login.json"
+T_HTTP="$(
+  curl -sS -o "$T_LOGIN_FILE" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
+)"
+if [ "$T_HTTP" != "201" ]; then
+  cat "$T_LOGIN_FILE"
+  fail "Mandate check: admin login failed. HTTP $T_HTTP"
+fi
+
+python3 - "$T_LOGIN_FILE" <<'PYJSON'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+if not d.get("twoFactorSetupRequired"):
+    raise SystemExit("ERROR: unenrolled admin login did not demand enrolment (2FA is not mandatory?)")
+if d.get("accessToken"):
+    raise SystemExit("ERROR: unenrolled admin login returned a JWT without 2FA")
+if not d.get("preAuthToken"):
+    raise SystemExit("ERROR: enrolment login returned no pre-auth token")
+print("✓ Unenrolled admin gets no JWT — enrolment is mandatory")
+PYJSON
+
+echo
+echo "[T2/6] Fresh enrolment: setup + enable with a real TOTP code..."
+
+T_PRE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["preAuthToken"])' "$T_LOGIN_FILE")"
+
+T_SETUP_FILE="$LOG_DIR/t-setup.json"
+T_HTTP="$(
+  curl -sS -o "$T_SETUP_FILE" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/2fa/setup" \
+    -H "Authorization: Bearer $T_PRE"
+)"
+if [ "$T_HTTP" != "201" ]; then
+  cat "$T_SETUP_FILE"
+  fail "2FA setup failed. HTTP $T_HTTP"
+fi
+
+T_NEW_SECRET="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["secret"])' "$T_SETUP_FILE")"
+
+T_ENABLE_FILE="$LOG_DIR/t-enable.json"
+T_HTTP="$(
+  curl -sS -o "$T_ENABLE_FILE" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/2fa/enable" \
+    -H "Authorization: Bearer $T_PRE" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"code":sys.argv[1]}))' "$(admin_totp "$T_NEW_SECRET")")"
+)"
+if [ "$T_HTTP" != "201" ]; then
+  cat "$T_ENABLE_FILE"
+  fail "2FA enable failed (TOTP mismatch between smoke and API?). HTTP $T_HTTP"
+fi
+
+# Persist the NEW enrolment state — the old secret died with the disable.
+python3 - "$T_ENABLE_FILE" "$T_NEW_SECRET" "$ADMIN_2FA_STATE" <<'PYSTATE'
+import json, sys
+enable = json.load(open(sys.argv[1], encoding="utf-8"))
+state = {"secret": sys.argv[2], "recoveryCodes": enable.get("recoveryCodes", [])}
+with open(sys.argv[3], "w", encoding="utf-8") as f:
+    json.dump(state, f, indent=2)
+PYSTATE
+
+T_TOKEN2="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["accessToken"])' "$T_ENABLE_FILE")"
+if [ -z "$T_TOKEN2" ]; then
+  fail "Enrolment did not complete the login (no access token from /auth/2fa/enable)"
+fi
+
+curl -sS "$API_URL$API_PREFIX/auth/me" \
+  -H "Authorization: Bearer $T_TOKEN2" > "$LOG_DIR/t-me.json"
+python3 - "$LOG_DIR/t-me.json" <<'PYJSON'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+if d.get("role") != "ADMIN" or d.get("twoFactorEnabled") is not True:
+    raise SystemExit("ERROR: enrolment session / me payload wrong: %s" % json.dumps(d))
+print("✓ Enrolment completes the login — recovery codes shown once, session live, /auth/me reports 2FA on")
+PYJSON
+
+echo
+echo "[T3/6] Wrong code rejected; valid code mints the JWT; pre-auth is single-use..."
+
+T_LOGIN2_FILE="$LOG_DIR/t-login2.json"
+T_HTTP="$(
+  curl -sS -o "$T_LOGIN2_FILE" -w "%{http_code}" -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
+)"
+if [ "$T_HTTP" == "429" ]; then
+  fail "Enrolled admin login was throttled (429) — the T0 window wait should have prevented this"
+fi
+if [ "$T_HTTP" != "201" ]; then
+  cat "$T_LOGIN2_FILE"
+  fail "Enrolled admin login failed. HTTP $T_HTTP"
+fi
+T_PRE2="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("preAuthToken",""))' "$T_LOGIN2_FILE")"
+if [ -z "$T_PRE2" ]; then
+  cat "$T_LOGIN2_FILE"
+  fail "Enrolled admin login returned no pre-auth token"
+fi
+
+# Off-by-one from the CURRENT code — deterministic and outside the ±1 drift
+# window (python handles the zero-padded base-10 math; bash $(( )) would
+# treat a leading zero as octal).
+T_WRONG_CODE="$(
+  python3 -c 'import sys; print(f"{(int(sys.argv[1]) + 1) % 1000000:06d}")' \
+    "$(admin_totp "$T_NEW_SECRET")"
+)"
+
+T_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/t-verify-wrong.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/2fa/verify" \
+    -H "Authorization: Bearer $T_PRE2" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"code":sys.argv[1]}))' "$T_WRONG_CODE")"
+)"
+if [ "$T_VERIFY_HTTP" != "401" ]; then
+  cat "$LOG_DIR/t-verify-wrong.json"
+  fail "Wrong 2FA code must be rejected with 401. Got HTTP $T_VERIFY_HTTP"
+fi
+echo "✓ Wrong code rejected with 401"
+
+T_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/t-verify-ok.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/2fa/verify" \
+    -H "Authorization: Bearer $T_PRE2" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"code":sys.argv[1]}))' "$(admin_totp "$T_NEW_SECRET")")"
+)"
+if [ "$T_VERIFY_HTTP" != "201" ]; then
+  cat "$LOG_DIR/t-verify-ok.json"
+  fail "Valid 2FA code must complete the login. HTTP $T_VERIFY_HTTP"
+fi
+echo "✓ Valid code completes the login"
+
+T_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/t-verify-replay.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/2fa/verify" \
+    -H "Authorization: Bearer $T_PRE2" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"code":sys.argv[1]}))' "$(admin_totp "$T_NEW_SECRET")")"
+)"
+if [ "$T_VERIFY_HTTP" != "401" ]; then
+  cat "$LOG_DIR/t-verify-replay.json"
+  fail "A consumed pre-auth token must be rejected on replay. HTTP $T_VERIFY_HTTP"
+fi
+echo "✓ Pre-auth replay rejected with 401 (single-use)"
+
+echo
+echo "[T4/6] Recovery codes work exactly once..."
+
+T_RECOVERY_1="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["recoveryCodes"][0])' "$ADMIN_2FA_STATE")"
+
+T_LOGIN3_FILE="$LOG_DIR/t-login3.json"
+curl -sS -o "$T_LOGIN3_FILE" -X POST "$API_URL$API_PREFIX/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")" > /dev/null
+T_PRE3="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("preAuthToken",""))' "$T_LOGIN3_FILE")"
+
+T_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/t-recovery-ok.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/2fa/verify" \
+    -H "Authorization: Bearer $T_PRE3" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"code":sys.argv[1]}))' "$T_RECOVERY_1")"
+)"
+if [ "$T_VERIFY_HTTP" != "201" ]; then
+  cat "$LOG_DIR/t-recovery-ok.json"
+  fail "Recovery code must complete the login. HTTP $T_VERIFY_HTTP"
+fi
+echo "✓ Recovery code completes the login"
+
+T_LOGIN4_FILE="$LOG_DIR/t-login4.json"
+T_HTTP="$(
+  curl -sS -o "$T_LOGIN4_FILE" -w "%{http_code}" -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
+)"
+if [ "$T_HTTP" == "429" ]; then
+  fail "Recovery-test login was throttled (429) — the T0 window wait should have prevented this"
+fi
+if [ "$T_HTTP" != "201" ]; then
+  cat "$T_LOGIN4_FILE"
+  fail "Recovery-test admin login failed. HTTP $T_HTTP"
+fi
+T_PRE4="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("preAuthToken",""))' "$T_LOGIN4_FILE")"
+if [ -z "$T_PRE4" ]; then
+  cat "$T_LOGIN4_FILE"
+  fail "Recovery-test login returned no pre-auth token"
+fi
+
+T_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/t-recovery-used.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/2fa/verify" \
+    -H "Authorization: Bearer $T_PRE4" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"code":sys.argv[1]}))' "$T_RECOVERY_1")"
+)"
+if [ "$T_VERIFY_HTTP" != "401" ]; then
+  cat "$LOG_DIR/t-recovery-used.json"
+  fail "A used recovery code must be rejected with 401. HTTP $T_VERIFY_HTTP"
+fi
+echo "✓ Used recovery code rejected with 401 (single-use)"
+
+# Drop the consumed code from the cached state so a later run never wastes it.
+python3 - "$ADMIN_2FA_STATE" "$T_RECOVERY_1" <<'PYSTATE'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as f:
+    state = json.load(f)
+used = sys.argv[2]
+state["recoveryCodes"] = [c for c in state.get("recoveryCodes", []) if c != used]
+with open(sys.argv[1], "w", encoding="utf-8") as f:
+    json.dump(state, f, indent=2)
+PYSTATE
+
+echo
+echo "[T5/6] Sign-in alert email captured with IP + time..."
+
+if [ ! -f "$ADMIN_LOGIN_CAPTURE_FILE" ]; then
+  fail "No admin sign-in alert captured at $ADMIN_LOGIN_CAPTURE_FILE"
+fi
+python3 - "$ADMIN_LOGIN_CAPTURE_FILE" "$ADMIN_E2E_EMAIL" <<'PYJSON'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+if d.get("email") != sys.argv[2]:
+    raise SystemExit("ERROR: alert captured for %s, expected %s" % (d.get("email"), sys.argv[2]))
+if not d.get("ip"):
+    raise SystemExit("ERROR: alert has no IP: %s" % json.dumps(d))
+if not d.get("signedInAt"):
+    raise SystemExit("ERROR: alert has no timestamp: %s" % json.dumps(d))
+print("✓ Sign-in alert captured (email + IP + time)")
+PYJSON
+
+echo
+echo "[T6/6] Seed admin left enrolled with the cached secret for the next run..."
+if [ ! -f "$ADMIN_2FA_STATE" ]; then
+  fail "State file $ADMIN_2FA_STATE missing — next run could not log in"
+fi
+python3 - "$ADMIN_2FA_STATE" <<'PYJSON'
+import json, sys
+state = json.load(open(sys.argv[1], encoding="utf-8"))
+assert state.get("secret"), "state has no secret"
+assert len(state.get("recoveryCodes", [])) >= 9, "expected the 9 unused recovery codes"
+print("✓ Enrolment state cached (secret + remaining recovery codes)")
+PYJSON
+
+echo
+echo "✓ ADMIN 2FA FLOW ACCEPTANCE PASSED"
+
+fi
 
 echo
 echo "RATE LIMITING FLOW"

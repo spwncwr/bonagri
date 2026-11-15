@@ -22,6 +22,7 @@ import {
   LogoutIcon,
   MegaphoneIcon,
   SearchIcon,
+  SettingsIcon,
   ShieldIcon,
   StarIcon,
   StoreIcon,
@@ -51,6 +52,7 @@ const NAV: NavItem[] = [
   { href: "/admin/orders", label: "Orders", icon: BasketIcon },
   { href: "/admin/disputes", label: "Disputes", icon: ShieldIcon },
   { href: "/admin/applications", label: "Applications", icon: ListIcon },
+  { href: "/admin/security", label: "Security", icon: SettingsIcon },
 ];
 
 // The header shows the busiest destinations as pills; the rail keeps all of them.

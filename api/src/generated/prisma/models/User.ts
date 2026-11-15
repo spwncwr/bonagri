@@ -40,6 +40,12 @@ export type UserMinAggregateOutputType = {
   latestApplicationId: string | null
   role: $Enums.UserRole | null
   status: $Enums.UserStatus | null
+  twoFactorEnabled: boolean | null
+  twoFactorSecret: string | null
+  twoFactorRecoveryCodes: string | null
+  twoFactorEnabledAt: Date | null
+  twoFactorPreAuthHash: string | null
+  twoFactorPreAuthExp: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -60,6 +66,12 @@ export type UserMaxAggregateOutputType = {
   latestApplicationId: string | null
   role: $Enums.UserRole | null
   status: $Enums.UserStatus | null
+  twoFactorEnabled: boolean | null
+  twoFactorSecret: string | null
+  twoFactorRecoveryCodes: string | null
+  twoFactorEnabledAt: Date | null
+  twoFactorPreAuthHash: string | null
+  twoFactorPreAuthExp: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -80,6 +92,12 @@ export type UserCountAggregateOutputType = {
   latestApplicationId: number
   role: number
   status: number
+  twoFactorEnabled: number
+  twoFactorSecret: number
+  twoFactorRecoveryCodes: number
+  twoFactorEnabledAt: number
+  twoFactorPreAuthHash: number
+  twoFactorPreAuthExp: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -102,6 +120,12 @@ export type UserMinAggregateInputType = {
   latestApplicationId?: true
   role?: true
   status?: true
+  twoFactorEnabled?: true
+  twoFactorSecret?: true
+  twoFactorRecoveryCodes?: true
+  twoFactorEnabledAt?: true
+  twoFactorPreAuthHash?: true
+  twoFactorPreAuthExp?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -122,6 +146,12 @@ export type UserMaxAggregateInputType = {
   latestApplicationId?: true
   role?: true
   status?: true
+  twoFactorEnabled?: true
+  twoFactorSecret?: true
+  twoFactorRecoveryCodes?: true
+  twoFactorEnabledAt?: true
+  twoFactorPreAuthHash?: true
+  twoFactorPreAuthExp?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -142,6 +172,12 @@ export type UserCountAggregateInputType = {
   latestApplicationId?: true
   role?: true
   status?: true
+  twoFactorEnabled?: true
+  twoFactorSecret?: true
+  twoFactorRecoveryCodes?: true
+  twoFactorEnabledAt?: true
+  twoFactorPreAuthHash?: true
+  twoFactorPreAuthExp?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -235,6 +271,12 @@ export type UserGroupByOutputType = {
   latestApplicationId: string | null
   role: $Enums.UserRole
   status: $Enums.UserStatus
+  twoFactorEnabled: boolean
+  twoFactorSecret: string | null
+  twoFactorRecoveryCodes: string | null
+  twoFactorEnabledAt: Date | null
+  twoFactorPreAuthHash: string | null
+  twoFactorPreAuthExp: Date | null
   createdAt: Date
   updatedAt: Date
   _count: UserCountAggregateOutputType | null
@@ -276,6 +318,12 @@ export type UserWhereInput = {
   latestApplicationId?: Prisma.StringNullableFilter<"User"> | string | null
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
   status?: Prisma.EnumUserStatusFilter<"User"> | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFilter<"User"> | boolean
+  twoFactorSecret?: Prisma.StringNullableFilter<"User"> | string | null
+  twoFactorRecoveryCodes?: Prisma.StringNullableFilter<"User"> | string | null
+  twoFactorEnabledAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  twoFactorPreAuthHash?: Prisma.StringNullableFilter<"User"> | string | null
+  twoFactorPreAuthExp?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   supplierProfile?: Prisma.XOR<Prisma.SupplierProfileNullableScalarRelationFilter, Prisma.SupplierProfileWhereInput> | null
@@ -315,6 +363,12 @@ export type UserOrderByWithRelationInput = {
   latestApplicationId?: Prisma.SortOrderInput | Prisma.SortOrder
   role?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  twoFactorEnabled?: Prisma.SortOrder
+  twoFactorSecret?: Prisma.SortOrderInput | Prisma.SortOrder
+  twoFactorRecoveryCodes?: Prisma.SortOrderInput | Prisma.SortOrder
+  twoFactorEnabledAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  twoFactorPreAuthHash?: Prisma.SortOrderInput | Prisma.SortOrder
+  twoFactorPreAuthExp?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   supplierProfile?: Prisma.SupplierProfileOrderByWithRelationInput
@@ -357,6 +411,12 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   businessVerifiedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
   status?: Prisma.EnumUserStatusFilter<"User"> | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFilter<"User"> | boolean
+  twoFactorSecret?: Prisma.StringNullableFilter<"User"> | string | null
+  twoFactorRecoveryCodes?: Prisma.StringNullableFilter<"User"> | string | null
+  twoFactorEnabledAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  twoFactorPreAuthHash?: Prisma.StringNullableFilter<"User"> | string | null
+  twoFactorPreAuthExp?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   supplierProfile?: Prisma.XOR<Prisma.SupplierProfileNullableScalarRelationFilter, Prisma.SupplierProfileWhereInput> | null
@@ -396,6 +456,12 @@ export type UserOrderByWithAggregationInput = {
   latestApplicationId?: Prisma.SortOrderInput | Prisma.SortOrder
   role?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  twoFactorEnabled?: Prisma.SortOrder
+  twoFactorSecret?: Prisma.SortOrderInput | Prisma.SortOrder
+  twoFactorRecoveryCodes?: Prisma.SortOrderInput | Prisma.SortOrder
+  twoFactorEnabledAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  twoFactorPreAuthHash?: Prisma.SortOrderInput | Prisma.SortOrder
+  twoFactorPreAuthExp?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
@@ -422,6 +488,12 @@ export type UserScalarWhereWithAggregatesInput = {
   latestApplicationId?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   role?: Prisma.EnumUserRoleWithAggregatesFilter<"User"> | $Enums.UserRole
   status?: Prisma.EnumUserStatusWithAggregatesFilter<"User"> | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
+  twoFactorSecret?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  twoFactorRecoveryCodes?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  twoFactorEnabledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  twoFactorPreAuthHash?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  twoFactorPreAuthExp?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
@@ -441,6 +513,12 @@ export type UserCreateInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -480,6 +558,12 @@ export type UserUncheckedCreateInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -517,6 +601,12 @@ export type UserUpdateInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -556,6 +646,12 @@ export type UserUncheckedUpdateInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -594,6 +690,12 @@ export type UserCreateManyInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -613,6 +715,12 @@ export type UserUpdateManyMutationInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -633,6 +741,12 @@ export type UserUncheckedUpdateManyInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -653,6 +767,12 @@ export type UserCountOrderByAggregateInput = {
   latestApplicationId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  twoFactorEnabled?: Prisma.SortOrder
+  twoFactorSecret?: Prisma.SortOrder
+  twoFactorRecoveryCodes?: Prisma.SortOrder
+  twoFactorEnabledAt?: Prisma.SortOrder
+  twoFactorPreAuthHash?: Prisma.SortOrder
+  twoFactorPreAuthExp?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -673,6 +793,12 @@ export type UserMaxOrderByAggregateInput = {
   latestApplicationId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  twoFactorEnabled?: Prisma.SortOrder
+  twoFactorSecret?: Prisma.SortOrder
+  twoFactorRecoveryCodes?: Prisma.SortOrder
+  twoFactorEnabledAt?: Prisma.SortOrder
+  twoFactorPreAuthHash?: Prisma.SortOrder
+  twoFactorPreAuthExp?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -693,6 +819,12 @@ export type UserMinOrderByAggregateInput = {
   latestApplicationId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  twoFactorEnabled?: Prisma.SortOrder
+  twoFactorSecret?: Prisma.SortOrder
+  twoFactorRecoveryCodes?: Prisma.SortOrder
+  twoFactorEnabledAt?: Prisma.SortOrder
+  twoFactorPreAuthHash?: Prisma.SortOrder
+  twoFactorPreAuthExp?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -729,6 +861,10 @@ export type EnumUserRoleFieldUpdateOperationsInput = {
 
 export type EnumUserStatusFieldUpdateOperationsInput = {
   set?: $Enums.UserStatus
+}
+
+export type BoolFieldUpdateOperationsInput = {
+  set?: boolean
 }
 
 export type DateTimeFieldUpdateOperationsInput = {
@@ -1042,6 +1178,12 @@ export type UserCreateWithoutEmailVerificationTokensInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -1080,6 +1222,12 @@ export type UserUncheckedCreateWithoutEmailVerificationTokensInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -1132,6 +1280,12 @@ export type UserUpdateWithoutEmailVerificationTokensInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -1170,6 +1324,12 @@ export type UserUncheckedUpdateWithoutEmailVerificationTokensInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -1206,6 +1366,12 @@ export type UserCreateWithoutSupplierProfileInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
@@ -1244,6 +1410,12 @@ export type UserUncheckedCreateWithoutSupplierProfileInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
@@ -1296,6 +1468,12 @@ export type UserUpdateWithoutSupplierProfileInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
@@ -1334,6 +1512,12 @@ export type UserUncheckedUpdateWithoutSupplierProfileInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
@@ -1370,6 +1554,12 @@ export type UserCreateWithoutAddressesInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -1408,6 +1598,12 @@ export type UserUncheckedCreateWithoutAddressesInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -1460,6 +1656,12 @@ export type UserUpdateWithoutAddressesInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -1498,6 +1700,12 @@ export type UserUncheckedUpdateWithoutAddressesInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -1534,6 +1742,12 @@ export type UserCreateWithoutProductReviewsInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -1572,6 +1786,12 @@ export type UserUncheckedCreateWithoutProductReviewsInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -1624,6 +1844,12 @@ export type UserUpdateWithoutProductReviewsInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -1662,6 +1888,12 @@ export type UserUncheckedUpdateWithoutProductReviewsInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -1698,6 +1930,12 @@ export type UserCreateWithoutOrdersInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -1736,6 +1974,12 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -1788,6 +2032,12 @@ export type UserUpdateWithoutOrdersInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -1826,6 +2076,12 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -1862,6 +2118,12 @@ export type UserCreateWithoutActedOnOrdersInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -1900,6 +2162,12 @@ export type UserUncheckedCreateWithoutActedOnOrdersInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -1952,6 +2220,12 @@ export type UserUpdateWithoutActedOnOrdersInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -1990,6 +2264,12 @@ export type UserUncheckedUpdateWithoutActedOnOrdersInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -2026,6 +2306,12 @@ export type UserCreateWithoutOpenedDisputesInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -2064,6 +2350,12 @@ export type UserUncheckedCreateWithoutOpenedDisputesInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -2105,6 +2397,12 @@ export type UserCreateWithoutResolvedDisputesInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -2143,6 +2441,12 @@ export type UserUncheckedCreateWithoutResolvedDisputesInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -2195,6 +2499,12 @@ export type UserUpdateWithoutOpenedDisputesInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -2233,6 +2543,12 @@ export type UserUncheckedUpdateWithoutOpenedDisputesInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -2280,6 +2596,12 @@ export type UserUpdateWithoutResolvedDisputesInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -2318,6 +2640,12 @@ export type UserUncheckedUpdateWithoutResolvedDisputesInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -2354,6 +2682,12 @@ export type UserCreateWithoutSellerApplicationInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -2392,6 +2726,12 @@ export type UserUncheckedCreateWithoutSellerApplicationInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -2433,6 +2773,12 @@ export type UserCreateWithoutReviewedApplicationsInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -2471,6 +2817,12 @@ export type UserUncheckedCreateWithoutReviewedApplicationsInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -2523,6 +2875,12 @@ export type UserUpdateWithoutSellerApplicationInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -2561,6 +2919,12 @@ export type UserUncheckedUpdateWithoutSellerApplicationInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -2608,6 +2972,12 @@ export type UserUpdateWithoutReviewedApplicationsInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -2646,6 +3016,12 @@ export type UserUncheckedUpdateWithoutReviewedApplicationsInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -2682,6 +3058,12 @@ export type UserCreateWithoutPhoneOtpCodesInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -2720,6 +3102,12 @@ export type UserUncheckedCreateWithoutPhoneOtpCodesInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -2772,6 +3160,12 @@ export type UserUpdateWithoutPhoneOtpCodesInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -2810,6 +3204,12 @@ export type UserUncheckedUpdateWithoutPhoneOtpCodesInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -2846,6 +3246,12 @@ export type UserCreateWithoutVerificationApplicationsInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -2884,6 +3290,12 @@ export type UserUncheckedCreateWithoutVerificationApplicationsInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -2925,6 +3337,12 @@ export type UserCreateWithoutLatestApplicationInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -2962,6 +3380,12 @@ export type UserUncheckedCreateWithoutLatestApplicationInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -3004,6 +3428,12 @@ export type UserCreateWithoutReviewedVerificationApplicationsInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -3042,6 +3472,12 @@ export type UserUncheckedCreateWithoutReviewedVerificationApplicationsInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -3094,6 +3530,12 @@ export type UserUpdateWithoutVerificationApplicationsInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -3132,6 +3574,12 @@ export type UserUncheckedUpdateWithoutVerificationApplicationsInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3179,6 +3627,12 @@ export type UserUpdateWithoutLatestApplicationInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -3216,6 +3670,12 @@ export type UserUncheckedUpdateWithoutLatestApplicationInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3264,6 +3724,12 @@ export type UserUpdateWithoutReviewedVerificationApplicationsInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -3302,6 +3768,12 @@ export type UserUncheckedUpdateWithoutReviewedVerificationApplicationsInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3338,6 +3810,12 @@ export type UserCreateWithoutVerificationActionsTakenInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -3376,6 +3854,12 @@ export type UserUncheckedCreateWithoutVerificationActionsTakenInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -3428,6 +3912,12 @@ export type UserUpdateWithoutVerificationActionsTakenInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -3466,6 +3956,12 @@ export type UserUncheckedUpdateWithoutVerificationActionsTakenInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3502,6 +3998,12 @@ export type UserCreateWithoutProductRequestsInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -3540,6 +4042,12 @@ export type UserUncheckedCreateWithoutProductRequestsInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -3592,6 +4100,12 @@ export type UserUpdateWithoutProductRequestsInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -3630,6 +4144,12 @@ export type UserUncheckedUpdateWithoutProductRequestsInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3666,6 +4186,12 @@ export type UserCreateWithoutCartItemsInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -3704,6 +4230,12 @@ export type UserUncheckedCreateWithoutCartItemsInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -3756,6 +4288,12 @@ export type UserUpdateWithoutCartItemsInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -3794,6 +4332,12 @@ export type UserUncheckedUpdateWithoutCartItemsInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3830,6 +4374,12 @@ export type UserCreateWithoutTransporterProfileInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -3868,6 +4418,12 @@ export type UserUncheckedCreateWithoutTransporterProfileInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -3920,6 +4476,12 @@ export type UserUpdateWithoutTransporterProfileInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -3958,6 +4520,12 @@ export type UserUncheckedUpdateWithoutTransporterProfileInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -3994,6 +4562,12 @@ export type UserCreateWithoutNotificationsInput = {
   businessVerifiedAt?: Date | string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
@@ -4032,6 +4606,12 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   latestApplicationId?: string | null
   role?: $Enums.UserRole
   status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
@@ -4084,6 +4664,12 @@ export type UserUpdateWithoutNotificationsInput = {
   businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
@@ -4122,6 +4708,12 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
@@ -4316,6 +4908,12 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   latestApplicationId?: boolean
   role?: boolean
   status?: boolean
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: boolean
+  twoFactorRecoveryCodes?: boolean
+  twoFactorEnabledAt?: boolean
+  twoFactorPreAuthHash?: boolean
+  twoFactorPreAuthExp?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   supplierProfile?: boolean | Prisma.User$supplierProfileArgs<ExtArgs>
@@ -4356,6 +4954,12 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   latestApplicationId?: boolean
   role?: boolean
   status?: boolean
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: boolean
+  twoFactorRecoveryCodes?: boolean
+  twoFactorEnabledAt?: boolean
+  twoFactorPreAuthHash?: boolean
+  twoFactorPreAuthExp?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
@@ -4377,6 +4981,12 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   latestApplicationId?: boolean
   role?: boolean
   status?: boolean
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: boolean
+  twoFactorRecoveryCodes?: boolean
+  twoFactorEnabledAt?: boolean
+  twoFactorPreAuthHash?: boolean
+  twoFactorPreAuthExp?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
@@ -4398,11 +5008,17 @@ export type UserSelectScalar = {
   latestApplicationId?: boolean
   role?: boolean
   status?: boolean
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: boolean
+  twoFactorRecoveryCodes?: boolean
+  twoFactorEnabledAt?: boolean
+  twoFactorPreAuthHash?: boolean
+  twoFactorPreAuthExp?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstName" | "lastName" | "phone" | "avatarUrl" | "avatarPublicId" | "emailVerifiedAt" | "phoneVerifiedAt" | "businessStatus" | "businessVerifiedAt" | "latestApplicationId" | "role" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstName" | "lastName" | "phone" | "avatarUrl" | "avatarPublicId" | "emailVerifiedAt" | "phoneVerifiedAt" | "businessStatus" | "businessVerifiedAt" | "latestApplicationId" | "role" | "status" | "twoFactorEnabled" | "twoFactorSecret" | "twoFactorRecoveryCodes" | "twoFactorEnabledAt" | "twoFactorPreAuthHash" | "twoFactorPreAuthExp" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   supplierProfile?: boolean | Prisma.User$supplierProfileArgs<ExtArgs>
   addresses?: boolean | Prisma.User$addressesArgs<ExtArgs>
@@ -4471,6 +5087,12 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     latestApplicationId: string | null
     role: $Enums.UserRole
     status: $Enums.UserStatus
+    twoFactorEnabled: boolean
+    twoFactorSecret: string | null
+    twoFactorRecoveryCodes: string | null
+    twoFactorEnabledAt: Date | null
+    twoFactorPreAuthHash: string | null
+    twoFactorPreAuthExp: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["user"]>
@@ -4930,6 +5552,12 @@ export interface UserFieldRefs {
   readonly latestApplicationId: Prisma.FieldRef<"User", 'String'>
   readonly role: Prisma.FieldRef<"User", 'UserRole'>
   readonly status: Prisma.FieldRef<"User", 'UserStatus'>
+  readonly twoFactorEnabled: Prisma.FieldRef<"User", 'Boolean'>
+  readonly twoFactorSecret: Prisma.FieldRef<"User", 'String'>
+  readonly twoFactorRecoveryCodes: Prisma.FieldRef<"User", 'String'>
+  readonly twoFactorEnabledAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly twoFactorPreAuthHash: Prisma.FieldRef<"User", 'String'>
+  readonly twoFactorPreAuthExp: Prisma.FieldRef<"User", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
 }

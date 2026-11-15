@@ -118,6 +118,12 @@ export const UserScalarFieldEnum = {
   latestApplicationId: 'latestApplicationId',
   role: 'role',
   status: 'status',
+  twoFactorEnabled: 'twoFactorEnabled',
+  twoFactorSecret: 'twoFactorSecret',
+  twoFactorRecoveryCodes: 'twoFactorRecoveryCodes',
+  twoFactorEnabledAt: 'twoFactorEnabledAt',
+  twoFactorPreAuthHash: 'twoFactorPreAuthHash',
+  twoFactorPreAuthExp: 'twoFactorPreAuthExp',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

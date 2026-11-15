@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   fetchCurrentUser,
+  readPreAuthToken,
   type AuthUser,
   type UserRole,
 } from "../../lib/auth";
@@ -25,8 +26,15 @@ export default function AuthGuard({
   fallback,
 }: AuthGuardProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [checking, setChecking] = useState(true);
+  // HP2: the mandatory first-admin-enrolment hand-off arrives with NO
+  // session — only the pre-auth token in sessionStorage. Without this mode
+  // the guard would bounce it straight back to /login (infinite loop); the
+  // security page validates the token server-side and redirects itself the
+  // moment it is dead.
+  const [preAuthHandoff, setPreAuthHandoff] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,6 +45,11 @@ export default function AuthGuard({
       if (cancelled) return;
 
       if (!currentUser) {
+        if (pathname === "/admin/security" && readPreAuthToken()) {
+          setPreAuthHandoff(true);
+          setChecking(false);
+          return;
+        }
         router.replace("/login");
         return;
       }
@@ -59,9 +72,9 @@ export default function AuthGuard({
     return () => {
       cancelled = true;
     };
-  }, [allowedRoles, requiredRole, router]);
+  }, [allowedRoles, pathname, requiredRole, router]);
 
-  if (checking || !user) {
+  if (checking || (!user && !preAuthHandoff)) {
     if (fallback) return <>{fallback}</>;
 
     return (

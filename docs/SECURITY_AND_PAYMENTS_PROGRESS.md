@@ -43,7 +43,7 @@ record actuals in §3).
 |---|---|---|---|
 | HP1 | Buyer payment-method selection screen | 2026-11-14 | done (3ede15d, 2026-11-14) |
 | HP2 | Admin 2FA (mandatory TOTP) + sign-in alerts | 2026-11-15 | done (518cf66, 2026-11-15) |
-| HP3 | Step-up confirmation + admin audit trail | 2026-11-15 | in progress |
+| HP3 | Step-up confirmation + admin audit trail | 2026-11-15 | done (9012021, 2026-11-16) |
 | HP4 | Password reset / account recovery | — | pending |
 | HP5 | Session hardening (refresh rotation, no storage token) | — | pending |
 | HP6 | Security hygiene + admin runbook | — | pending |
@@ -175,12 +175,77 @@ asserts ≥9 remain); login rate-limit bucket stays shared per IP (accepted);
 `.e2e/` + `.runtime-test/` artifacts stay gitignored.
 
 ### HP3 — Step-up confirmation + admin audit trail
-**Status**: pending
-**Shipped**: —
-**Deviations from plan**: —
-**Gates**: —
-**Live journey**: —
-**Residue / follow-ups**: —
+**Status**: done (9012021, 2026-11-16)
+**Shipped**: `AdminAuditLog` (+ migration `20261115170841_add_admin_audit_log`,
+regenerated client committed) written in the **same transaction** as each
+guarded mutation via `AdminAuditService.guarded`; `POST /auth/step-up`
+(password-verified, 10/min, 5-min TTL, secret derived
+`sha256(JWT_SECRET+":step-up")`, deliberately **not** single-use) with
+`StepUpGuard` on **17** admin mutation routes (failures **403** +
+`code:"STEP_UP_REQUIRED"`); `admin/verification/*` excluded (own trail per
+plan D3). Read side: `GET /admin/audit` (actor/action filters, response also
+returns the distinct `actions` list). Web: shared `StepUpProvider` mounted in
+`/admin/layout.tsx` (inside AuthGuard, above AdminShell) — on 403+STEP_UP_REQUIRED
+it silently retries with an in-memory token (ref only, expires 30s early) or
+opens the password dialog (401/429 messages stay in the dialog; cancel returns
+the original 403); token never persisted (test enforces no localStorage /
+sessionStorage access); concurrent prompts share one waiter. **15** mutation
+wraps across 7 pages (users 4, suppliers 1, transporters 1, categories 2,
+banners 3, notifications 1, promotions 3); reads stay plain `fetch`;
+security/verification/disputes/applications pages stay unwrapped (asserted).
+New `/admin` nav entry **Audit** (`HistoryIcon`).
+**Deviations from plan**: smoke section is **U**, not the plan's O — O1/8–O8/8
+already belongs to CP16a's media flow (same N→T precedent as HP2); label
+renames applied (`[O1/5..O5/5]→[U1/5..U5/5]`, `O_*→U_*`, `o-*.json→u-*.json`)
+and the deviation is noted in the section comment. Guard failures are **403**
+(not the plan's 428 — 428 Precondition Required is not a code the fetch layer
+maps cleanly; 403 + machine `code` keeps the client check one branch). Extra
+`[createdAt]` index on `AdminAuditLog` (feed sorts by time). `admin_step_up()`
+smoke helper file-caches the token at `$LOG_DIR/admin-step-up.json` (refresh on
+mtime > 4 min) — all 21 existing guarded mutation call sites now send
+`-H "X-Step-Up: …"` (only `admin/verification/*` intentionally lack it).
+Journey-only defect found & fixed in the live journey (web): after a failed
+password the provider did `await requestPassword(message)` *and* the loop top
+awaited a fresh waiter — the discarded await swallowed the next submitted
+password and wedged the dialog at "Confirming..." forever (no POST ever left).
+Fix: the error re-prompt is **not** awaited (the loop top awaits the same
+waiter); the test now asserts `(?<!await )requestPassword\(message\);` +
+`doesNotMatch(/await requestPassword\(message\)/)` so the regression cannot
+return.
+**Gates**: api build ✓ · api lint ✓ (4 pre-existing mail warnings) · api test
+493 (+20: step-up service/guard specs + audit `guarded`/list service specs) ·
+web build ✓ · web lint ✓ (1 pre-existing warning) · web test **100** (+8
+`admin-step-up.test.mjs`: handshake contract, no-storage, throttle messages,
+layout mount order, exact per-page wrap counts, exclusions, nav entry, audit
+page) · smoke `runtime-smoke.sh` exit 0, section **U green U1/5–U5/5** (wrong
+password 401 · missing header 403 STEP_UP_REQUIRED with no side effect ·
+forged+expired rejected · valid step-up creates banner · `/admin/audit?action=BANNER_CREATE`
+row with actor/target/metadata + filter · feed newest-first · token reuse ·
+patch+delete under same step-up · `BANNER_DELETE` survives cleanup) with all
+21 header edits green across A/P/NEAR/T/L/M.
+**Live journey**: local dev stack (web :3001, api :3000 with mail capture).
+Throwaway `hp3_journey_admin` (own constant password, never the `.env` seed
+password) registered+verified via capture-file bridge → promoted ADMIN in DB →
+login → mandatory enrolment (QR secret read from DOM, TOTP computed
+client-side, **Enable 2FA** → recovery codes shown once → tick → Continue) →
+`/admin/users` → Promote journey buyer to supplier → page confirm → **step-up
+dialog** appeared (403 handshake) → wrong password → **"That password is not
+correct."** stays in the dialog (screenshot) → correct password → dialog
+closed → buyer row now **SUPPLIER** with profile "Journey Buyer Agri"
+(network: two 401s → `POST /auth/step-up` **201** → replay succeeded) →
+`/admin/audit` showed **USER PROMOTE SUPPLIER** row (actor
+hp3_journey_admin, `16 Nov 2026, 06:02`, target `USER · 39949f6a…`, metadata
+`to: SUPPLIER · from: BUYER`) → action filter narrowed to promote rows only
+(banner rows dropped). **0 console errors** on the audit page. Screenshots
+shown for 2FA enrolment + step-up dialog; remaining states DOM-verified (user
+elected to skip captures when the desktop window was hidden).
+**Residue / follow-ups**: journey fixture accounts + supplier profile deleted
+after the journey (`AdminAuditLog.actor` cascade verified — 0 orphan rows),
+capture files removed, dev servers stopped; HP3 Render/deployed-stack
+walkthrough still owed with HP2's (HP1 note); headless capture dropped the
+dialog's `backdrop-filter` layer, so the journey harness injected
+`backdrop-filter: none` at runtime for the modal screenshots — product code
+unchanged.
 
 ### HP4 — Password reset / account recovery
 **Status**: pending

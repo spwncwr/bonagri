@@ -192,6 +192,7 @@ model User {
   verificationApplications VerificationApplication[] @relation("VerificationApplicant")
   latestApplication   VerificationApplication? @relation("LatestApplication", fields: [latestApplicationId], references: [id], onDelete: SetNull)
   reviewedVerificationApplications VerificationApplication[] @relation("VerificationReviewer")
+  adminAuditLogs AdminAuditLog[]
   verificationActionsTaken VerificationAuditLog[] @relation("VerificationActionAdmin")
   orders          Order[]
   notifications   Notification[]
@@ -533,6 +534,29 @@ model VerificationAuditLog {
   admin       User                   @relation("VerificationActionAdmin", fields: [adminId], references: [id], onDelete: Cascade)
 
   @@index([applicationId, createdAt])
+}
+
+// HP3 (plan G3): append-only trail of guarded admin mutations. The row is
+// written in the SAME transaction as the mutation it records, so a rolled-back
+// mutation leaves no row and a committed one always has its entry. action is a
+// String (not an enum) so new guarded routes never need a migration.
+model AdminAuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String
+  action      String // machine action name, e.g. USER_STATUS_UPDATE
+  targetType  String // USER | SUPPLIER_PROFILE | TRANSPORTER_PROFILE | CATEGORY | BANNER | PROMOTION
+  targetId    String
+  metadata    Json? // action-specific detail, e.g. { from, to }
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  // actorUserId+createdAt per plan; createdAt alone serves the /admin/audit
+  // recent-activity list (global newest-first ordering).
+  @@index([actorUserId, createdAt])
+  @@index([createdAt])
 }
 
 model ProductRequest {

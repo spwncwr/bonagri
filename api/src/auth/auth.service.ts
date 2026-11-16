@@ -25,6 +25,9 @@ import {
 // issuance is cleared when the JWT is handed out, so a captured token is
 // single-use while still allowing retries inside the window.
 const PRE_AUTH_TTL_MS = 5 * 60 * 1000;
+// HP3: how long a step-up confirmation lasts. Deliberately NOT single-use —
+// one password re-entry may cover several quick dangerous actions.
+const STEP_UP_TTL_MS = 5 * 60 * 1000;
 const RECOVERY_CODE_COUNT = 10;
 
 type PreAuthPurpose = "2fa" | "setup";
@@ -760,6 +763,63 @@ export class AuthService {
     } catch (error) {
       console.error("BonAgri admin sign-in alert delivery error:", error);
     }
+  }
+
+  // ---------- HP3: step-up confirmation (plan G3) ----------
+
+  // Re-proves the password for an already-signed-in user so a dangerous
+  // action can proceed. The token is signed with a derived secret (see
+  // StepUpGuard) so it can never pass JwtAuthGuard, and it is NOT stored —
+  // possession within the 5-minute TTL is the proof.
+  async stepUp(userId: string, password: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, passwordHash: true, status: true },
+    });
+
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      throw new UnauthorizedException("Invalid password");
+    }
+
+    if (user.status !== "ACTIVE") {
+      throw new UnauthorizedException("User account is not active");
+    }
+
+    const expiresIn = Math.floor(STEP_UP_TTL_MS / 1000);
+    const stepUpToken = await this.jwtService.signAsync(
+      { sub: user.id, type: "step-up" },
+      { secret: this.stepUpSecret(), expiresIn },
+    );
+
+    return { stepUpToken, expiresIn };
+  }
+
+  // Full step-up validation lives here (mirrors resolveSetupActor for the
+  // pre-auth token) so the derived secret exists in exactly one place.
+  async verifyStepUpToken(
+    token: string | undefined,
+  ): Promise<{ id: string } | null> {
+    if (!token) return null;
+
+    try {
+      const payload = await this.jwtService.verifyAsync<{
+        sub: string;
+        type?: string;
+      }>(token, { secret: this.stepUpSecret() });
+
+      if (payload.type !== "step-up") {
+        return null;
+      }
+
+      return { id: payload.sub };
+    } catch {
+      return null;
+    }
+  }
+
+  private stepUpSecret() {
+    const base = process.env.JWT_SECRET ?? "";
+    return createHash("sha256").update(`${base}:step-up`).digest("hex");
   }
 
   async validateUser(userId: string) {

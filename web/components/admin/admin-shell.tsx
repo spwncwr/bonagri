@@ -16,6 +16,7 @@ import {
   BoxIcon,
   CameraIcon,
   ChevronRightIcon,
+  HistoryIcon,
   HomeIcon,
   InfoIcon,
   ListIcon,
@@ -52,6 +53,8 @@ const NAV: NavItem[] = [
   { href: "/admin/orders", label: "Orders", icon: BasketIcon },
   { href: "/admin/disputes", label: "Disputes", icon: ShieldIcon },
   { href: "/admin/applications", label: "Applications", icon: ListIcon },
+  // HP3: the admin audit trail (who changed what, when).
+  { href: "/admin/audit", label: "Audit", icon: HistoryIcon },
   { href: "/admin/security", label: "Security", icon: SettingsIcon },
 ];
 

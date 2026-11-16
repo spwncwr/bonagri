@@ -14,6 +14,8 @@ import type { Request } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { StepUpGuard } from "../auth/guards/step-up.guard";
+import { auditContextFrom } from "../audit/audit-context";
 import { AdminService } from "./admin.service";
 import { ListUsersQueryDto } from "./dto/list-users-query.dto";
 import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
@@ -50,29 +52,50 @@ export class AdminController {
     return this.adminService.getUsers(query);
   }
 
+  // HP3: everything below is a guarded mutation — StepUpGuard demands a
+  // fresh password confirmation, and AdminService writes the audit row in
+  // the same transaction as the change (plan G3).
   @Patch("users/:id/status")
+  @UseGuards(StepUpGuard)
   updateUserStatus(
+    @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
     @Body() dto: UpdateUserStatusDto,
   ) {
-    return this.adminService.updateUserStatus(id, dto);
+    return this.adminService.updateUserStatus(
+      id,
+      dto,
+      auditContextFrom(request),
+    );
   }
 
   @Post("users/:id/promote-supplier")
+  @UseGuards(StepUpGuard)
   promoteToSupplier(
+    @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
     @Body() dto: PromoteSupplierDto,
   ) {
-    return this.adminService.promoteToSupplier(id, dto);
+    return this.adminService.promoteToSupplier(
+      id,
+      dto,
+      auditContextFrom(request),
+    );
   }
 
   // CP14: transporter management (promote, list, verify toggle).
   @Post("users/:id/promote-transporter")
+  @UseGuards(StepUpGuard)
   promoteToTransporter(
+    @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
     @Body() dto: PromoteTransporterDto,
   ) {
-    return this.adminService.promoteToTransporter(id, dto);
+    return this.adminService.promoteToTransporter(
+      id,
+      dto,
+      auditContextFrom(request),
+    );
   }
 
   @Get("transporters")
@@ -83,11 +106,17 @@ export class AdminController {
   }
 
   @Patch("transporters/:id")
+  @UseGuards(StepUpGuard)
   setTransporterVerified(
+    @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
     @Body() dto: UpdateSupplierVerifyDto,
   ) {
-    return this.adminService.setTransporterVerified(id, dto);
+    return this.adminService.setTransporterVerified(
+      id,
+      dto,
+      auditContextFrom(request),
+    );
   }
 
   @Get("suppliers")
@@ -96,6 +125,7 @@ export class AdminController {
   }
 
   @Patch("suppliers/:id")
+  @UseGuards(StepUpGuard)
   setSupplierVerified(
     @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
@@ -104,24 +134,34 @@ export class AdminController {
     return this.adminService.setSupplierVerified(
       id,
       dto,
-      request.user.id,
+      auditContextFrom(request),
     );
   }
 
   @Post("categories")
-  createCategory(@Body() dto: CreateCategoryDto) {
-    return this.adminService.createCategory(dto);
+  @UseGuards(StepUpGuard)
+  createCategory(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreateCategoryDto,
+  ) {
+    return this.adminService.createCategory(dto, auditContextFrom(request));
   }
 
   @Patch("categories/:id")
+  @UseGuards(StepUpGuard)
   updateCategory(
+    @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
     @Body() dto: UpdateCategoryDto,
   ) {
-    return this.adminService.updateCategory(id, dto);
+    return this.adminService.updateCategory(
+      id,
+      dto,
+      auditContextFrom(request),
+    );
   }
 
-  // Broadcast Notifications
+  // Broadcast notifications
   @Get("notifications/audience-counts")
   getAudienceCounts() {
     return this.adminService.getAudienceCounts();
@@ -133,11 +173,15 @@ export class AdminController {
   }
 
   @Post("notifications/broadcast")
+  @UseGuards(StepUpGuard)
   broadcastNotification(
     @Req() request: AuthenticatedRequest,
     @Body() dto: BroadcastNotificationDto,
   ) {
-    return this.adminService.broadcastNotification(request.user.id, dto);
+    return this.adminService.broadcastNotification(
+      dto,
+      auditContextFrom(request),
+    );
   }
 
   // Promo Banners
@@ -147,20 +191,34 @@ export class AdminController {
   }
 
   @Post("banners")
-  createBanner(@Body() dto: CreateBannerDto) {
-    return this.adminService.createBanner(dto);
+  @UseGuards(StepUpGuard)
+  createBanner(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreateBannerDto,
+  ) {
+    return this.adminService.createBanner(dto, auditContextFrom(request));
   }
 
   @Patch("banners/:id")
+  @UseGuards(StepUpGuard)
   updateBanner(
+    @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
     @Body() dto: UpdateBannerDto,
   ) {
-    return this.adminService.updateBanner(id, dto);
+    return this.adminService.updateBanner(
+      id,
+      dto,
+      auditContextFrom(request),
+    );
   }
 
   @Delete("banners/:id")
-  deleteBanner(@Param("id") id: string) {
-    return this.adminService.deleteBanner(id);
+  @UseGuards(StepUpGuard)
+  deleteBanner(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    return this.adminService.deleteBanner(id, auditContextFrom(request));
   }
 }

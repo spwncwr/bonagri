@@ -24,6 +24,7 @@ import {
   Compass01Icon as CompassGlyph,
   Globe02Icon as GlobeGlyph,
   HelpCircleIcon as HelpGlyph,
+  HistoryIcon as HistoryGlyph,
   Home03Icon as HomeGlyph,
   InformationCircleIcon as InfoGlyph,
   ListIcon as ListGlyph,
@@ -68,6 +69,7 @@ function wrap(icon: IconSvgElement, fallback: string) {
 }
 
 export const HomeIcon = wrap(HomeGlyph, "h-5 w-5");
+export const HistoryIcon = wrap(HistoryGlyph, "h-5 w-5");
 export const SearchIcon = wrap(SearchGlyph, "h-5 w-5");
 export const BasketIcon = wrap(BasketGlyph, "h-5 w-5");
 export const UserIcon = wrap(UserGlyph, "h-5 w-5");

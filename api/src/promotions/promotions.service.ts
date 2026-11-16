@@ -3,9 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import type { Prisma } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { MediaService } from "../media/media.service";
+import { AdminAuditAction, type AdminAuditActionName } from "../audit/actions";
+import type { AuditContext } from "../audit/audit-context";
+import { AdminAuditService } from "../audit/admin-audit.service";
 import {
   CreatePromoCampaignDto,
   ListAdminCampaignsDto,
@@ -216,6 +220,7 @@ export class PromotionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mediaService: MediaService,
+    private readonly audit: AdminAuditService,
   ) {}
 
   // ── Public feed ───────────────────────────────────────────────────────────
@@ -834,7 +839,7 @@ export class PromotionsService {
 
   // ── Admin writes ──────────────────────────────────────────────────────────
 
-  async createCampaign(dto: CreatePromoCampaignDto) {
+  async createCampaign(dto: CreatePromoCampaignDto, audit: AuditContext) {
     const normalized = await this.normalize(
       {
         name: dto.name,
@@ -860,19 +865,38 @@ export class PromotionsService {
 
     await this.validate(normalized);
 
-    const created = await this.prisma.promoCampaign.create({
-      data: {
-        ...this.toWriteData(normalized),
-        images: { create: this.imagesCreate(normalized) },
-        products: { create: this.productsCreate(normalized) },
-      },
-      select: { id: true },
-    });
+    // Id minted up front so the audit row can name the created campaign
+    // inside the same transaction (mirrors AdminService.createCategory).
+    const campaignId = randomUUID();
 
-    return this.getCampaign(created.id);
+    await this.audit.guarded(
+      audit,
+      {
+        action: AdminAuditAction.PROMOTION_CREATE,
+        targetType: "PROMOTION",
+        targetId: campaignId,
+        metadata: { name: normalized.name, status: normalized.status },
+      },
+      (tx) =>
+        tx.promoCampaign.create({
+          data: {
+            ...this.toWriteData(normalized),
+            id: campaignId,
+            images: { create: this.imagesCreate(normalized) },
+            products: { create: this.productsCreate(normalized) },
+          },
+          select: { id: true },
+        }),
+    );
+
+    return this.getCampaign(campaignId);
   }
 
-  async updateCampaign(campaignId: string, dto: UpdatePromoCampaignDto) {
+  async updateCampaign(
+    campaignId: string,
+    dto: UpdatePromoCampaignDto,
+    audit: AuditContext,
+  ) {
     const existing = await this.prisma.promoCampaign.findUnique({
       where: { id: campaignId },
       include: promotionInclude,
@@ -954,14 +978,26 @@ export class PromotionsService {
       .map((image) => image.publicId)
       .filter((publicId): publicId is string => Boolean(publicId));
 
-    await this.prisma.promoCampaign.update({
-      where: { id: campaignId },
-      data: {
-        ...this.toWriteData(normalized),
-        images: { deleteMany: {}, create: this.imagesCreate(normalized) },
-        products: { deleteMany: {}, create: this.productsCreate(normalized) },
+    await this.audit.guarded(
+      audit,
+      {
+        action: AdminAuditAction.PROMOTION_UPDATE,
+        targetType: "PROMOTION",
+        targetId: campaignId,
+        // JSON round-trip drops `undefined` fields — Prisma's InputJsonValue
+        // rejects them, and an absent field is not audit-relevant anyway.
+        metadata: JSON.parse(JSON.stringify(dto)) as Prisma.InputJsonValue,
       },
-    });
+      (tx) =>
+        tx.promoCampaign.update({
+          where: { id: campaignId },
+          data: {
+            ...this.toWriteData(normalized),
+            images: { deleteMany: {}, create: this.imagesCreate(normalized) },
+            products: { deleteMany: {}, create: this.productsCreate(normalized) },
+          },
+        }),
+    );
 
     await Promise.all(
       removedAssetIds.map((publicId) =>
@@ -972,26 +1008,50 @@ export class PromotionsService {
     return this.getCampaign(campaignId);
   }
 
-  async publishCampaign(campaignId: string) {
-    return this.setLifecycleStatus(campaignId, "ACTIVE");
+  async publishCampaign(campaignId: string, audit: AuditContext) {
+    return this.setLifecycleStatus(
+      campaignId,
+      "ACTIVE",
+      audit,
+      AdminAuditAction.PROMOTION_PUBLISH,
+    );
   }
 
-  async pauseCampaign(campaignId: string) {
-    return this.setLifecycleStatus(campaignId, "PAUSED");
+  async pauseCampaign(campaignId: string, audit: AuditContext) {
+    return this.setLifecycleStatus(
+      campaignId,
+      "PAUSED",
+      audit,
+      AdminAuditAction.PROMOTION_PAUSE,
+    );
   }
 
-  async resumeCampaign(campaignId: string) {
-    return this.setLifecycleStatus(campaignId, "ACTIVE");
+  async resumeCampaign(campaignId: string, audit: AuditContext) {
+    return this.setLifecycleStatus(
+      campaignId,
+      "ACTIVE",
+      audit,
+      AdminAuditAction.PROMOTION_RESUME,
+    );
   }
 
-  async deleteCampaign(campaignId: string) {
+  async deleteCampaign(campaignId: string, audit: AuditContext) {
     const existing = await this.prisma.promoCampaign.findUnique({
       where: { id: campaignId },
       include: { images: { select: { publicId: true } } },
     });
     if (!existing) throw new NotFoundException("Campaign not found");
 
-    await this.prisma.promoCampaign.delete({ where: { id: campaignId } });
+    await this.audit.guarded(
+      audit,
+      {
+        action: AdminAuditAction.PROMOTION_DELETE,
+        targetType: "PROMOTION",
+        targetId: campaignId,
+        metadata: { name: existing.name, status: existing.status },
+      },
+      (tx) => tx.promoCampaign.delete({ where: { id: campaignId } }),
+    );
 
     await Promise.all(
       existing.images
@@ -1028,6 +1088,8 @@ export class PromotionsService {
   private async setLifecycleStatus(
     campaignId: string,
     target: "ACTIVE" | "PAUSED",
+    audit: AuditContext,
+    action: AdminAuditActionName,
   ) {
     const existing = await this.prisma.promoCampaign.findUnique({
       where: { id: campaignId },
@@ -1036,10 +1098,20 @@ export class PromotionsService {
     if (!existing) throw new NotFoundException("Campaign not found");
 
     if (target === "PAUSED") {
-      await this.prisma.promoCampaign.update({
-        where: { id: campaignId },
-        data: { status: "PAUSED" },
-      });
+      await this.audit.guarded(
+        audit,
+        {
+          action,
+          targetType: "PROMOTION",
+          targetId: campaignId,
+          metadata: { from: existing.status, to: "PAUSED" },
+        },
+        (tx) =>
+          tx.promoCampaign.update({
+            where: { id: campaignId },
+            data: { status: "PAUSED" },
+          }),
+      );
       return this.getCampaign(campaignId);
     }
 
@@ -1074,10 +1146,20 @@ export class PromotionsService {
     );
 
     await this.validate(normalized);
-    await this.prisma.promoCampaign.update({
-      where: { id: campaignId },
-      data: { status: normalized.status },
-    });
+    await this.audit.guarded(
+      audit,
+      {
+        action,
+        targetType: "PROMOTION",
+        targetId: campaignId,
+        metadata: { from: existing.status, to: normalized.status },
+      },
+      (tx) =>
+        tx.promoCampaign.update({
+          where: { id: campaignId },
+          data: { status: normalized.status },
+        }),
+    );
     return this.getCampaign(campaignId);
   }
 

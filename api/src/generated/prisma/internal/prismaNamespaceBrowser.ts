@@ -67,6 +67,7 @@ export const ModelName = {
   VerificationApplication: 'VerificationApplication',
   VerificationDocument: 'VerificationDocument',
   VerificationAuditLog: 'VerificationAuditLog',
+  AdminAuditLog: 'AdminAuditLog',
   ProductRequest: 'ProductRequest',
   RequestResponse: 'RequestResponse',
   CartItem: 'CartItem',
@@ -379,6 +380,21 @@ export const VerificationAuditLogScalarFieldEnum = {
 } as const
 
 export type VerificationAuditLogScalarFieldEnum = (typeof VerificationAuditLogScalarFieldEnum)[keyof typeof VerificationAuditLogScalarFieldEnum]
+
+
+export const AdminAuditLogScalarFieldEnum = {
+  id: 'id',
+  actorUserId: 'actorUserId',
+  action: 'action',
+  targetType: 'targetType',
+  targetId: 'targetId',
+  metadata: 'metadata',
+  ip: 'ip',
+  userAgent: 'userAgent',
+  createdAt: 'createdAt'
+} as const
+
+export type AdminAuditLogScalarFieldEnum = (typeof AdminAuditLogScalarFieldEnum)[keyof typeof AdminAuditLogScalarFieldEnum]
 
 
 export const ProductRequestScalarFieldEnum = {

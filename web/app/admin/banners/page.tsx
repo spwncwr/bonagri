@@ -5,6 +5,7 @@ import ImageUpload from "../../../components/media/image-upload";
 import { ArrowRightIcon } from "../../../components/mobile/icons";
 import { authHeaders } from "../../../lib/auth";
 import { AdminRowsSkeleton } from "../../../components/admin/admin-ui";
+import { useStepUp } from "../../../components/admin/step-up-provider";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -62,6 +63,8 @@ export default function AdminBannersPage() {
   const [editSortOrder, setEditSortOrder] = useState(0);
   const [editIsActive, setEditIsActive] = useState(true);
   const [savingEdit, setSavingEdit] = useState(false);
+  // HP3: create, edit and delete replay through the step-up confirmation.
+  const stepUpFetch = useStepUp();
 
   useEffect(() => {
     let cancelled = false;
@@ -114,7 +117,7 @@ export default function AdminBannersPage() {
     setSuccess("");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/banners`, {
+      const res = await stepUpFetch(`${API_BASE_URL}/api/admin/banners`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -176,7 +179,7 @@ export default function AdminBannersPage() {
     setError("");
 
     try {
-      const res = await fetch(
+      const res = await stepUpFetch(
         `${API_BASE_URL}/api/admin/banners/${editingBanner.id}`,
         {
           method: "PATCH",
@@ -219,7 +222,7 @@ export default function AdminBannersPage() {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/banners/${id}`, {
+      const res = await stepUpFetch(`${API_BASE_URL}/api/admin/banners/${id}`, {
         method: "DELETE",
         headers: authHeaders(),
       });

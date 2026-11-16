@@ -98,6 +98,11 @@ export type VerificationDocument = Prisma.VerificationDocumentModel
  */
 export type VerificationAuditLog = Prisma.VerificationAuditLogModel
 /**
+ * Model AdminAuditLog
+ * 
+ */
+export type AdminAuditLog = Prisma.AdminAuditLogModel
+/**
  * Model ProductRequest
  * 
  */

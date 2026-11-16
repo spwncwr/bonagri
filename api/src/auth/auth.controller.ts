@@ -16,6 +16,7 @@ import { ResendVerificationDto } from "./dto/resend-verification.dto";
 import { EnableTwoFactorDto } from "./dto/enable-two-factor.dto";
 import { VerifyTwoFactorDto } from "./dto/verify-two-factor.dto";
 import { DisableTwoFactorDto } from "./dto/disable-two-factor.dto";
+import { StepUpDto } from "./dto/step-up.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { RolesGuard } from "./guards/roles.guard";
 import { Roles } from "./decorators/roles.decorator";
@@ -122,5 +123,17 @@ export class AuthController {
     @Body() dto: DisableTwoFactorDto,
   ) {
     return this.authService.disable2fa(request.user.id, dto);
+  }
+
+  // ---------- HP3: step-up confirmation (plan G3) ----------
+
+  // Any signed-in user may re-prove their password here; the short-lived
+  // token it returns only opens guarded admin mutations (StepUpGuard).
+  // Throttled like login — this is a password-guessing surface.
+  @Post("step-up")
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  stepUp(@Req() request: AuthenticatedRequest, @Body() dto: StepUpDto) {
+    return this.authService.stepUp(request.user.id, dto.password);
   }
 }

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import ImageUpload from "../../../components/media/image-upload";
 import { authHeaders } from "../../../lib/auth";
 import { AdminRowsSkeleton } from "../../../components/admin/admin-ui";
+import { useStepUp } from "../../../components/admin/step-up-provider";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -36,6 +37,8 @@ export default function AdminCategoriesPage() {
   const [editDescription, setEditDescription] = useState("");
   const [editImageUrl, setEditImageUrl] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
+  // HP3: create + save replay through the step-up confirmation.
+  const stepUpFetch = useStepUp();
 
   useEffect(() => {
     let cancelled = false;
@@ -91,7 +94,7 @@ export default function AdminCategoriesPage() {
     setError("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/categories`, {
+      const response = await stepUpFetch(`${API_BASE_URL}/api/admin/categories`, {
         method: "POST",
         headers: {
           ...authHeaders(),
@@ -129,7 +132,7 @@ export default function AdminCategoriesPage() {
     setError("");
 
     try {
-      const response = await fetch(
+      const response = await stepUpFetch(
         `${API_BASE_URL}/api/admin/categories/${id}`,
         {
           method: "PATCH",

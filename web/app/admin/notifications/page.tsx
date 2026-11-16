@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { authHeaders } from "../../../lib/auth";
 import { AdminRowsSkeleton } from "../../../components/admin/admin-ui";
+import { useStepUp } from "../../../components/admin/step-up-provider";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -47,6 +48,8 @@ export default function AdminBroadcastNotificationsPage() {
   const [message, setMessage] = useState("");
   const [sendEmail, setSendEmail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // HP3: the broadcast dispatch replays through the step-up confirmation.
+  const stepUpFetch = useStepUp();
 
   useEffect(() => {
     let cancelled = false;
@@ -116,7 +119,7 @@ export default function AdminBroadcastNotificationsPage() {
     setSuccess("");
 
     try {
-      const response = await fetch(
+      const response = await stepUpFetch(
         `${API_BASE_URL}/api/admin/notifications/broadcast`,
         {
           method: "POST",

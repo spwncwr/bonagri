@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { authHeaders } from "../../../lib/auth";
 import { AdminRowsSkeleton } from "../../../components/admin/admin-ui";
+import { useStepUp } from "../../../components/admin/step-up-provider";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -75,6 +76,8 @@ export default function AdminUsersPage() {
   const [tpProvinces, setTpProvinces] = useState<string[]>([]);
   const [tpPromoting, setTpPromoting] = useState(false);
   const [verifyBusyId, setVerifyBusyId] = useState<string | null>(null);
+  // HP3: every mutation below replays through the step-up confirmation.
+  const stepUpFetch = useStepUp();
 
   useEffect(() => {
     let cancelled = false;
@@ -144,7 +147,7 @@ export default function AdminUsersPage() {
     setError("");
 
     try {
-      const response = await fetch(
+      const response = await stepUpFetch(
         `${API_BASE_URL}/api/admin/users/${user.id}/status`,
         {
           method: "PATCH",
@@ -178,7 +181,7 @@ export default function AdminUsersPage() {
     setError("");
 
     try {
-      const response = await fetch(
+      const response = await stepUpFetch(
         `${API_BASE_URL}/api/admin/users/${user.id}/promote-supplier`,
         {
           method: "POST",
@@ -220,7 +223,7 @@ export default function AdminUsersPage() {
     setError("");
 
     try {
-      const response = await fetch(
+      const response = await stepUpFetch(
         `${API_BASE_URL}/api/admin/users/${user.id}/promote-transporter`,
         {
           method: "POST",
@@ -268,7 +271,7 @@ export default function AdminUsersPage() {
     setError("");
 
     try {
-      const response = await fetch(
+      const response = await stepUpFetch(
         `${API_BASE_URL}/api/admin/transporters/${profileId}`,
         {
           method: "PATCH",

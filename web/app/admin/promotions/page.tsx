@@ -13,6 +13,7 @@ import PromotionForm, {
 import PromotionCard from "../../../components/promotions/promotion-card";
 import { authHeaders } from "../../../lib/auth";
 import { AdminRowsSkeleton } from "../../../components/admin/admin-ui";
+import { useStepUp } from "../../../components/admin/step-up-provider";
 import type {
   PromoCampaignType,
   PromoPlacement,
@@ -138,6 +139,8 @@ export default function AdminPromotionsPage() {
   const [preview, setPreview] = useState<PublicPromotion | null>(null);
   const [previewLabel, setPreviewLabel] = useState("");
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
+  // HP3: save, lifecycle and delete replay through the step-up confirmation.
+  const stepUpFetch = useStepUp();
 
   const loadCampaigns = useCallback(async () => {
     const params = new URLSearchParams();
@@ -279,7 +282,7 @@ export default function AdminPromotionsPage() {
             : (editing?.status ?? "DRAFT");
 
     try {
-      const response = await fetch(
+      const response = await stepUpFetch(
         editing
           ? `${API_BASE_URL}/api/admin/promotions/${editing.id}`
           : `${API_BASE_URL}/api/admin/promotions`,
@@ -337,7 +340,7 @@ export default function AdminPromotionsPage() {
     setSuccess("");
 
     try {
-      const response = await fetch(
+      const response = await stepUpFetch(
         `${API_BASE_URL}/api/admin/promotions/${campaign.id}/${action}`,
         { method: "POST", headers: authHeaders() },
       );
@@ -385,7 +388,7 @@ export default function AdminPromotionsPage() {
     setSuccess("");
 
     try {
-      const response = await fetch(
+      const response = await stepUpFetch(
         `${API_BASE_URL}/api/admin/promotions/${campaign.id}`,
         { method: "DELETE", headers: authHeaders() },
       );

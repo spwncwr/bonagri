@@ -231,6 +231,40 @@ PYSTATE
   printf '%s' "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["accessToken"])' "$verify_file")"
 }
 
+# HP3 (plan G3): password-confirmed step-up token for guarded admin mutations
+# (POST /auth/step-up → X-Step-Up header). Cached in $LOG_DIR and refreshed
+# only when older than 4 minutes (server TTL is 5), so a burst of mutations
+# costs ONE password check (bucket: 10/min) while no call can ever present a
+# stale token. Takes the admin access token as $1; prints ONLY the step-up
+# token — same stdout discipline as admin_login.
+admin_step_up() {
+  local bearer="$1"
+  local token_file="$LOG_DIR/admin-step-up.json"
+  local http
+
+  if [ -z "${ADMIN_E2E_PASSWORD:-}" ]; then
+    admin_fail "step-up requested but ADMIN_E2E_PASSWORD is not set"
+  fi
+
+  if [ ! -f "$token_file" ] || [ -n "$(find "$token_file" -mmin +4 2>/dev/null)" ]; then
+    http="$(
+      curl -sS -o "$token_file.new" -w "%{http_code}" \
+        -X POST "$API_URL$API_PREFIX/auth/step-up" \
+        -H "Authorization: Bearer $bearer" \
+        -H "Content-Type: application/json" \
+        -d "$(python3 -c 'import json,sys; print(json.dumps({"password":sys.argv[1]}))' "$ADMIN_E2E_PASSWORD")"
+    )"
+    if [ "$http" != "201" ]; then
+      cat "$token_file.new" >&2
+      rm -f "$token_file.new"
+      admin_fail "step-up token mint failed. HTTP $http"
+    fi
+    mv "$token_file.new" "$token_file"
+  fi
+
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["stepUpToken"], end="")' "$token_file"
+}
+
 echo "========================================"
 echo "BONAGRI RUNTIME SMOKE TEST"
 echo "========================================"
@@ -4453,6 +4487,7 @@ M_PROMOTE_HTTP="$(
   curl -sS -o "$LOG_DIR/m-promote.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/users/$M_USER_ID/promote-transporter" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d '{"businessName":"Mosa Hauliers","vehicleType":"1-tonne truck","city":"Polokwane","province":"Limpopo","serviceProvinces":["Limpopo"]}'
 )"
@@ -4471,6 +4506,7 @@ M_PROMOTE_AGAIN_HTTP="$(
   curl -sS -o "$LOG_DIR/m-promote-again.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/users/$M_USER_ID/promote-transporter" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d '{"businessName":"Mosa Hauliers","serviceProvinces":["Limpopo"]}'
 )"
@@ -4566,6 +4602,7 @@ M_VERIFY_PROFILE_HTTP="$(
   curl -sS -o "$LOG_DIR/m-verify-profile.json" -w "%{http_code}" \
     -X PATCH "$API_URL$API_PREFIX/admin/transporters/$M_PROFILE_ID" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d '{"verified":true}'
 )"
@@ -6289,6 +6326,7 @@ PROMOTE_HTTP="$(
   curl -sS -o "$LOG_DIR/admin-promote.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/users/$USER_ID/promote-supplier" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d '{"businessName":"Smoke Admin Traders","city":"Polokwane"}'
 )"
@@ -6313,6 +6351,7 @@ PROMOTE_AGAIN_HTTP="$(
   curl -sS -o "$LOG_DIR/admin-promote-again.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/users/$USER_ID/promote-supplier" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d '{"businessName":"Smoke Admin Traders Again"}'
 )"
@@ -6374,6 +6413,7 @@ SUSPEND_HTTP="$(
   curl -sS -o "$LOG_DIR/admin-suspend.json" -w "%{http_code}" \
     -X PATCH "$API_URL$API_PREFIX/admin/users/$USER_ID/status" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d '{"status":"SUSPENDED"}'
 )"
@@ -6414,6 +6454,7 @@ REACTIVATE_HTTP="$(
   curl -sS -o "$LOG_DIR/admin-reactivate.json" -w "%{http_code}" \
     -X PATCH "$API_URL$API_PREFIX/admin/users/$USER_ID/status" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d '{"status":"ACTIVE"}'
 )"
@@ -6447,6 +6488,7 @@ CREATE_CAT_HTTP="$(
   curl -sS -o "$LOG_DIR/admin-category.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/categories" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d "{\"name\":\"Smoke Admin Category $ADMIN_CAT_TS\",\"slug\":\"$ADMIN_CAT_SLUG\"}"
 )"
@@ -6484,6 +6526,7 @@ RENAME_CAT_HTTP="$(
   curl -sS -o "$LOG_DIR/admin-category-renamed.json" -w "%{http_code}" \
     -X PATCH "$API_URL$API_PREFIX/admin/categories/$ADMIN_CATEGORY_ID" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d "{\"name\":\"Smoke Admin Category Renamed $ADMIN_CAT_TS\"}"
 )"
@@ -6514,6 +6557,7 @@ DUP_CAT_HTTP="$(
   curl -sS -o "$LOG_DIR/admin-category-dup.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/categories" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d "{\"name\":\"Smoke Admin Category Duplicate\",\"slug\":\"$ADMIN_CAT_SLUG\"}"
 )"
@@ -6555,6 +6599,7 @@ VERIFY_HTTP="$(
   curl -sS -o "$LOG_DIR/admin-verify.json" -w "%{http_code}" \
     -X PATCH "$API_URL$API_PREFIX/admin/suppliers/$SUPPLIER_PROFILE_ID" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d "{\"verified\":$NEXT_VERIFIED}"
 )"
@@ -6592,6 +6637,7 @@ RESTORE_VERIFY_HTTP="$(
   curl -sS -o "$LOG_DIR/admin-verify-restore.json" -w "%{http_code}" \
     -X PATCH "$API_URL$API_PREFIX/admin/suppliers/$SUPPLIER_PROFILE_ID" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d "{\"verified\":$CURRENT_VERIFIED}"
 )"
@@ -6693,6 +6739,7 @@ CREATE_PROMO_HTTP="$(
   curl -sS -o "$LOG_DIR/promo-create.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/promotions" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d "$PROMO_PAYLOAD"
 )"
@@ -6762,6 +6809,7 @@ CREATE_DRAFT_HTTP="$(
   curl -sS -o "$LOG_DIR/promo-draft.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/promotions" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d "$PROMO_DRAFT_PAYLOAD"
 )"
@@ -6801,6 +6849,7 @@ CREATE_SCHEDULED_HTTP="$(
   curl -sS -o "$LOG_DIR/promo-scheduled.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/promotions" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d "$PROMO_SCHEDULED_PAYLOAD"
 )"
@@ -6879,7 +6928,8 @@ echo "[P4/4] Pause, preview, resume and delete control public visibility..."
 PROMO_PAUSE_HTTP="$(
   curl -sS -o "$LOG_DIR/promo-pause.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/promotions/$PROMO_ID/pause" \
-    -H "Authorization: Bearer $ADMIN_TOKEN"
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")"
 )"
 
 if [[ "$PROMO_PAUSE_HTTP" != "201" ]]; then
@@ -6917,7 +6967,8 @@ fi
 PROMO_RESUME_HTTP="$(
   curl -sS -o "$LOG_DIR/promo-resume.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/promotions/$PROMO_ID/resume" \
-    -H "Authorization: Bearer $ADMIN_TOKEN"
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")"
 )"
 
 if [[ "$PROMO_RESUME_HTTP" != "201" ]]; then
@@ -6944,7 +6995,8 @@ PYJSON
 PROMO_DELETE_HTTP="$(
   curl -sS -o "$LOG_DIR/promo-delete.json" -w "%{http_code}" \
     -X DELETE "$API_URL$API_PREFIX/admin/promotions/$PROMO_ID" \
-    -H "Authorization: Bearer $ADMIN_TOKEN"
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")"
 )"
 
 if [[ "$PROMO_DELETE_HTTP" != "200" ]]; then
@@ -6972,7 +7024,8 @@ for PROMO_CLEANUP_ID in "$PROMO_DRAFT_ID" "$PROMO_SCHEDULED_ID"; do
   PROMO_CLEANUP_HTTP="$(
     curl -sS -o /dev/null -w "%{http_code}" \
       -X DELETE "$API_URL$API_PREFIX/admin/promotions/$PROMO_CLEANUP_ID" \
-      -H "Authorization: Bearer $ADMIN_TOKEN"
+      -H "Authorization: Bearer $ADMIN_TOKEN" \
+      -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")"
   )"
 
   if [[ "$PROMO_CLEANUP_HTTP" != "200" ]]; then
@@ -7189,6 +7242,7 @@ NEAR_CREATE_HTTP="$(
   curl -sS -o "$LOG_DIR/near-create.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/admin/promotions" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")" \
     -H "Content-Type: application/json" \
     -d "$NEAR_PAYLOAD"
 )"
@@ -7264,7 +7318,8 @@ echo "[NEAR 3/3] The campaign can be removed again..."
 NEAR_DELETE_HTTP="$(
   curl -sS -o /dev/null -w "%{http_code}" \
     -X DELETE "$API_URL$API_PREFIX/admin/promotions/$NEAR_ID" \
-    -H "Authorization: Bearer $ADMIN_TOKEN"
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "X-Step-Up: $(admin_step_up "$ADMIN_TOKEN")"
 )"
 
 if [[ "$NEAR_DELETE_HTTP" != "200" ]]; then
@@ -7585,6 +7640,264 @@ PYJSON
 
 echo
 echo "✓ ADMIN 2FA FLOW ACCEPTANCE PASSED"
+
+fi
+
+echo
+echo "ADMIN STEP-UP + AUDIT FLOW"
+echo "========================================"
+
+# HP3 (plan G3): dangerous admin mutations need a fresh password confirmation
+# (POST /auth/step-up → X-Step-Up header) and every guarded mutation writes an
+# AdminAuditLog row in the SAME transaction as the change. Runs after T (T
+# owns the login window it waits out; U adds one login) and BEFORE L (L
+# hammers /auth/login — U mints step-up tokens, a different bucket, but keeps
+# the discipline anyway). Section U uses BANNER mutations because they clean
+# up after themselves: create → patch → delete leaves only audit rows.
+# (Plan §HP3 calls this section O; O is CP16a's media flow — same deviation
+# HP2 recorded for its N → T rename.)
+
+if [ -z "${ADMIN_E2E_PASSWORD:-}" ]; then
+  echo "⚠ Step-up/audit section SKIPPED: no SEED_ADMIN_PASSWORD in api/.env and no ADMIN_E2E_PASSWORD env var."
+else
+
+U_TOKEN="$(admin_login "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
+if [ -z "$U_TOKEN" ]; then
+  fail "Step-up section: login returned no token"
+fi
+
+U_ADMIN_ID="$(
+  curl -sS "$API_URL$API_PREFIX/auth/me" \
+    -H "Authorization: Bearer $U_TOKEN" > "$LOG_DIR/u-me.json"
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/u-me.json"
+)"
+if [ -z "$U_ADMIN_ID" ]; then
+  cat "$LOG_DIR/u-me.json"
+  fail "Step-up section: could not resolve the admin user id"
+fi
+
+U_BANNER_TITLE="HP3 Smoke Banner $(date +%s)"
+
+# One banner POST reused by the negative tests — the response body is only
+# inspected when the call is EXPECTED to succeed. No array for the optional
+# header: an empty "${arr[@]}" under `set -u` is an unbound-variable error on
+# the bash 3.2 this script runs on.
+u_post_banner() {
+  local out_file="$1"
+  local step_up="${2:-}"
+
+  if [ -n "$step_up" ]; then
+    curl -sS -o "$out_file" -w "%{http_code}" \
+      -X POST "$API_URL$API_PREFIX/admin/banners" \
+      -H "Authorization: Bearer $U_TOKEN" \
+      -H "X-Step-Up: $step_up" \
+      -H "Content-Type: application/json" \
+      -d "$(python3 -c 'import json,sys; print(json.dumps({"title":sys.argv[1]}))' "$U_BANNER_TITLE")"
+  else
+    curl -sS -o "$out_file" -w "%{http_code}" \
+      -X POST "$API_URL$API_PREFIX/admin/banners" \
+      -H "Authorization: Bearer $U_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "$(python3 -c 'import json,sys; print(json.dumps({"title":sys.argv[1]}))' "$U_BANNER_TITLE")"
+  fi
+}
+
+echo
+echo "[U1/5] Wrong password cannot mint a step-up; a missing header is refused..."
+
+U_BAD_HTTP="$(
+  curl -sS -o "$LOG_DIR/u-stepup-bad.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/step-up" \
+    -H "Authorization: Bearer $U_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"password":"definitely-not-the-password"}'
+)"
+if [ "$U_BAD_HTTP" != "401" ]; then
+  cat "$LOG_DIR/u-stepup-bad.json"
+  fail "Step-up with a wrong password must 401. HTTP $U_BAD_HTTP"
+fi
+echo "✓ Wrong password rejected with 401 (nothing minted)"
+
+U_NOHEADER_HTTP="$(u_post_banner "$LOG_DIR/u-no-header.json")"
+if [ "$U_NOHEADER_HTTP" != "403" ]; then
+  cat "$LOG_DIR/u-no-header.json"
+  fail "Guarded mutation without X-Step-Up must 403. HTTP $U_NOHEADER_HTTP"
+fi
+
+python3 - "$LOG_DIR/u-no-header.json" <<'PYJSON'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+if d.get("code") != "STEP_UP_REQUIRED":
+    raise SystemExit("ERROR: expected machine-readable STEP_UP_REQUIRED, got: " + json.dumps(d))
+print("✓ Missing header → 403 with code STEP_UP_REQUIRED")
+PYJSON
+
+request GET "$API_URL$API_PREFIX/admin/banners" "" "$U_TOKEN" > "$LOG_DIR/u-banners-after-403.json"
+python3 - "$LOG_DIR/u-banners-after-403.json" "$U_BANNER_TITLE" <<'PYJSON'
+import json, sys
+banners = json.load(open(sys.argv[1], encoding="utf-8"))
+if any(b.get("title") == sys.argv[2] for b in banners):
+    raise SystemExit("ERROR: banner created without step-up confirmation")
+print("✓ No side effect from the refused call")
+PYJSON
+
+echo
+echo "[U2/5] Forged and expired step-up headers are rejected server-side..."
+
+# The access token is signed with JWT_SECRET — presented as X-Step-Up it can
+# never verify against the derived step-up secret.
+U_FORGED_HTTP="$(u_post_banner "$LOG_DIR/u-forged.json" "$U_TOKEN")"
+if [ "$U_FORGED_HTTP" != "403" ]; then
+  cat "$LOG_DIR/u-forged.json"
+  fail "Access token in X-Step-Up must 403. HTTP $U_FORGED_HTTP"
+fi
+
+# A structurally perfect but EXPIRED step-up token: signed here with the same
+# derived secret (sha256(JWT_SECRET + ":step-up")) and an exp in the past.
+# The secret itself is read from api/.env inside node and never printed.
+U_EXPIRED="$(
+  node -e '
+    const fs = require("fs");
+    const crypto = require("crypto");
+    const env = fs.readFileSync(process.argv[1], "utf8");
+    const m = env.match(/^JWT_SECRET=(.*)$/m);
+    if (!m) { console.error("no JWT_SECRET in api/.env"); process.exit(2); }
+    const secret = m[1].trim().replace(/^["\x27]|["\x27]$/g, "");
+    const derived = crypto.createHash("sha256").update(secret + ":step-up").digest("hex");
+    const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+    const now = Math.floor(Date.now() / 1000);
+    const head = b64({ alg: "HS256", typ: "JWT" });
+    const body = b64({ sub: process.argv[2], type: "step-up", iat: now - 600, exp: now - 300 });
+    const sig = crypto.createHmac("sha256", derived).update(head + "." + body).digest("base64url");
+    process.stdout.write(head + "." + body + "." + sig);
+  ' "$API/.env" "$U_ADMIN_ID"
+)"
+if [ -z "$U_EXPIRED" ]; then
+  fail "Could not mint an expired step-up token"
+fi
+
+U_EXPIRED_HTTP="$(u_post_banner "$LOG_DIR/u-expired.json" "$U_EXPIRED")"
+if [ "$U_EXPIRED_HTTP" != "403" ]; then
+  cat "$LOG_DIR/u-expired.json"
+  fail "Expired step-up token must 403. HTTP $U_EXPIRED_HTTP"
+fi
+
+python3 - "$LOG_DIR/u-forged.json" "$LOG_DIR/u-expired.json" <<'PYJSON'
+import json, sys
+for path in sys.argv[1:]:
+    d = json.load(open(path, encoding="utf-8"))
+    if d.get("code") != "STEP_UP_REQUIRED":
+        raise SystemExit("ERROR: expected STEP_UP_REQUIRED from " + path + ", got: " + json.dumps(d))
+print("✓ Forged and expired headers rejected with STEP_UP_REQUIRED")
+PYJSON
+
+echo
+echo "[U3/5] A password-confirmed step-up unlocks the mutation..."
+
+U_STEP="$(admin_step_up "$U_TOKEN")"
+if [ -z "$U_STEP" ]; then
+  fail "Step-up section: mint returned no token"
+fi
+
+U_CREATE_HTTP="$(u_post_banner "$LOG_DIR/u-banner-create.json" "$U_STEP")"
+if [ "$U_CREATE_HTTP" != "201" ]; then
+  cat "$LOG_DIR/u-banner-create.json"
+  fail "Guarded banner create with a valid step-up failed. HTTP $U_CREATE_HTTP"
+fi
+
+U_BANNER_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/u-banner-create.json"
+)"
+if [ -z "$U_BANNER_ID" ]; then
+  cat "$LOG_DIR/u-banner-create.json"
+  fail "Banner create returned no id"
+fi
+echo "✓ Valid step-up accepted — banner $U_BANNER_ID created"
+
+echo
+echo "[U4/5] The mutation is in /admin/audit, filterable by action..."
+
+request GET "$API_URL$API_PREFIX/admin/audit?action=BANNER_CREATE&limit=10" "" "$U_TOKEN" > "$LOG_DIR/u-audit-create.json"
+python3 - "$LOG_DIR/u-audit-create.json" "$U_BANNER_ID" "$U_BANNER_TITLE" "$ADMIN_E2E_EMAIL" <<'PYJSON'
+import json, sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+banner_id, title, email = sys.argv[2], sys.argv[3], sys.argv[4]
+items = data.get("items") or []
+
+match = next((i for i in items if i.get("targetId") == banner_id), None)
+if match is None:
+    raise SystemExit("ERROR: audit feed missing BANNER_CREATE row for the banner: " + json.dumps(items)[:400])
+if match.get("action") != "BANNER_CREATE":
+    raise SystemExit("ERROR: audit action mismatch: " + json.dumps(match))
+if (match.get("actor") or {}).get("email") != email:
+    raise SystemExit("ERROR: audit actor is not the acting admin: " + json.dumps(match))
+metadata = match.get("metadata") or {}
+if metadata.get("title") != title:
+    raise SystemExit("ERROR: audit metadata lost the title: " + json.dumps(match))
+if "BANNER_CREATE" not in (data.get("actions") or []):
+    raise SystemExit("ERROR: distinct action list missing BANNER_CREATE: " + json.dumps(data.get("actions")))
+print("✓ BANNER_CREATE row present (actor, target, metadata) and filter works")
+PYJSON
+
+request GET "$API_URL$API_PREFIX/admin/audit?limit=5" "" "$U_TOKEN" > "$LOG_DIR/u-audit-feed.json"
+python3 - "$LOG_DIR/u-audit-feed.json" <<'PYJSON'
+import json, sys
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+items = data.get("items") or []
+if not items:
+    raise SystemExit("ERROR: audit feed is empty after guarded mutations")
+print("✓ Audit feed returns {} recent row(s), newest first".format(len(items)))
+PYJSON
+
+# The cached step-up is deliberately reused here — one password confirmation
+# covers a burst of actions (not single-use within its 5-minute TTL).
+U_STEP_AGAIN="$(admin_step_up "$U_TOKEN")"
+if [ "$U_STEP_AGAIN" != "$U_STEP" ]; then
+  fail "Step-up cache unexpectedly re-minted inside the TTL"
+fi
+echo "✓ Same step-up token reused for the next action (not single-use)"
+
+echo
+echo "[U5/5] Patch and delete also guarded; the trail survives cleanup..."
+
+U_PATCH_HTTP="$(
+  curl -sS -o "$LOG_DIR/u-banner-patch.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/admin/banners/$U_BANNER_ID" \
+    -H "Authorization: Bearer $U_TOKEN" \
+    -H "X-Step-Up: $U_STEP_AGAIN" \
+    -H "Content-Type: application/json" \
+    -d '{"subtitle":"stepped-up edit"}'
+)"
+if [ "$U_PATCH_HTTP" != "200" ]; then
+  cat "$LOG_DIR/u-banner-patch.json"
+  fail "Guarded banner patch failed. HTTP $U_PATCH_HTTP"
+fi
+
+U_DELETE_HTTP="$(
+  curl -sS -o "$LOG_DIR/u-banner-delete.json" -w "%{http_code}" \
+    -X DELETE "$API_URL$API_PREFIX/admin/banners/$U_BANNER_ID" \
+    -H "Authorization: Bearer $U_TOKEN" \
+    -H "X-Step-Up: $U_STEP_AGAIN"
+)"
+if [ "$U_DELETE_HTTP" != "200" ]; then
+  cat "$LOG_DIR/u-banner-delete.json"
+  fail "Guarded banner delete failed. HTTP $U_DELETE_HTTP"
+fi
+echo "✓ Patch and delete completed under the same step-up"
+
+request GET "$API_URL$API_PREFIX/admin/audit?action=BANNER_DELETE&limit=10" "" "$U_TOKEN" > "$LOG_DIR/u-audit-delete.json"
+python3 - "$LOG_DIR/u-audit-delete.json" "$U_BANNER_ID" <<'PYJSON'
+import json, sys
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+items = data.get("items") or []
+if not any(i.get("targetId") == sys.argv[2] for i in items):
+    raise SystemExit("ERROR: BANNER_DELETE audit row missing: " + json.dumps(items)[:400])
+print("✓ BANNER_DELETE row present after cleanup (trail survives the mutation)")
+PYJSON
+
+echo
+echo "✓ ADMIN STEP-UP + AUDIT FLOW ACCEPTANCE PASSED"
 
 fi
 

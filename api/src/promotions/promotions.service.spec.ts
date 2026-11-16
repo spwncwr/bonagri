@@ -1,8 +1,14 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { AdminAuditService } from "../audit/admin-audit.service";
+import type { AuditContext } from "../audit/audit-context";
 import {
   effectiveCampaignStatus,
   PromotionsService,
 } from "./promotions.service";
+
+// HP3: the actor every guarded mutation in these tests writes its audit row
+// under.
+const AUDIT: AuditContext = { actorUserId: "admin-1" };
 
 function makeProduct(overrides: Record<string, unknown> = {}) {
   return {
@@ -68,17 +74,32 @@ function makeCampaign(overrides: Record<string, unknown> = {}) {
 }
 
 function makeService() {
+  // tx and prisma share the SAME model mocks: HP3 runs mutations through
+  // AdminAuditService.guarded(), whose $transaction callback receives `tx`.
+  const promoCampaign = {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  };
+  const adminAuditLog = { create: jest.fn() };
+
+  const tx = {
+    promoCampaign,
+    adminAuditLog,
+  };
+
   const prisma = {
-    $transaction: jest.fn(async (operations: Promise<unknown>[]) =>
-      Promise.all(operations),
+    // Two shapes: guarded() passes a callback; the analytics batch path
+    // passes an array of promises.
+    $transaction: jest.fn(async (operations: unknown) =>
+      typeof operations === "function"
+        ? (operations as (t: typeof tx) => unknown)(tx)
+        : Promise.all(operations as Promise<unknown>[]),
     ),
-    promoCampaign: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
+    promoCampaign,
+    adminAuditLog,
     promoCampaignEvent: { create: jest.fn() },
     product: {
       findMany: jest.fn(),
@@ -98,10 +119,14 @@ function makeService() {
     destroyAsset: jest.fn().mockResolvedValue(undefined),
   };
 
+  const audit = new AdminAuditService(prisma as never);
+
   return {
-    service: new PromotionsService(prisma as never, media as never),
+    service: new PromotionsService(prisma as never, media as never, audit as never),
     prisma,
+    tx,
     media,
+    audit,
   };
 }
 
@@ -371,12 +396,15 @@ describe("PromotionsService admin lifecycle", () => {
       makeCampaign({ status: "DRAFT", products: [] }),
     );
 
-    await service.createCampaign({
-      name: "New campaign",
-      headline: "Coming soon",
-      type: "FEATURED_PRODUCTS",
-      status: "DRAFT",
-    });
+    await service.createCampaign(
+      {
+        name: "New campaign",
+        headline: "Coming soon",
+        type: "FEATURED_PRODUCTS",
+        status: "DRAFT",
+      },
+      AUDIT,
+    );
 
     expect(prisma.promoCampaign.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -389,12 +417,15 @@ describe("PromotionsService admin lifecycle", () => {
     const { service, prisma } = makeService();
 
     await expect(
-      service.createCampaign({
-        name: "New campaign",
-        headline: "Fresh picks",
-        type: "FEATURED_PRODUCTS",
-        status: "ACTIVE",
-      }),
+      service.createCampaign(
+        {
+          name: "New campaign",
+          headline: "Fresh picks",
+          type: "FEATURED_PRODUCTS",
+          status: "ACTIVE",
+        },
+        AUDIT,
+      ),
     ).rejects.toThrow(BadRequestException);
     expect(prisma.promoCampaign.create).not.toHaveBeenCalled();
   });
@@ -406,13 +437,16 @@ describe("PromotionsService admin lifecycle", () => {
     ]);
 
     await expect(
-      service.createCampaign({
-        name: "Offer",
-        headline: "Save now",
-        type: "SPECIAL_OFFERS",
-        status: "ACTIVE",
-        products: [{ productId: "prod-1", promoPrice: 25 }],
-      }),
+      service.createCampaign(
+        {
+          name: "Offer",
+          headline: "Save now",
+          type: "SPECIAL_OFFERS",
+          status: "ACTIVE",
+          products: [{ productId: "prod-1", promoPrice: 25 }],
+        },
+        AUDIT,
+      ),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -424,15 +458,18 @@ describe("PromotionsService admin lifecycle", () => {
     prisma.promoCampaign.create.mockResolvedValue({ id: "cmp-1" });
     prisma.promoCampaign.findUnique.mockResolvedValue(makeCampaign());
 
-    await service.createCampaign({
-      name: "Scheduled",
-      headline: "Next week",
-      type: "FEATURED_PRODUCTS",
-      status: "ACTIVE",
-      startAt: "2999-01-01T00:00:00.000Z",
-      expiresAt: "3000-01-01T00:00:00.000Z",
-      products: [{ productId: "prod-1" }],
-    });
+    await service.createCampaign(
+      {
+        name: "Scheduled",
+        headline: "Next week",
+        type: "FEATURED_PRODUCTS",
+        status: "ACTIVE",
+        startAt: "2999-01-01T00:00:00.000Z",
+        expiresAt: "3000-01-01T00:00:00.000Z",
+        products: [{ productId: "prod-1" }],
+      },
+      AUDIT,
+    );
 
     expect(prisma.promoCampaign.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -448,14 +485,17 @@ describe("PromotionsService admin lifecycle", () => {
     ]);
 
     await expect(
-      service.createCampaign({
-        name: "Expired",
-        headline: "Too late",
-        type: "FEATURED_PRODUCTS",
-        status: "ACTIVE",
-        expiresAt: "2020-01-01T00:00:00.000Z",
-        products: [{ productId: "prod-1" }],
-      }),
+      service.createCampaign(
+        {
+          name: "Expired",
+          headline: "Too late",
+          type: "FEATURED_PRODUCTS",
+          status: "ACTIVE",
+          expiresAt: "2020-01-01T00:00:00.000Z",
+          products: [{ productId: "prod-1" }],
+        },
+        AUDIT,
+      ),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -481,13 +521,17 @@ describe("PromotionsService admin lifecycle", () => {
       { id: "prod-1", price: "20.00", status: "ACTIVE", name: "Tomatoes" },
     ]);
 
-    await service.updateCampaign("cmp-1", {
-      images: [
-        {
-          url: "https://res.cloudinary.com/demo/image/upload/v1/bonagri/promotion/new.jpg",
-        },
-      ],
-    });
+    await service.updateCampaign(
+      "cmp-1",
+      {
+        images: [
+          {
+            url: "https://res.cloudinary.com/demo/image/upload/v1/bonagri/promotion/new.jpg",
+          },
+        ],
+      },
+      AUDIT,
+    );
 
     expect(media.destroyAsset).toHaveBeenCalledWith("bonagri/promotion/old");
   });
@@ -501,7 +545,7 @@ describe("PromotionsService admin lifecycle", () => {
       { id: "prod-1", price: "20.00", status: "ACTIVE", name: "Tomatoes" },
     ]);
 
-    await service.publishCampaign("cmp-1");
+    await service.publishCampaign("cmp-1", AUDIT);
 
     expect(prisma.promoCampaign.update).toHaveBeenCalledWith({
       where: { id: "cmp-1" },

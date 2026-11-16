@@ -19,6 +19,7 @@ import { MediaModule } from "./media/media.module";
 import { PromotionsModule } from "./promotions/promotions.module";
 import { ProfileModule } from "./profile/profile.module";
 import { VerificationModule } from "./verification/verification.module";
+import { AuditModule } from "./audit/audit.module";
 
 @Module({
   imports: [
@@ -49,6 +50,8 @@ import { VerificationModule } from "./verification/verification.module";
     PromotionsModule,
     ProfileModule,
     VerificationModule,
+    // HP3: admin audit trail (read controller + guarded() writer).
+    AuditModule,
   ],
 })
 export class AppModule {}

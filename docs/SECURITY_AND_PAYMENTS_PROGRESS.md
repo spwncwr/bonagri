@@ -43,7 +43,7 @@ record actuals in §3).
 |---|---|---|---|
 | HP1 | Buyer payment-method selection screen | 2026-11-14 | done (3ede15d, 2026-11-14) |
 | HP2 | Admin 2FA (mandatory TOTP) + sign-in alerts | 2026-11-15 | done (518cf66, 2026-11-15) |
-| HP3 | Step-up confirmation + admin audit trail | — | pending |
+| HP3 | Step-up confirmation + admin audit trail | 2026-11-15 | in progress |
 | HP4 | Password reset / account recovery | — | pending |
 | HP5 | Session hardening (refresh rotation, no storage token) | — | pending |
 | HP6 | Security hygiene + admin runbook | — | pending |

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { authHeaders } from "../../../lib/auth";
 import { AdminRowsSkeleton } from "../../../components/admin/admin-ui";
+import { useStepUp } from "../../../components/admin/step-up-provider";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://" + "localhost" + ":3000";
@@ -30,6 +31,8 @@ export default function AdminSuppliersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  // HP3: the verify toggle replays through the step-up confirmation.
+  const stepUpFetch = useStepUp();
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +80,7 @@ export default function AdminSuppliersPage() {
     setError("");
 
     try {
-      const response = await fetch(
+      const response = await stepUpFetch(
         `${API_BASE_URL}/api/admin/suppliers/${profile.id}`,
         {
           method: "PATCH",

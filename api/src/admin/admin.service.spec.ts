@@ -3,48 +3,78 @@ import {
   ConflictException,
   NotFoundException,
 } from "@nestjs/common";
+import { AdminAuditService } from "../audit/admin-audit.service";
+import type { AuditContext } from "../audit/audit-context";
 import { AdminService } from "./admin.service";
 
+// HP3: the actor every guarded mutation in these tests writes its audit row
+// under (matches the "admin-1" ids used by the verification-sync assertions).
+const AUDIT: AuditContext = { actorUserId: "admin-1" };
+
 function makeService() {
+  // tx and prisma share the SAME model mocks: HP3 runs every mutation through
+  // AdminAuditService.guarded(), whose $transaction callback receives `tx`,
+  // while read paths still hit prisma directly.
+  const user = {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+    groupBy: jest.fn(),
+    count: jest.fn(),
+  };
+  const supplierProfile = {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    update: jest.fn(),
+  };
+  const transporterProfile = {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    update: jest.fn(),
+  };
+  const category = {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+  };
+  const notification = { createMany: jest.fn() };
+  const notificationBroadcast = { create: jest.fn(), findMany: jest.fn() };
+  const promoBanner = {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  };
+  const adminAuditLog = { create: jest.fn() };
+
   const tx = {
-    supplierProfile: { create: jest.fn() },
-    transporterProfile: { create: jest.fn() },
-    user: { update: jest.fn() },
+    user,
+    supplierProfile,
+    transporterProfile,
+    category,
+    notification,
+    notificationBroadcast,
+    promoBanner,
+    adminAuditLog,
   };
 
   const prisma = {
     $transaction: jest.fn(async (callback: (t: typeof tx) => unknown) =>
       callback(tx),
     ),
-    user: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      groupBy: jest.fn(),
-      count: jest.fn(),
-    },
-    supplierProfile: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
-    },
-    transporterProfile: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
-    },
+    user,
+    supplierProfile,
+    transporterProfile,
+    category,
+    notification,
+    notificationBroadcast,
+    promoBanner,
+    adminAuditLog,
     product: { groupBy: jest.fn() },
     order: { groupBy: jest.fn(), aggregate: jest.fn() },
-    category: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
-    notification: { createMany: jest.fn() },
-    notificationBroadcast: { create: jest.fn(), findMany: jest.fn() },
-    promoBanner: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
   };
 
   const notifications = {
@@ -70,6 +100,10 @@ function makeService() {
     syncLegacyBadge: jest.fn(),
   };
 
+  // Real AdminAuditService over the mocked prisma — guarded() therefore runs
+  // the real transaction wrapper and writes a real (mocked) audit row.
+  const audit = new AdminAuditService(prisma as never);
+
   return {
     service: new AdminService(
       prisma as never,
@@ -77,6 +111,7 @@ function makeService() {
       media as never,
       mail as never,
       verification as never,
+      audit as never,
     ),
     prisma,
     tx,
@@ -84,6 +119,7 @@ function makeService() {
     media,
     mail,
     verification,
+    audit,
   };
 }
 
@@ -109,10 +145,14 @@ describe("AdminService (CP3 management)", () => {
         supplierProfile: { id: "sup-1" },
       });
 
-      const result = await service.promoteToSupplier("user-1", {
-        businessName: "Thandi Fresh Produce",
-        city: "Tzaneen",
-      });
+      const result = await service.promoteToSupplier(
+        "user-1",
+        {
+          businessName: "Thandi Fresh Produce",
+          city: "Tzaneen",
+        },
+        AUDIT,
+      );
 
       expect(result.role).toBe("SUPPLIER");
       expect(tx.supplierProfile.create).toHaveBeenCalledWith({
@@ -142,9 +182,13 @@ describe("AdminService (CP3 management)", () => {
       });
 
       await expect(
-        service.promoteToSupplier("user-1", {
-          businessName: "Again",
-        }),
+        service.promoteToSupplier(
+          "user-1",
+          {
+            businessName: "Again",
+          },
+          AUDIT,
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -162,7 +206,7 @@ describe("AdminService (CP3 management)", () => {
       );
 
       await expect(
-        service.promoteToSupplier("user-1", { businessName: "X" }),
+        service.promoteToSupplier("user-1", { businessName: "X" }, AUDIT),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -177,7 +221,7 @@ describe("AdminService (CP3 management)", () => {
       });
 
       await expect(
-        service.promoteToSupplier("admin-1", { businessName: "X" }),
+        service.promoteToSupplier("admin-1", { businessName: "X" }, AUDIT),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -187,7 +231,7 @@ describe("AdminService (CP3 management)", () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.promoteToSupplier("ghost", { businessName: "X" }),
+        service.promoteToSupplier("ghost", { businessName: "X" }, AUDIT),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -208,12 +252,16 @@ describe("AdminService (CP3 management)", () => {
         role: "TRANSPORTER",
       });
 
-      const result = await service.promoteToTransporter("user-1", {
-        businessName: "Sipho Hauliers",
-        vehicleType: "1-tonne truck",
-        city: "Polokwane",
-        serviceProvinces: [" Limpopo ", "Limpopo", "Gauteng"],
-      });
+      const result = await service.promoteToTransporter(
+        "user-1",
+        {
+          businessName: "Sipho Hauliers",
+          vehicleType: "1-tonne truck",
+          city: "Polokwane",
+          serviceProvinces: [" Limpopo ", "Limpopo", "Gauteng"],
+        },
+        AUDIT,
+      );
 
       expect(result.role).toBe("TRANSPORTER");
       expect(tx.transporterProfile.create).toHaveBeenCalledWith({
@@ -245,10 +293,14 @@ describe("AdminService (CP3 management)", () => {
       });
 
       await expect(
-        service.promoteToTransporter("user-1", {
-          businessName: "Again",
-          serviceProvinces: ["Limpopo"],
-        }),
+        service.promoteToTransporter(
+          "user-1",
+          {
+            businessName: "Again",
+            serviceProvinces: ["Limpopo"],
+          },
+          AUDIT,
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -263,10 +315,14 @@ describe("AdminService (CP3 management)", () => {
       });
 
       await expect(
-        service.promoteToTransporter("admin-1", {
-          businessName: "X",
-          serviceProvinces: ["Limpopo"],
-        }),
+        service.promoteToTransporter(
+          "admin-1",
+          {
+            businessName: "X",
+            serviceProvinces: ["Limpopo"],
+          },
+          AUDIT,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -276,10 +332,14 @@ describe("AdminService (CP3 management)", () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.promoteToTransporter("ghost", {
-          businessName: "X",
-          serviceProvinces: ["Limpopo"],
-        }),
+        service.promoteToTransporter(
+          "ghost",
+          {
+            businessName: "X",
+            serviceProvinces: ["Limpopo"],
+          },
+          AUDIT,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -299,9 +359,13 @@ describe("AdminService (CP3 management)", () => {
         user: { id: "user-1", email: "sipho@example.com" },
       });
 
-      const result = await service.setTransporterVerified("tp-1", {
-        verified: true,
-      } as never);
+      const result = await service.setTransporterVerified(
+        "tp-1",
+        {
+          verified: true,
+        } as never,
+        AUDIT,
+      );
 
       expect(result.verified).toBe(true);
       expect(prisma.transporterProfile.update).toHaveBeenCalledWith(
@@ -330,7 +394,11 @@ describe("AdminService (CP3 management)", () => {
         user: { id: "user-1", email: "sipho@example.com" },
       });
 
-      await service.setTransporterVerified("tp-1", { verified: false } as never);
+      await service.setTransporterVerified(
+        "tp-1",
+        { verified: false } as never,
+        AUDIT,
+      );
 
       expect(notifications.onTransporterVerified).not.toHaveBeenCalled();
     });
@@ -341,7 +409,11 @@ describe("AdminService (CP3 management)", () => {
       prisma.transporterProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.setTransporterVerified("ghost", { verified: true } as never),
+        service.setTransporterVerified(
+          "ghost",
+          { verified: true } as never,
+          AUDIT,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -387,9 +459,13 @@ describe("AdminService (CP3 management)", () => {
         status: "SUSPENDED",
       });
 
-      const result = await service.updateUserStatus("user-1", {
-        status: "SUSPENDED",
-      });
+      const result = await service.updateUserStatus(
+        "user-1",
+        {
+          status: "SUSPENDED",
+        },
+        AUDIT,
+      );
 
       expect(result.status).toBe("SUSPENDED");
       expect(prisma.user.update).toHaveBeenCalledWith(
@@ -411,7 +487,7 @@ describe("AdminService (CP3 management)", () => {
       });
 
       await expect(
-        service.updateUserStatus("admin-1", { status: "SUSPENDED" }),
+        service.updateUserStatus("admin-1", { status: "SUSPENDED" }, AUDIT),
       ).rejects.toThrow("Admin accounts cannot be suspended");
     });
 
@@ -429,9 +505,13 @@ describe("AdminService (CP3 management)", () => {
         status: "ACTIVE",
       });
 
-      const result = await service.updateUserStatus("user-1", {
-        status: "ACTIVE",
-      });
+      const result = await service.updateUserStatus(
+        "user-1",
+        {
+          status: "ACTIVE",
+        },
+        AUDIT,
+      );
 
       expect(result.status).toBe("ACTIVE");
     });
@@ -442,7 +522,7 @@ describe("AdminService (CP3 management)", () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.updateUserStatus("ghost", { status: "SUSPENDED" }),
+        service.updateUserStatus("ghost", { status: "SUSPENDED" }, AUDIT),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -463,7 +543,7 @@ describe("AdminService (CP3 management)", () => {
       const result = await service.setSupplierVerified(
         "sup-1",
         { verified: true },
-        "admin-1",
+        AUDIT,
       );
 
       expect(result.verified).toBe(true);
@@ -487,7 +567,7 @@ describe("AdminService (CP3 management)", () => {
       prisma.supplierProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.setSupplierVerified("ghost", { verified: true }, "admin-1"),
+        service.setSupplierVerified("ghost", { verified: true }, AUDIT),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -498,7 +578,10 @@ describe("AdminService (CP3 management)", () => {
 
       prisma.category.create.mockResolvedValue({ id: "cat-1" });
 
-      await service.createCategory({ name: "Fresh Poultry & Eggs" });
+      await service.createCategory(
+        { name: "Fresh Poultry & Eggs" },
+        AUDIT,
+      );
 
       expect(prisma.category.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -516,7 +599,7 @@ describe("AdminService (CP3 management)", () => {
       );
 
       await expect(
-        service.createCategory({ name: "Vegetables" }),
+        service.createCategory({ name: "Vegetables" }, AUDIT),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -529,9 +612,13 @@ describe("AdminService (CP3 management)", () => {
         name: "Grains & Cereals",
       });
 
-      const result = await service.updateCategory("cat-1", {
-        name: "Grains & Cereals",
-      });
+      const result = await service.updateCategory(
+        "cat-1",
+        {
+          name: "Grains & Cereals",
+        },
+        AUDIT,
+      );
 
       expect(result.name).toBe("Grains & Cereals");
       expect(prisma.category.update).toHaveBeenCalledWith(
@@ -548,7 +635,7 @@ describe("AdminService (CP3 management)", () => {
       prisma.category.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.updateCategory("ghost", { name: "X" }),
+        service.updateCategory("ghost", { name: "X" }, AUDIT),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -556,10 +643,13 @@ describe("AdminService (CP3 management)", () => {
       const { service, prisma } = makeService();
       prisma.category.create.mockResolvedValue({ id: "cat-1" });
 
-      await service.createCategory({
-        name: "Dairy",
-        imageUrl: "https://res.cloudinary.com/bonagri/category/dairy.jpg",
-      });
+      await service.createCategory(
+        {
+          name: "Dairy",
+          imageUrl: "https://res.cloudinary.com/bonagri/category/dairy.jpg",
+        },
+        AUDIT,
+      );
 
       expect(prisma.category.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -578,9 +668,13 @@ describe("AdminService (CP3 management)", () => {
       });
       prisma.category.update.mockResolvedValue({ id: "cat-1" });
 
-      await service.updateCategory("cat-1", {
-        imageUrl: "https://res.cloudinary.com/bonagri/category/new.jpg",
-      });
+      await service.updateCategory(
+        "cat-1",
+        {
+          imageUrl: "https://res.cloudinary.com/bonagri/category/new.jpg",
+        },
+        AUDIT,
+      );
 
       expect(media.destroyAsset).toHaveBeenCalledWith("bonagri/category/old-id");
     });
@@ -672,12 +766,15 @@ describe("AdminService (CP3 management)", () => {
         recipientCount: 2,
       });
 
-      const res = await service.broadcastNotification("admin-1", {
-        title: "Supplier update",
-        message: "New packing rules apply starting Monday.",
-        targetRole: "SUPPLIER",
-        sendEmail: true,
-      });
+      const res = await service.broadcastNotification(
+        {
+          title: "Supplier update",
+          message: "New packing rules apply starting Monday.",
+          targetRole: "SUPPLIER",
+          sendEmail: true,
+        },
+        AUDIT,
+      );
 
       expect(prisma.user.findMany).toHaveBeenCalledWith({
         where: { status: "ACTIVE", role: "SUPPLIER" },
@@ -707,11 +804,14 @@ describe("AdminService (CP3 management)", () => {
       prisma.user.findMany.mockResolvedValue([]);
       prisma.notificationBroadcast.create.mockResolvedValue({ id: "bcast-2" });
 
-      await service.broadcastNotification("admin-1", {
-        title: "Holiday announcement",
-        message: "Happy holidays to all users!",
-        targetRole: "ALL",
-      });
+      await service.broadcastNotification(
+        {
+          title: "Holiday announcement",
+          message: "Happy holidays to all users!",
+          targetRole: "ALL",
+        },
+        AUDIT,
+      );
 
       expect(prisma.user.findMany).toHaveBeenCalledWith({
         where: { status: "ACTIVE" },
@@ -726,11 +826,14 @@ describe("AdminService (CP3 management)", () => {
 
       prisma.promoBanner.create.mockResolvedValue({ id: "banner-1" });
 
-      await service.createBanner({
-        title: "Summer Citrus Harvest",
-        subtitle: "Fresh oranges direct from Tzaneen",
-        imageUrl: "https://res.cloudinary.com/bonagri/banner/summer.jpg",
-      });
+      await service.createBanner(
+        {
+          title: "Summer Citrus Harvest",
+          subtitle: "Fresh oranges direct from Tzaneen",
+          imageUrl: "https://res.cloudinary.com/bonagri/banner/summer.jpg",
+        },
+        AUDIT,
+      );
 
       expect(prisma.promoBanner.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -750,12 +853,83 @@ describe("AdminService (CP3 management)", () => {
       });
       prisma.promoBanner.delete.mockResolvedValue({ id: "banner-1" });
 
-      await service.deleteBanner("banner-1");
+      await service.deleteBanner("banner-1", AUDIT);
 
       expect(prisma.promoBanner.delete).toHaveBeenCalledWith({
         where: { id: "banner-1" },
       });
       expect(media.destroyAsset).toHaveBeenCalledWith("bonagri/banner/old-asset");
+    });
+  });
+
+  describe("HP3 audit trail", () => {
+    it("writes the audit row in the same transaction as the mutation", async () => {
+      const { service, prisma, tx } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: "user-1",
+        role: "BUYER",
+        status: "ACTIVE",
+      });
+      prisma.user.update.mockResolvedValue({
+        id: "user-1",
+        role: "BUYER",
+        status: "SUSPENDED",
+      });
+
+      await service.updateUserStatus(
+        "user-1",
+        { status: "SUSPENDED" },
+        AUDIT,
+      );
+
+      expect(tx.adminAuditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          actorUserId: "admin-1",
+          action: "USER_STATUS_UPDATE",
+          targetType: "USER",
+          targetId: "user-1",
+          metadata: { from: "ACTIVE", to: "SUSPENDED" },
+        }),
+      });
+      // Mutation + row went through ONE $transaction call.
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it("writes no audit row when the mutation fails", async () => {
+      const { service, prisma, tx } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: "user-1",
+        role: "BUYER",
+        status: "ACTIVE",
+      });
+      prisma.user.update.mockRejectedValue(new Error("db down"));
+
+      await expect(
+        service.updateUserStatus("user-1", { status: "SUSPENDED" }, AUDIT),
+      ).rejects.toThrow("db down");
+
+      expect(tx.adminAuditLog.create).not.toHaveBeenCalled();
+    });
+
+    it("writes no audit row for a no-op status change", async () => {
+      const { service, prisma, tx } = makeService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: "user-1",
+        role: "BUYER",
+        status: "ACTIVE",
+      });
+
+      await service.updateUserStatus(
+        "user-1",
+        { status: "ACTIVE" },
+        AUDIT,
+      );
+
+      expect(tx.adminAuditLog.create).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
   });
 });

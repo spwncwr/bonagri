@@ -333,6 +333,7 @@ export type UserWhereInput = {
   verificationApplications?: Prisma.VerificationApplicationListRelationFilter
   latestApplication?: Prisma.XOR<Prisma.VerificationApplicationNullableScalarRelationFilter, Prisma.VerificationApplicationWhereInput> | null
   reviewedVerificationApplications?: Prisma.VerificationApplicationListRelationFilter
+  adminAuditLogs?: Prisma.AdminAuditLogListRelationFilter
   verificationActionsTaken?: Prisma.VerificationAuditLogListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
@@ -378,6 +379,7 @@ export type UserOrderByWithRelationInput = {
   verificationApplications?: Prisma.VerificationApplicationOrderByRelationAggregateInput
   latestApplication?: Prisma.VerificationApplicationOrderByWithRelationInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationOrderByRelationAggregateInput
+  adminAuditLogs?: Prisma.AdminAuditLogOrderByRelationAggregateInput
   verificationActionsTaken?: Prisma.VerificationAuditLogOrderByRelationAggregateInput
   orders?: Prisma.OrderOrderByRelationAggregateInput
   notifications?: Prisma.NotificationOrderByRelationAggregateInput
@@ -426,6 +428,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   verificationApplications?: Prisma.VerificationApplicationListRelationFilter
   latestApplication?: Prisma.XOR<Prisma.VerificationApplicationNullableScalarRelationFilter, Prisma.VerificationApplicationWhereInput> | null
   reviewedVerificationApplications?: Prisma.VerificationApplicationListRelationFilter
+  adminAuditLogs?: Prisma.AdminAuditLogListRelationFilter
   verificationActionsTaken?: Prisma.VerificationAuditLogListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
@@ -528,6 +531,7 @@ export type UserCreateInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -572,6 +576,7 @@ export type UserUncheckedCreateInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -616,6 +621,7 @@ export type UserUpdateInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -660,6 +666,7 @@ export type UserUncheckedUpdateInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -1107,6 +1114,20 @@ export type UserUpdateOneRequiredWithoutVerificationActionsTakenNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutVerificationActionsTakenInput, Prisma.UserUpdateWithoutVerificationActionsTakenInput>, Prisma.UserUncheckedUpdateWithoutVerificationActionsTakenInput>
 }
 
+export type UserCreateNestedOneWithoutAdminAuditLogsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdminAuditLogsInput, Prisma.UserUncheckedCreateWithoutAdminAuditLogsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdminAuditLogsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutAdminAuditLogsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdminAuditLogsInput, Prisma.UserUncheckedCreateWithoutAdminAuditLogsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdminAuditLogsInput
+  upsert?: Prisma.UserUpsertWithoutAdminAuditLogsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAdminAuditLogsInput, Prisma.UserUpdateWithoutAdminAuditLogsInput>, Prisma.UserUncheckedUpdateWithoutAdminAuditLogsInput>
+}
+
 export type UserCreateNestedOneWithoutProductRequestsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutProductRequestsInput, Prisma.UserUncheckedCreateWithoutProductRequestsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutProductRequestsInput
@@ -1192,6 +1213,7 @@ export type UserCreateWithoutEmailVerificationTokensInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -1235,6 +1257,7 @@ export type UserUncheckedCreateWithoutEmailVerificationTokensInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -1294,6 +1317,7 @@ export type UserUpdateWithoutEmailVerificationTokensInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -1337,6 +1361,7 @@ export type UserUncheckedUpdateWithoutEmailVerificationTokensInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -1380,6 +1405,7 @@ export type UserCreateWithoutSupplierProfileInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -1423,6 +1449,7 @@ export type UserUncheckedCreateWithoutSupplierProfileInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -1482,6 +1509,7 @@ export type UserUpdateWithoutSupplierProfileInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -1525,6 +1553,7 @@ export type UserUncheckedUpdateWithoutSupplierProfileInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -1568,6 +1597,7 @@ export type UserCreateWithoutAddressesInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -1611,6 +1641,7 @@ export type UserUncheckedCreateWithoutAddressesInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -1670,6 +1701,7 @@ export type UserUpdateWithoutAddressesInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -1713,6 +1745,7 @@ export type UserUncheckedUpdateWithoutAddressesInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -1757,6 +1790,7 @@ export type UserCreateWithoutProductReviewsInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -1800,6 +1834,7 @@ export type UserUncheckedCreateWithoutProductReviewsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -1859,6 +1894,7 @@ export type UserUpdateWithoutProductReviewsInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -1902,6 +1938,7 @@ export type UserUncheckedUpdateWithoutProductReviewsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -1945,6 +1982,7 @@ export type UserCreateWithoutOrdersInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -1988,6 +2026,7 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -2047,6 +2086,7 @@ export type UserUpdateWithoutOrdersInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -2090,6 +2130,7 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -2133,6 +2174,7 @@ export type UserCreateWithoutActedOnOrdersInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -2176,6 +2218,7 @@ export type UserUncheckedCreateWithoutActedOnOrdersInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -2235,6 +2278,7 @@ export type UserUpdateWithoutActedOnOrdersInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -2278,6 +2322,7 @@ export type UserUncheckedUpdateWithoutActedOnOrdersInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -2321,6 +2366,7 @@ export type UserCreateWithoutOpenedDisputesInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -2364,6 +2410,7 @@ export type UserUncheckedCreateWithoutOpenedDisputesInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -2412,6 +2459,7 @@ export type UserCreateWithoutResolvedDisputesInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -2455,6 +2503,7 @@ export type UserUncheckedCreateWithoutResolvedDisputesInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -2514,6 +2563,7 @@ export type UserUpdateWithoutOpenedDisputesInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -2557,6 +2607,7 @@ export type UserUncheckedUpdateWithoutOpenedDisputesInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -2611,6 +2662,7 @@ export type UserUpdateWithoutResolvedDisputesInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -2654,6 +2706,7 @@ export type UserUncheckedUpdateWithoutResolvedDisputesInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -2697,6 +2750,7 @@ export type UserCreateWithoutSellerApplicationInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -2740,6 +2794,7 @@ export type UserUncheckedCreateWithoutSellerApplicationInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -2788,6 +2843,7 @@ export type UserCreateWithoutReviewedApplicationsInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -2831,6 +2887,7 @@ export type UserUncheckedCreateWithoutReviewedApplicationsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -2890,6 +2947,7 @@ export type UserUpdateWithoutSellerApplicationInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -2933,6 +2991,7 @@ export type UserUncheckedUpdateWithoutSellerApplicationInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -2987,6 +3046,7 @@ export type UserUpdateWithoutReviewedApplicationsInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -3030,6 +3090,7 @@ export type UserUncheckedUpdateWithoutReviewedApplicationsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -3072,6 +3133,7 @@ export type UserCreateWithoutPhoneOtpCodesInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -3115,6 +3177,7 @@ export type UserUncheckedCreateWithoutPhoneOtpCodesInput = {
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -3174,6 +3237,7 @@ export type UserUpdateWithoutPhoneOtpCodesInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -3217,6 +3281,7 @@ export type UserUncheckedUpdateWithoutPhoneOtpCodesInput = {
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -3260,6 +3325,7 @@ export type UserCreateWithoutVerificationApplicationsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -3303,6 +3369,7 @@ export type UserUncheckedCreateWithoutVerificationApplicationsInput = {
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -3351,6 +3418,7 @@ export type UserCreateWithoutLatestApplicationInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -3394,6 +3462,7 @@ export type UserUncheckedCreateWithoutLatestApplicationInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -3442,6 +3511,7 @@ export type UserCreateWithoutReviewedVerificationApplicationsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -3485,6 +3555,7 @@ export type UserUncheckedCreateWithoutReviewedVerificationApplicationsInput = {
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -3544,6 +3615,7 @@ export type UserUpdateWithoutVerificationApplicationsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -3587,6 +3659,7 @@ export type UserUncheckedUpdateWithoutVerificationApplicationsInput = {
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -3641,6 +3714,7 @@ export type UserUpdateWithoutLatestApplicationInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -3684,6 +3758,7 @@ export type UserUncheckedUpdateWithoutLatestApplicationInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -3738,6 +3813,7 @@ export type UserUpdateWithoutReviewedVerificationApplicationsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -3781,6 +3857,7 @@ export type UserUncheckedUpdateWithoutReviewedVerificationApplicationsInput = {
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -3825,6 +3902,7 @@ export type UserCreateWithoutVerificationActionsTakenInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -3868,6 +3946,7 @@ export type UserUncheckedCreateWithoutVerificationActionsTakenInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -3927,6 +4006,7 @@ export type UserUpdateWithoutVerificationActionsTakenInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -3970,6 +4050,199 @@ export type UserUncheckedUpdateWithoutVerificationActionsTakenInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUncheckedUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUncheckedUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUncheckedUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserCreateWithoutAdminAuditLogsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewCreateNestedManyWithoutBuyerInput
+}
+
+export type UserUncheckedCreateWithoutAdminAuditLogsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestUncheckedCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemUncheckedCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewUncheckedCreateNestedManyWithoutBuyerInput
+}
+
+export type UserCreateOrConnectWithoutAdminAuditLogsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdminAuditLogsInput, Prisma.UserUncheckedCreateWithoutAdminAuditLogsInput>
+}
+
+export type UserUpsertWithoutAdminAuditLogsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAdminAuditLogsInput, Prisma.UserUncheckedUpdateWithoutAdminAuditLogsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdminAuditLogsInput, Prisma.UserUncheckedCreateWithoutAdminAuditLogsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAdminAuditLogsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAdminAuditLogsInput, Prisma.UserUncheckedUpdateWithoutAdminAuditLogsInput>
+}
+
+export type UserUpdateWithoutAdminAuditLogsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAdminAuditLogsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -4013,6 +4286,7 @@ export type UserCreateWithoutProductRequestsInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -4056,6 +4330,7 @@ export type UserUncheckedCreateWithoutProductRequestsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -4115,6 +4390,7 @@ export type UserUpdateWithoutProductRequestsInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -4158,6 +4434,7 @@ export type UserUncheckedUpdateWithoutProductRequestsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -4201,6 +4478,7 @@ export type UserCreateWithoutCartItemsInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -4244,6 +4522,7 @@ export type UserUncheckedCreateWithoutCartItemsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -4303,6 +4582,7 @@ export type UserUpdateWithoutCartItemsInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -4346,6 +4626,7 @@ export type UserUncheckedUpdateWithoutCartItemsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -4389,6 +4670,7 @@ export type UserCreateWithoutTransporterProfileInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
@@ -4432,6 +4714,7 @@ export type UserUncheckedCreateWithoutTransporterProfileInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
@@ -4491,6 +4774,7 @@ export type UserUpdateWithoutTransporterProfileInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
@@ -4534,6 +4818,7 @@ export type UserUncheckedUpdateWithoutTransporterProfileInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
@@ -4577,6 +4862,7 @@ export type UserCreateWithoutNotificationsInput = {
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
@@ -4620,6 +4906,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
@@ -4679,6 +4966,7 @@ export type UserUpdateWithoutNotificationsInput = {
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
@@ -4722,6 +5010,7 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
@@ -4746,6 +5035,7 @@ export type UserCountOutputType = {
   phoneOtpCodes: number
   verificationApplications: number
   reviewedVerificationApplications: number
+  adminAuditLogs: number
   verificationActionsTaken: number
   orders: number
   notifications: number
@@ -4764,6 +5054,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   phoneOtpCodes?: boolean | UserCountOutputTypeCountPhoneOtpCodesArgs
   verificationApplications?: boolean | UserCountOutputTypeCountVerificationApplicationsArgs
   reviewedVerificationApplications?: boolean | UserCountOutputTypeCountReviewedVerificationApplicationsArgs
+  adminAuditLogs?: boolean | UserCountOutputTypeCountAdminAuditLogsArgs
   verificationActionsTaken?: boolean | UserCountOutputTypeCountVerificationActionsTakenArgs
   orders?: boolean | UserCountOutputTypeCountOrdersArgs
   notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
@@ -4819,6 +5110,13 @@ export type UserCountOutputTypeCountVerificationApplicationsArgs<ExtArgs extends
  */
 export type UserCountOutputTypeCountReviewedVerificationApplicationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.VerificationApplicationWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAdminAuditLogsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdminAuditLogWhereInput
 }
 
 /**
@@ -4923,6 +5221,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   verificationApplications?: boolean | Prisma.User$verificationApplicationsArgs<ExtArgs>
   latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
   reviewedVerificationApplications?: boolean | Prisma.User$reviewedVerificationApplicationsArgs<ExtArgs>
+  adminAuditLogs?: boolean | Prisma.User$adminAuditLogsArgs<ExtArgs>
   verificationActionsTaken?: boolean | Prisma.User$verificationActionsTakenArgs<ExtArgs>
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
@@ -5027,6 +5326,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   verificationApplications?: boolean | Prisma.User$verificationApplicationsArgs<ExtArgs>
   latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
   reviewedVerificationApplications?: boolean | Prisma.User$reviewedVerificationApplicationsArgs<ExtArgs>
+  adminAuditLogs?: boolean | Prisma.User$adminAuditLogsArgs<ExtArgs>
   verificationActionsTaken?: boolean | Prisma.User$verificationActionsTakenArgs<ExtArgs>
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
@@ -5058,6 +5358,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     verificationApplications: Prisma.$VerificationApplicationPayload<ExtArgs>[]
     latestApplication: Prisma.$VerificationApplicationPayload<ExtArgs> | null
     reviewedVerificationApplications: Prisma.$VerificationApplicationPayload<ExtArgs>[]
+    adminAuditLogs: Prisma.$AdminAuditLogPayload<ExtArgs>[]
     verificationActionsTaken: Prisma.$VerificationAuditLogPayload<ExtArgs>[]
     orders: Prisma.$OrderPayload<ExtArgs>[]
     notifications: Prisma.$NotificationPayload<ExtArgs>[]
@@ -5496,6 +5797,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   verificationApplications<T extends Prisma.User$verificationApplicationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$verificationApplicationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VerificationApplicationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   latestApplication<T extends Prisma.User$latestApplicationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$latestApplicationArgs<ExtArgs>>): Prisma.Prisma__VerificationApplicationClient<runtime.Types.Result.GetResult<Prisma.$VerificationApplicationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   reviewedVerificationApplications<T extends Prisma.User$reviewedVerificationApplicationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$reviewedVerificationApplicationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VerificationApplicationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  adminAuditLogs<T extends Prisma.User$adminAuditLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$adminAuditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdminAuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   verificationActionsTaken<T extends Prisma.User$verificationActionsTakenArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$verificationActionsTakenArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VerificationAuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   orders<T extends Prisma.User$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notifications<T extends Prisma.User$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -6116,6 +6418,30 @@ export type User$reviewedVerificationApplicationsArgs<ExtArgs extends runtime.Ty
   take?: number
   skip?: number
   distinct?: Prisma.VerificationApplicationScalarFieldEnum | Prisma.VerificationApplicationScalarFieldEnum[]
+}
+
+/**
+ * User.adminAuditLogs
+ */
+export type User$adminAuditLogsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdminAuditLog
+   */
+  select?: Prisma.AdminAuditLogSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdminAuditLog
+   */
+  omit?: Prisma.AdminAuditLogOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdminAuditLogInclude<ExtArgs> | null
+  where?: Prisma.AdminAuditLogWhereInput
+  orderBy?: Prisma.AdminAuditLogOrderByWithRelationInput | Prisma.AdminAuditLogOrderByWithRelationInput[]
+  cursor?: Prisma.AdminAuditLogWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdminAuditLogScalarFieldEnum | Prisma.AdminAuditLogScalarFieldEnum[]
 }
 
 /**

@@ -45,7 +45,7 @@ record actuals in §3).
 | HP2 | Admin 2FA (mandatory TOTP) + sign-in alerts | 2026-11-15 | done (518cf66, 2026-11-15) |
 | HP3 | Step-up confirmation + admin audit trail | 2026-11-15 | done (9012021, 2026-11-16) |
 | HP4 | Password reset / account recovery | 2026-11-16 | done (a04d649, 2026-11-17) |
-| HP5 | Session hardening (refresh rotation, no storage token) | — | pending |
+| HP5 | Session hardening (refresh rotation, no storage token) | 2026-11-17 | done (16a07a6, 2026-11-17) |
 | HP6 | Security hygiene + admin runbook | — | pending |
 | F1 | Quote → checkout (agreed price → payment screen) | — | pending |
 | F2 | Order-scoped messaging (buyer/supplier/transporter) | — | pending |
@@ -318,12 +318,85 @@ appends instead of replacing when the target React-controlled input is
 already non-empty — reload the page and fill each field once from empty.
 
 ### HP5 — Session hardening (refresh rotation, no storage token)
-**Status**: pending
-**Shipped**: —
-**Deviations from plan**: —
-**Gates**: —
-**Live journey**: —
-**Residue / follow-ups**: —
+**Status**: done (16a07a6, 2026-11-17)
+**Shipped**:
+- **API**: `RefreshToken` model (`tokenHash @unique`, `userId`, `expiresAt`,
+  `revokedAt?`, `replacedByHash?`, `@@index([userId])`) + migration
+  `20261117083909_add_refresh_token` (applied, generated client committed).
+  New helpers `auth/refresh-cookie.ts` (HttpOnly; SameSite=Lax; Secure;
+  Path=/api/auth cookie, `Max-Age` only when remembered, clear on logout) and
+  `auth/token-ttl.ts` (`accessTtlSeconds()`, default 900s, env
+  `ACCESS_TOKEN_TTL_SECONDS`); `JwtModule` signs with it.
+- **API**: `POST /auth/refresh` rotates atomically (`updateMany` count check
+  marks the used row revoked + `replacedByHash` chain); a **replayed** cookie
+  walks the `replacedByHash` chain and revokes the whole family → 401
+  (theft response kills the current leaf too). Expired/inactive/unverified
+  sessions are revoked then 401. `POST /auth/logout` is idempotent
+  `{ok:true}` + clears the cookie. Login/verify-2fa/enable-2fa return the
+  cookie via `@Res({passthrough:true})` and `withRefreshCookie` strips it from
+  the JSON body (shape unchanged). Remember-me is derived from the row
+  (`expiresAt - createdAt` ≈ 30d → persistent cookie, else 12h session
+  cookie) — no schema column, per plan. `reset-password` revokes all of the
+  user's refresh rows **in the same `$transaction`** (replacing HP4's
+  HP5-pointing comment). `main.ts` CORS is a deduped
+  `CORS_ORIGIN ∪ WEB_BASE_URL` allowlist with `credentials: true` (both envs
+  verified single-origin, no trailing slash — shape only, values not printed).
+- **Web**: `lib/auth.ts` rewritten — access token lives in a module variable
+  only; `saveAuth`/`getAccessToken` keep their signatures and purge any
+  legacy storage token (adopt-once cutover); `bonagri_remember_me` stays as a
+  non-secret session hint. `clearAuth` fires `POST /auth/logout`
+  (credentials include) only when a session existed. `ensureSession()` is a
+  single-flight cookie refresh; `window.fetch` is patched once (HMR-safe via
+  `__bonagriHp5`) to refresh + replay exactly once on 401, with a
+  `NO_REFRESH_PATHS` deny-list (login/refresh/logout/register/forgot/reset/
+  resend/verify-email/2fa*/step-up) so legitimate auth 401s pass through.
+  Module-load kicks `void ensureSession()`; `fetchCurrentUser` restores first
+  (guest short-circuit spends no request).
+- **Web wiring**: login + 2fa/verify + enrolment fetches gained
+  `credentials: "include"` + `rememberMe` bodies; `product-rail` picks guard
+  now `await ensureSession()` (guest still renders empty without a doomed 401).
+- **Tests**: new `api/src/auth/auth.refresh.spec.ts` (11: rotation,
+  family-revoke on replay, expiry, logout idempotency, login cookie attrs,
+  attribute pinning), `auth.service.spec` reset-revokes case,
+  `two-factor.spec` refreshToken mock; new `web/tests/session-refresh.test.mjs`
+  (7 contract tests: memory-only token, single-flight refresh, deny-list,
+  dead-cookie clear, logout-with-hadSession, hard-reload restore, credentials
+  wiring). `jest.setTimeout(15_000)` added to `auth.service.spec` (bcrypt
+  cost-12 reset tests flaked under extreme machine load; assertions unchanged).
+- **Smoke section Q** (after L, before M — L3's `sleep 65` resets the login
+  bucket so Q's two logins fit; CP13 comment updated): cookie attrs + JWT
+  TTL=900s decode, rotation, replay→family revoked (live leaf dies), logout
+  `Max-Age=0` + dead cookie, cookie-only 401s.
+**Deviations from plan**: remember-me persistence derived from row
+`expiresAt - createdAt` instead of a dedicated column (plan §G5 schema
+allows it; keeps the migration minimal); access TTL configurable via env
+(default 900s) rather than hardcoded.
+**Gates**: api build ✓, api test **513/513** ✓, api lint ✓ (4 pre-existing
+mail warnings), web build ✓, web test **112/112** ✓, web lint ✓ (0 errors,
+17 warnings = HP4 baseline: 1 pre-existing + 16 from uncommitted
+`web/android/`), full `runtime-smoke.sh` **exit 0** (Q1/5–Q5/5 green, W/L/M
+still green, 0 `❌`).
+**Live journey**: browser journey on dev stack (`ACCESS_TOKEN_TTL_SECONDS=5`
+simulates 15-min expiry) with the seeded buyer — fresh login leaves
+`localStorage`/`sessionStorage` token **null** and `document.cookie` empty
+(HttpOnly invisible); hard reload restores the session
+(`POST /auth/refresh` 200 → `/auth/me` 200, header shows the buyer); silent
+refresh on expiry shows the exact chain `401 → POST /auth/refresh 200
+(+53ms) → replayed GET /auth/me 200 (+100ms)`; logout → `POST /auth/logout`
+200 + cookie-clearing `Set-Cookie`, then a page-JS refresh probe answers
+**401** (revoked server-side) with storage fully cleared. Console: **0
+JS/uncaught errors**; the only 2 error-level lines are the deliberate 401
+resource entries created for the proof above.
+**Residue / follow-ups**: screenshot skipped (desktop window not visible to
+the tool); journey tab closed, both dev servers stopped (3000/3001 free),
+`$TMPDIR` smoke log removed, journey used the seeded buyer (no DB rows to
+delete). Render/deployed-stack walkthrough still owed with HP2–HP4's. Tool
+quirks for future journeys: `browser.click` hits `UnknownVizError`/60s
+timeouts — drive real handlers via in-page `btn.click()` in `evaluate`;
+`browser.evaluate` takes `script`; `browser.wait` supports only
+`load|text|textGone`; the Code Mode runtime has no `setTimeout` (wait via
+separate calls); background shells need
+`export PATH="/usr/local/bin:$PATH"` (missing PATH → smoke exit 127).
 
 ### HP6 — Security hygiene + admin runbook
 **Status**: pending

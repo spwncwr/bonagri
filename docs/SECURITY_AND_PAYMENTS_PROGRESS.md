@@ -44,7 +44,7 @@ record actuals in §3).
 | HP1 | Buyer payment-method selection screen | 2026-11-14 | done (3ede15d, 2026-11-14) |
 | HP2 | Admin 2FA (mandatory TOTP) + sign-in alerts | 2026-11-15 | done (518cf66, 2026-11-15) |
 | HP3 | Step-up confirmation + admin audit trail | 2026-11-15 | done (9012021, 2026-11-16) |
-| HP4 | Password reset / account recovery | — | pending |
+| HP4 | Password reset / account recovery | 2026-11-16 | done (a04d649, 2026-11-17) |
 | HP5 | Session hardening (refresh rotation, no storage token) | — | pending |
 | HP6 | Security hygiene + admin runbook | — | pending |
 | F1 | Quote → checkout (agreed price → payment screen) | — | pending |
@@ -248,12 +248,74 @@ dialog's `backdrop-filter` layer, so the journey harness injected
 unchanged.
 
 ### HP4 — Password reset / account recovery
-**Status**: pending
-**Shipped**: —
-**Deviations from plan**: —
-**Gates**: —
-**Live journey**: —
-**Residue / follow-ups**: —
+**Status**: done (a04d649, 2026-11-17)
+**Shipped**: `PasswordResetToken` (+ migration `20261117061407_add_password_reset_token`,
+regenerated client committed) — only the **SHA-256 hash** of the token is
+persisted, 30-minute TTL, single-use. `POST /auth/forgot-password` always
+answers **202** with one fixed body for known, unknown, unverified and
+mail-failing addresses (SMTP errors are logged, never surfaced — a 500 only
+for registered addresses would be a live enumeration oracle), budgeted
+**5/min**; mints a link only for existing accounts and burns any outstanding
+older link first. `POST /auth/reset-password` `{token, password}` →
+**bcrypt 12** + token `usedAt` in **one `$transaction`**; unknown / expired /
+reused links share one generic `BadRequestException` (400); `status` and
+`emailVerifiedAt` are untouched, so a reset can never un-suspend an account or
+verify an email (the SUSPENDED login gate keeps holding). Refresh-token revoke
+deliberately **skipped with a comment** pointing at HP5 (plan's own escape
+clause — no refresh tokens exist yet). DTO `Length(64)` rejects junk tokens
+before the lookup. Mail: `sendPasswordResetEmail` with its own
+`E2E_RESET_CAPTURE_FILE` bridge (pattern of the verification/OTP/dispute
+mails). Web: `/forgot-password` (one field, repeats the API's generic
+sentence verbatim; 429 → wait message; "Use a different email" resets the
+form), `/reset-password` (token read from the link's query string inside
+`Suspense` like `/verify-email`, password + confirm matching register's
+`MinLength(8)` rules, client-side mismatch check, **passwords cleared from
+state the moment the API accepts them**, dead link → "Request a new reset
+link" state, success → sign-in CTA), "Forgot password?" link on `/login`'s
+password step only (not the 2FA code step).
+**Deviations from plan**: smoke section is **W**, not the plan's P — P1/4–P4/4
+plus PICKS/NEAR already own P (same collision precedent as N→T, O→U); Q stays
+reserved for HP5. Design note: forgot-password mints links for accounts in
+**any** status (response identical either way, and reset never touches
+`status`), so recovery is possible without weakening the login gates — recorded
+here because the plan only specified the "reset must not bypass SUSPENDED"
+half.
+**Gates**: api build ✓ · api lint ✓ (4 pre-existing mail warnings, no new
+ones) · api test **501** (+8: no-enumeration/generic-error/hash-swap/token-burn
+unit specs + forgot 5-min and reset 10-min throttle pins) · web build ✓ (both
+routes prerendered) · web lint ✓ (0 errors; 1 pre-existing warning + 16
+warnings from the uncommitted `web/android/` Capacitor build output — flat-config
+ESLint does not read `.eslintignore`, so `android/` gets linted; not HP4's
+doing, left to the owner) · web test **105** (+5 `password-reset.test.mjs`:
+generic answer verbatim, token only in URL+body with no storage access,
+register-matching rules + clear-on-success, dead-link/missing-token states,
+login link placement) · smoke `runtime-smoke.sh` exit 0, section **W green
+W1/8–W8/8** (dedicated account → hash recorded → 202 + captured link →
+unknown address returns byte-identical message with **no link minted** →
+429 on request 6 of 5/min → hash swapped + all token rows burned → old
+password 401 / new password 201 → replay + unknown token share one generic
+400) with the rest of the suite (U, L, mobile) still green.
+**Live journey**: local dev stack (web :3001, api :3000, mail capture bridged
+to `$TMPDIR`). Throwaway `hp4_journey_*` buyer registered + verified via the
+capture bridge → `/login` → **"Forgot password?"** link → forgot form →
+submitted an **unknown address** first: identical generic confirmation
+(screenshot) and the capture file confirmed **no link minted** → real address:
+same confirmation, link captured → opened `/reset-password?token=…` as the
+email would → mismatched passwords → **"Passwords do not match"** stays in the
+form (screenshot) → valid pair → **"Password updated."** (network:
+`POST /api/auth/reset-password`) → replayed the same link → **"This reset
+link is invalid or has expired"** + Request a new reset link (screenshot) →
+old password → **"Invalid email or password"** → new password → landed on the
+marketplace logged in. Console: **0 error-level messages on the final
+document**; the only error-level line during the whole journey was Chromium's
+automatic `Failed to load resource … 400` for the deliberately rejected
+replay — a completed expected response, not a JS error.
+**Residue / follow-ups**: journey account deleted after the run
+(`PasswordResetToken` cascade verified 1 → 0), `$TMPDIR` capture files
+removed, dev servers stopped; Render/deployed-stack walkthrough still owed
+with HP2's/HP3's (HP1 note). Tooling note for future journeys: `browser.fill`
+appends instead of replacing when the target React-controlled input is
+already non-empty — reload the page and fill each field once from empty.
 
 ### HP5 — Session hardening (refresh rotation, no storage token)
 **Status**: pending

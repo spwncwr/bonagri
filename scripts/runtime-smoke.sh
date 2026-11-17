@@ -8250,8 +8250,9 @@ echo "RATE LIMITING FLOW"
 echo "========================================"
 
 # CP13: auth/* and public reads are rate limited by ThrottlerGuard. Section L
-# runs last on purpose — hammering login exhausts the shared per-IP login
-# bucket, so nothing after it may rely on logging in until the window resets.
+# runs near the end on purpose — hammering login exhausts the shared per-IP
+# login bucket. L3 sleeps out the window and proves recovery, so the sections
+# after it (Q, M) start with a fresh bucket; Q spends only two logins from it.
 
 echo
 echo "[L1/3] A login burst gets blocked with 429..."
@@ -8322,6 +8323,223 @@ echo "✓ Legitimate login works again once the window resets (no restart needed
 
 echo
 echo "✓ RATE LIMITING FLOW ACCEPTANCE PASSED"
+
+echo
+echo "REFRESH SESSION HARDENING (HP5)"
+echo "========================================"
+
+# HP5 (G5): login mints an HttpOnly rotating refresh cookie, POST
+# /auth/refresh rotates it (a replayed cookie kills the whole family),
+# POST /auth/logout revokes the session server-side, and the access token
+# now lives only 15 minutes. curl refuses to send Secure cookies over
+# http://localhost, so the cookie is handed back via -H "Cookie: …" — the
+# same bytes a browser would attach.
+
+echo
+echo "[Q1/5] Login sets the refresh cookie and a 15-minute access token..."
+
+Q_LOGIN_HEADERS="$LOG_DIR/q-login-headers.txt"
+Q_LOGIN_HTTP="$(
+  curl -sS -D "$Q_LOGIN_HEADERS" -o "$LOG_DIR/q-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$W_EMAIL\",\"password\":\"$W_NEW_PASSWORD\",\"rememberMe\":true}"
+)"
+
+if [[ "$Q_LOGIN_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/q-login.json"
+  fail "HP5 baseline login failed. HTTP $Q_LOGIN_HTTP"
+fi
+
+Q_SET_COOKIE="$(
+  grep -i '^set-cookie:' "$Q_LOGIN_HEADERS" | grep 'refresh_token=' | head -1 || true
+)"
+
+if [[ -z "$Q_SET_COOKIE" ]]; then
+  cat "$Q_LOGIN_HEADERS"
+  fail "Login did not set the refresh_token cookie"
+fi
+
+for Q_ATTR in "HttpOnly" "SameSite=Lax" "Secure" "Path=/api/auth" "Max-Age=2592000"; do
+  if [[ "$Q_SET_COOKIE" != *"$Q_ATTR"* ]]; then
+    fail "Refresh cookie is missing $Q_ATTR — got: $Q_SET_COOKIE"
+  fi
+done
+
+Q_RAW1="${Q_SET_COOKIE#*refresh_token=}"
+Q_RAW1="${Q_RAW1%%;*}"
+
+if [[ -z "$Q_RAW1" || "$Q_RAW1" == *" "* ]]; then
+  fail "Could not parse the raw refresh token out of: $Q_SET_COOKIE"
+fi
+
+Q_ACCESS_TOKEN="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["accessToken"])' \
+    "$LOG_DIR/q-login.json"
+)"
+
+Q_TTL="$(
+  python3 -c '
+import base64, json, sys
+payload = sys.argv[1].split(".")[1]
+payload += "=" * (-len(payload) % 4)
+data = json.loads(base64.urlsafe_b64decode(payload))
+print(data["exp"] - data["iat"])
+' "$Q_ACCESS_TOKEN"
+)"
+
+if [[ "$Q_TTL" != "900" ]]; then
+  fail "Access token TTL must be 900s (15 min, HP5) — got ${Q_TTL}s"
+fi
+
+echo "✓ Cookie HttpOnly; SameSite=Lax; Secure; Path=/api/auth; Max-Age=30d; JWT TTL=${Q_TTL}s"
+
+echo
+echo "[Q2/5] /auth/refresh rotates the cookie and mints a new access token..."
+
+Q_REFRESH_HEADERS="$LOG_DIR/q-refresh-headers.txt"
+Q_REFRESH_HTTP="$(
+  curl -sS -D "$Q_REFRESH_HEADERS" -o "$LOG_DIR/q-refresh.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/refresh" \
+    -H "Cookie: refresh_token=$Q_RAW1"
+)"
+
+if [[ "$Q_REFRESH_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/q-refresh.json"
+  fail "refresh must answer 200 with a rotated session. HTTP $Q_REFRESH_HTTP"
+fi
+
+Q_SET_COOKIE2="$(
+  grep -i '^set-cookie:' "$Q_REFRESH_HEADERS" | grep 'refresh_token=' | head -1 || true
+)"
+Q_RAW2="${Q_SET_COOKIE2#*refresh_token=}"
+Q_RAW2="${Q_RAW2%%;*}"
+
+if [[ -z "$Q_RAW2" || "$Q_RAW2" == "$Q_RAW1" ]]; then
+  fail "refresh did not rotate the cookie (old='$Q_RAW1' new='$Q_RAW2')"
+fi
+
+Q_REFRESH_ACCESS="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["accessToken"])' \
+    "$LOG_DIR/q-refresh.json"
+)"
+
+if [[ -z "$Q_REFRESH_ACCESS" || "$Q_REFRESH_ACCESS" == "$Q_ACCESS_TOKEN" ]]; then
+  fail "refresh did not mint a fresh access token"
+fi
+
+echo "✓ Cookie rotated; fresh access token returned; body keeps {accessToken, user}"
+
+echo
+echo "[Q3/5] Replaying the OLD cookie revokes the whole family..."
+
+Q_REPLAY_HTTP="$(
+  curl -sS -o "$LOG_DIR/q-replay.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/refresh" \
+    -H "Cookie: refresh_token=$Q_RAW1"
+)"
+
+if [[ "$Q_REPLAY_HTTP" != "401" ]]; then
+  cat "$LOG_DIR/q-replay.json"
+  fail "Replayed refresh cookie must be rejected with 401. HTTP $Q_REPLAY_HTTP"
+fi
+
+# Theft response kills the CURRENT leaf too: the victim's live cookie
+# (Q_RAW2) must be dead from that moment on.
+Q_FAMILY_HTTP="$(
+  curl -sS -o "$LOG_DIR/q-family.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/refresh" \
+    -H "Cookie: refresh_token=$Q_RAW2"
+)"
+
+if [[ "$Q_FAMILY_HTTP" != "401" ]]; then
+  cat "$LOG_DIR/q-family.json"
+  fail "Reuse detection must revoke the family — live cookie answered HTTP $Q_FAMILY_HTTP"
+fi
+
+echo "✓ Replayed cookie 401s and the family (including the current leaf) is revoked"
+
+echo
+echo "[Q4/5] Logout revokes the session server-side and clears the cookie..."
+
+Q_LOGIN2_HEADERS="$LOG_DIR/q-login2-headers.txt"
+Q_LOGIN2_HTTP="$(
+  curl -sS -D "$Q_LOGIN2_HEADERS" -o "$LOG_DIR/q-login2.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$W_EMAIL\",\"password\":\"$W_NEW_PASSWORD\"}"
+)"
+
+if [[ "$Q_LOGIN2_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/q-login2.json"
+  fail "Second HP5 login failed. HTTP $Q_LOGIN2_HTTP"
+fi
+
+Q_SET_COOKIE3="$(
+  grep -i '^set-cookie:' "$Q_LOGIN2_HEADERS" | grep 'refresh_token=' | head -1 || true
+)"
+Q_RAW3="${Q_SET_COOKIE3#*refresh_token=}"
+Q_RAW3="${Q_RAW3%%;*}"
+
+if [[ -z "$Q_RAW3" || "$Q_RAW3" == *" "* ]]; then
+  fail "Second login did not yield a parseable refresh cookie"
+fi
+
+Q_LOGOUT_HEADERS="$LOG_DIR/q-logout-headers.txt"
+Q_LOGOUT_HTTP="$(
+  curl -sS -D "$Q_LOGOUT_HEADERS" -o "$LOG_DIR/q-logout.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/logout" \
+    -H "Cookie: refresh_token=$Q_RAW3"
+)"
+
+if [[ "$Q_LOGOUT_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/q-logout.json"
+  fail "logout must answer 200. HTTP $Q_LOGOUT_HTTP"
+fi
+
+if ! grep -qi '^set-cookie:.*refresh_token=;.*Max-Age=0' "$Q_LOGOUT_HEADERS"; then
+  cat "$Q_LOGOUT_HEADERS"
+  fail "logout must clear the cookie with an expired refresh_token"
+fi
+
+Q_AFTER_LOGOUT="$(
+  curl -sS -o "$LOG_DIR/q-after-logout.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/refresh" \
+    -H "Cookie: refresh_token=$Q_RAW3"
+)"
+
+if [[ "$Q_AFTER_LOGOUT" != "401" ]]; then
+  cat "$LOG_DIR/q-after-logout.json"
+  fail "The logged-out cookie must be dead server-side. HTTP $Q_AFTER_LOGOUT"
+fi
+
+echo "✓ Cookie cleared (Max-Age=0) and the revoked session cannot refresh"
+
+echo
+echo "[Q5/5] Refresh is cookie-only — no cookie, no session..."
+
+Q_NO_COOKIE="$(
+  curl -sS -o "$LOG_DIR/q-nocookie.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/refresh"
+)"
+Q_BOGUS="$(
+  curl -sS -o "$LOG_DIR/q-bogus.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/refresh" \
+    -H "Cookie: refresh_token=not-a-real-token"
+)"
+
+if [[ "$Q_NO_COOKIE" != "401" ]]; then
+  fail "refresh without a cookie answered HTTP $Q_NO_COOKIE (want 401)"
+fi
+
+if [[ "$Q_BOGUS" != "401" ]]; then
+  fail "refresh with a bogus cookie answered HTTP $Q_BOGUS (want 401)"
+fi
+
+echo "✓ Missing and unknown cookies are rejected with 401"
+
+echo
+echo "✓ REFRESH SESSION HARDENING ACCEPTANCE PASSED"
 
 echo
 echo "MOBILE APP ROUTES (HOME / EXPLORE / CART / PROFILE)"

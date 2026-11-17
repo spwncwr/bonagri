@@ -330,6 +330,7 @@ export type UserWhereInput = {
   addresses?: Prisma.AddressListRelationFilter
   emailVerificationTokens?: Prisma.EmailVerificationTokenListRelationFilter
   passwordResetTokens?: Prisma.PasswordResetTokenListRelationFilter
+  refreshTokens?: Prisma.RefreshTokenListRelationFilter
   phoneOtpCodes?: Prisma.PhoneOtpCodeListRelationFilter
   verificationApplications?: Prisma.VerificationApplicationListRelationFilter
   latestApplication?: Prisma.XOR<Prisma.VerificationApplicationNullableScalarRelationFilter, Prisma.VerificationApplicationWhereInput> | null
@@ -377,6 +378,7 @@ export type UserOrderByWithRelationInput = {
   addresses?: Prisma.AddressOrderByRelationAggregateInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenOrderByRelationAggregateInput
   passwordResetTokens?: Prisma.PasswordResetTokenOrderByRelationAggregateInput
+  refreshTokens?: Prisma.RefreshTokenOrderByRelationAggregateInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeOrderByRelationAggregateInput
   verificationApplications?: Prisma.VerificationApplicationOrderByRelationAggregateInput
   latestApplication?: Prisma.VerificationApplicationOrderByWithRelationInput
@@ -427,6 +429,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   addresses?: Prisma.AddressListRelationFilter
   emailVerificationTokens?: Prisma.EmailVerificationTokenListRelationFilter
   passwordResetTokens?: Prisma.PasswordResetTokenListRelationFilter
+  refreshTokens?: Prisma.RefreshTokenListRelationFilter
   phoneOtpCodes?: Prisma.PhoneOtpCodeListRelationFilter
   verificationApplications?: Prisma.VerificationApplicationListRelationFilter
   latestApplication?: Prisma.XOR<Prisma.VerificationApplicationNullableScalarRelationFilter, Prisma.VerificationApplicationWhereInput> | null
@@ -531,6 +534,7 @@ export type UserCreateInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -578,6 +582,7 @@ export type UserUncheckedCreateInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -623,6 +628,7 @@ export type UserUpdateInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -670,6 +676,7 @@ export type UserUncheckedUpdateInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -911,6 +918,20 @@ export type UserUpdateOneRequiredWithoutPasswordResetTokensNestedInput = {
   upsert?: Prisma.UserUpsertWithoutPasswordResetTokensInput
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutPasswordResetTokensInput, Prisma.UserUpdateWithoutPasswordResetTokensInput>, Prisma.UserUncheckedUpdateWithoutPasswordResetTokensInput>
+}
+
+export type UserCreateNestedOneWithoutRefreshTokensInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutRefreshTokensInput, Prisma.UserUncheckedCreateWithoutRefreshTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutRefreshTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutRefreshTokensNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutRefreshTokensInput, Prisma.UserUncheckedCreateWithoutRefreshTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutRefreshTokensInput
+  upsert?: Prisma.UserUpsertWithoutRefreshTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutRefreshTokensInput, Prisma.UserUpdateWithoutRefreshTokensInput>, Prisma.UserUncheckedUpdateWithoutRefreshTokensInput>
 }
 
 export type UserCreateNestedOneWithoutSupplierProfileInput = {
@@ -1231,6 +1252,7 @@ export type UserCreateWithoutEmailVerificationTokensInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -1277,6 +1299,7 @@ export type UserUncheckedCreateWithoutEmailVerificationTokensInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -1337,6 +1360,7 @@ export type UserUpdateWithoutEmailVerificationTokensInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -1383,6 +1407,7 @@ export type UserUncheckedUpdateWithoutEmailVerificationTokensInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -1427,6 +1452,7 @@ export type UserCreateWithoutPasswordResetTokensInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -1473,6 +1499,7 @@ export type UserUncheckedCreateWithoutPasswordResetTokensInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -1533,6 +1560,7 @@ export type UserUpdateWithoutPasswordResetTokensInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -1579,6 +1607,207 @@ export type UserUncheckedUpdateWithoutPasswordResetTokensInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUncheckedUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUncheckedUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUncheckedUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserCreateWithoutRefreshTokensInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewCreateNestedManyWithoutBuyerInput
+}
+
+export type UserUncheckedCreateWithoutRefreshTokensInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestUncheckedCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemUncheckedCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewUncheckedCreateNestedManyWithoutBuyerInput
+}
+
+export type UserCreateOrConnectWithoutRefreshTokensInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutRefreshTokensInput, Prisma.UserUncheckedCreateWithoutRefreshTokensInput>
+}
+
+export type UserUpsertWithoutRefreshTokensInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutRefreshTokensInput, Prisma.UserUncheckedUpdateWithoutRefreshTokensInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutRefreshTokensInput, Prisma.UserUncheckedCreateWithoutRefreshTokensInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutRefreshTokensInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutRefreshTokensInput, Prisma.UserUncheckedUpdateWithoutRefreshTokensInput>
+}
+
+export type UserUpdateWithoutRefreshTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserUncheckedUpdateWithoutRefreshTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -1623,6 +1852,7 @@ export type UserCreateWithoutSupplierProfileInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -1669,6 +1899,7 @@ export type UserUncheckedCreateWithoutSupplierProfileInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -1729,6 +1960,7 @@ export type UserUpdateWithoutSupplierProfileInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -1775,6 +2007,7 @@ export type UserUncheckedUpdateWithoutSupplierProfileInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -1819,6 +2052,7 @@ export type UserCreateWithoutAddressesInput = {
   supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -1865,6 +2099,7 @@ export type UserUncheckedCreateWithoutAddressesInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -1925,6 +2160,7 @@ export type UserUpdateWithoutAddressesInput = {
   supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -1971,6 +2207,7 @@ export type UserUncheckedUpdateWithoutAddressesInput = {
   supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -2016,6 +2253,7 @@ export type UserCreateWithoutProductReviewsInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -2062,6 +2300,7 @@ export type UserUncheckedCreateWithoutProductReviewsInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -2122,6 +2361,7 @@ export type UserUpdateWithoutProductReviewsInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -2168,6 +2408,7 @@ export type UserUncheckedUpdateWithoutProductReviewsInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -2212,6 +2453,7 @@ export type UserCreateWithoutOrdersInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -2258,6 +2500,7 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -2318,6 +2561,7 @@ export type UserUpdateWithoutOrdersInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -2364,6 +2608,7 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -2408,6 +2653,7 @@ export type UserCreateWithoutActedOnOrdersInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -2454,6 +2700,7 @@ export type UserUncheckedCreateWithoutActedOnOrdersInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -2514,6 +2761,7 @@ export type UserUpdateWithoutActedOnOrdersInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -2560,6 +2808,7 @@ export type UserUncheckedUpdateWithoutActedOnOrdersInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -2604,6 +2853,7 @@ export type UserCreateWithoutOpenedDisputesInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -2650,6 +2900,7 @@ export type UserUncheckedCreateWithoutOpenedDisputesInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -2699,6 +2950,7 @@ export type UserCreateWithoutResolvedDisputesInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -2745,6 +2997,7 @@ export type UserUncheckedCreateWithoutResolvedDisputesInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -2805,6 +3058,7 @@ export type UserUpdateWithoutOpenedDisputesInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -2851,6 +3105,7 @@ export type UserUncheckedUpdateWithoutOpenedDisputesInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -2906,6 +3161,7 @@ export type UserUpdateWithoutResolvedDisputesInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -2952,6 +3208,7 @@ export type UserUncheckedUpdateWithoutResolvedDisputesInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -2996,6 +3253,7 @@ export type UserCreateWithoutSellerApplicationInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -3042,6 +3300,7 @@ export type UserUncheckedCreateWithoutSellerApplicationInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -3091,6 +3350,7 @@ export type UserCreateWithoutReviewedApplicationsInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -3137,6 +3397,7 @@ export type UserUncheckedCreateWithoutReviewedApplicationsInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -3197,6 +3458,7 @@ export type UserUpdateWithoutSellerApplicationInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -3243,6 +3505,7 @@ export type UserUncheckedUpdateWithoutSellerApplicationInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -3298,6 +3561,7 @@ export type UserUpdateWithoutReviewedApplicationsInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -3344,6 +3608,7 @@ export type UserUncheckedUpdateWithoutReviewedApplicationsInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -3388,6 +3653,7 @@ export type UserCreateWithoutPhoneOtpCodesInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
@@ -3434,6 +3700,7 @@ export type UserUncheckedCreateWithoutPhoneOtpCodesInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -3494,6 +3761,7 @@ export type UserUpdateWithoutPhoneOtpCodesInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
@@ -3540,6 +3808,7 @@ export type UserUncheckedUpdateWithoutPhoneOtpCodesInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -3584,6 +3853,7 @@ export type UserCreateWithoutVerificationApplicationsInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
@@ -3630,6 +3900,7 @@ export type UserUncheckedCreateWithoutVerificationApplicationsInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -3679,6 +3950,7 @@ export type UserCreateWithoutLatestApplicationInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
@@ -3724,6 +3996,7 @@ export type UserUncheckedCreateWithoutLatestApplicationInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -3774,6 +4047,7 @@ export type UserCreateWithoutReviewedVerificationApplicationsInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -3820,6 +4094,7 @@ export type UserUncheckedCreateWithoutReviewedVerificationApplicationsInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -3880,6 +4155,7 @@ export type UserUpdateWithoutVerificationApplicationsInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
@@ -3926,6 +4202,7 @@ export type UserUncheckedUpdateWithoutVerificationApplicationsInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -3981,6 +4258,7 @@ export type UserUpdateWithoutLatestApplicationInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
@@ -4026,6 +4304,7 @@ export type UserUncheckedUpdateWithoutLatestApplicationInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -4082,6 +4361,7 @@ export type UserUpdateWithoutReviewedVerificationApplicationsInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -4128,6 +4408,7 @@ export type UserUncheckedUpdateWithoutReviewedVerificationApplicationsInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -4172,6 +4453,7 @@ export type UserCreateWithoutVerificationActionsTakenInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -4218,6 +4500,7 @@ export type UserUncheckedCreateWithoutVerificationActionsTakenInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -4278,6 +4561,7 @@ export type UserUpdateWithoutVerificationActionsTakenInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -4324,6 +4608,7 @@ export type UserUncheckedUpdateWithoutVerificationActionsTakenInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -4368,6 +4653,7 @@ export type UserCreateWithoutAdminAuditLogsInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -4414,6 +4700,7 @@ export type UserUncheckedCreateWithoutAdminAuditLogsInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -4474,6 +4761,7 @@ export type UserUpdateWithoutAdminAuditLogsInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -4520,6 +4808,7 @@ export type UserUncheckedUpdateWithoutAdminAuditLogsInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -4564,6 +4853,7 @@ export type UserCreateWithoutProductRequestsInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -4610,6 +4900,7 @@ export type UserUncheckedCreateWithoutProductRequestsInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -4670,6 +4961,7 @@ export type UserUpdateWithoutProductRequestsInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -4716,6 +5008,7 @@ export type UserUncheckedUpdateWithoutProductRequestsInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -4760,6 +5053,7 @@ export type UserCreateWithoutCartItemsInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -4806,6 +5100,7 @@ export type UserUncheckedCreateWithoutCartItemsInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -4866,6 +5161,7 @@ export type UserUpdateWithoutCartItemsInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -4912,6 +5208,7 @@ export type UserUncheckedUpdateWithoutCartItemsInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -4956,6 +5253,7 @@ export type UserCreateWithoutTransporterProfileInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -5002,6 +5300,7 @@ export type UserUncheckedCreateWithoutTransporterProfileInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -5062,6 +5361,7 @@ export type UserUpdateWithoutTransporterProfileInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -5108,6 +5408,7 @@ export type UserUncheckedUpdateWithoutTransporterProfileInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -5152,6 +5453,7 @@ export type UserCreateWithoutNotificationsInput = {
   addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
   latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
@@ -5198,6 +5500,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
@@ -5258,6 +5561,7 @@ export type UserUpdateWithoutNotificationsInput = {
   addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
   latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
@@ -5304,6 +5608,7 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
   emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
   verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
   reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
@@ -5330,6 +5635,7 @@ export type UserCountOutputType = {
   addresses: number
   emailVerificationTokens: number
   passwordResetTokens: number
+  refreshTokens: number
   phoneOtpCodes: number
   verificationApplications: number
   reviewedVerificationApplications: number
@@ -5350,6 +5656,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   addresses?: boolean | UserCountOutputTypeCountAddressesArgs
   emailVerificationTokens?: boolean | UserCountOutputTypeCountEmailVerificationTokensArgs
   passwordResetTokens?: boolean | UserCountOutputTypeCountPasswordResetTokensArgs
+  refreshTokens?: boolean | UserCountOutputTypeCountRefreshTokensArgs
   phoneOtpCodes?: boolean | UserCountOutputTypeCountPhoneOtpCodesArgs
   verificationApplications?: boolean | UserCountOutputTypeCountVerificationApplicationsArgs
   reviewedVerificationApplications?: boolean | UserCountOutputTypeCountReviewedVerificationApplicationsArgs
@@ -5395,6 +5702,13 @@ export type UserCountOutputTypeCountEmailVerificationTokensArgs<ExtArgs extends 
  */
 export type UserCountOutputTypeCountPasswordResetTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PasswordResetTokenWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountRefreshTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RefreshTokenWhereInput
 }
 
 /**
@@ -5524,6 +5838,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   addresses?: boolean | Prisma.User$addressesArgs<ExtArgs>
   emailVerificationTokens?: boolean | Prisma.User$emailVerificationTokensArgs<ExtArgs>
   passwordResetTokens?: boolean | Prisma.User$passwordResetTokensArgs<ExtArgs>
+  refreshTokens?: boolean | Prisma.User$refreshTokensArgs<ExtArgs>
   phoneOtpCodes?: boolean | Prisma.User$phoneOtpCodesArgs<ExtArgs>
   verificationApplications?: boolean | Prisma.User$verificationApplicationsArgs<ExtArgs>
   latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
@@ -5630,6 +5945,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   addresses?: boolean | Prisma.User$addressesArgs<ExtArgs>
   emailVerificationTokens?: boolean | Prisma.User$emailVerificationTokensArgs<ExtArgs>
   passwordResetTokens?: boolean | Prisma.User$passwordResetTokensArgs<ExtArgs>
+  refreshTokens?: boolean | Prisma.User$refreshTokensArgs<ExtArgs>
   phoneOtpCodes?: boolean | Prisma.User$phoneOtpCodesArgs<ExtArgs>
   verificationApplications?: boolean | Prisma.User$verificationApplicationsArgs<ExtArgs>
   latestApplication?: boolean | Prisma.User$latestApplicationArgs<ExtArgs>
@@ -5663,6 +5979,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     addresses: Prisma.$AddressPayload<ExtArgs>[]
     emailVerificationTokens: Prisma.$EmailVerificationTokenPayload<ExtArgs>[]
     passwordResetTokens: Prisma.$PasswordResetTokenPayload<ExtArgs>[]
+    refreshTokens: Prisma.$RefreshTokenPayload<ExtArgs>[]
     phoneOtpCodes: Prisma.$PhoneOtpCodePayload<ExtArgs>[]
     verificationApplications: Prisma.$VerificationApplicationPayload<ExtArgs>[]
     latestApplication: Prisma.$VerificationApplicationPayload<ExtArgs> | null
@@ -6103,6 +6420,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   addresses<T extends Prisma.User$addressesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$addressesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AddressPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   emailVerificationTokens<T extends Prisma.User$emailVerificationTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$emailVerificationTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EmailVerificationTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   passwordResetTokens<T extends Prisma.User$passwordResetTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$passwordResetTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PasswordResetTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  refreshTokens<T extends Prisma.User$refreshTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$refreshTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RefreshTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   phoneOtpCodes<T extends Prisma.User$phoneOtpCodesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$phoneOtpCodesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PhoneOtpCodePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   verificationApplications<T extends Prisma.User$verificationApplicationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$verificationApplicationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VerificationApplicationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   latestApplication<T extends Prisma.User$latestApplicationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$latestApplicationArgs<ExtArgs>>): Prisma.Prisma__VerificationApplicationClient<runtime.Types.Result.GetResult<Prisma.$VerificationApplicationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
@@ -6661,6 +6979,30 @@ export type User$passwordResetTokensArgs<ExtArgs extends runtime.Types.Extension
   take?: number
   skip?: number
   distinct?: Prisma.PasswordResetTokenScalarFieldEnum | Prisma.PasswordResetTokenScalarFieldEnum[]
+}
+
+/**
+ * User.refreshTokens
+ */
+export type User$refreshTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RefreshToken
+   */
+  select?: Prisma.RefreshTokenSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RefreshToken
+   */
+  omit?: Prisma.RefreshTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RefreshTokenInclude<ExtArgs> | null
+  where?: Prisma.RefreshTokenWhereInput
+  orderBy?: Prisma.RefreshTokenOrderByWithRelationInput | Prisma.RefreshTokenOrderByWithRelationInput[]
+  cursor?: Prisma.RefreshTokenWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RefreshTokenScalarFieldEnum | Prisma.RefreshTokenScalarFieldEnum[]
 }
 
 /**

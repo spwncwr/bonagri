@@ -158,10 +158,15 @@ export default function AdminSecurityPage() {
     setError("");
 
     try {
+      // HP5: enrolment-as-login sets the refresh cookie on this response —
+      // computed before the fetch so the body can carry it.
+      const remembered =
+        localStorage.getItem("bonagri_remember_me") !== "false";
       const response = await fetch(`${API_BASE_URL}/api/auth/2fa/enable`, {
         method: "POST",
+        credentials: "include",
         headers: enrolHeaders(),
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, rememberMe: remembered }),
       });
       const data = (await response.json().catch(() => null)) as
         | (EnableResponse & ApiError)
@@ -176,8 +181,6 @@ export default function AdminSecurityPage() {
 
       if (data.accessToken) {
         // Enrolment-as-login: persist the session the pre-auth flow earned.
-        const remembered =
-          localStorage.getItem("bonagri_remember_me") !== "false";
         saveAuth(data.accessToken, remembered);
         const me = await fetchCurrentUser();
         if (me) setUser(me);

@@ -98,12 +98,18 @@ export default function LoginPage() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
+        // HP5: the rotating refresh cookie is set on this response —
+        // cross-origin (port3001 → 3000) only stores it with credentials.
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email,
           password,
+          // HP5: rememberMe widens the refresh cookie (30d vs session);
+          // the access token is short-lived either way.
+          rememberMe,
         }),
       });
 
@@ -170,11 +176,14 @@ export default function LoginPage() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/2fa/verify`, {
         method: "POST",
+        // HP5: second step of the same sign-in — the refresh cookie is
+        // set on this response too.
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${preAuthToken}`,
         },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, rememberMe }),
       });
 
       const data = (await response.json().catch(() => null)) as ApiReply;

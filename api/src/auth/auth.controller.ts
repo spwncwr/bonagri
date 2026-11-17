@@ -7,11 +7,13 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
 import { AuthService } from "./auth.service";
+import { clearRefreshCookie, readRefreshCookie } from "./refresh-cookie";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
@@ -52,6 +54,23 @@ type SetupAuthenticatedRequest = Request & {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // HP5: the refresh token rides ONLY in the Set-Cookie header (HttpOnly,
+  // Path=/api/auth) — strip it from the reply so the JSON body keeps the
+  // exact shape callers already parse.
+  private withRefreshCookie<T>(res: Response, result: T): T {
+    const cookie = (result as { refreshCookie?: string } | null)
+      ?.refreshCookie;
+
+    if (typeof cookie === "string") {
+      res.setHeader("Set-Cookie", cookie);
+      const body = { ...(result as Record<string, unknown>) };
+      delete body.refreshCookie;
+      return body as T;
+    }
+
+    return result;
+  }
+
   @Post("register")
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   register(@Body() dto: RegisterDto) {
@@ -60,8 +79,44 @@ export class AuthController {
 
   @Post("login")
   @Throttle({ default: { ttl: 60_000, limit: 15 } })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withRefreshCookie(res, await this.authService.login(dto));
+  }
+
+  // HP5: cookie-only rotation — the HttpOnly refresh cookie is the only
+  // credential accepted here. The reply carries a fresh short-lived access
+  // token AND rotates the cookie; replaying a spent cookie revokes the
+  // whole family server-side (theft detection).
+  @Post("refresh")
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @Req() request: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withRefreshCookie(
+      res,
+      await this.authService.refreshSession(
+        readRefreshCookie(request.headers.cookie),
+      ),
+    );
+  }
+
+  // HP5: revoke the presented session server-side and clear the cookie, so
+  // "log out" is real everywhere — not just a client-side token drop.
+  @Post("logout")
+  @HttpCode(HttpStatus.OK)
+  async logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.logoutSession(
+      readRefreshCookie(request.headers.cookie),
+    );
+    res.setHeader("Set-Cookie", clearRefreshCookie());
+    return result;
   }
 
   @Get("verify-email")
@@ -98,24 +153,38 @@ export class AuthController {
   @Post("2fa/enable")
   @UseGuards(TwoFactorSetupGuard)
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
-  enableTwoFactor(
+  async enableTwoFactor(
     @Req() request: SetupAuthenticatedRequest,
     @Body() dto: EnableTwoFactorDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.enable2fa(request.user, dto.code, {
-      ip: request.ip,
-    });
+    return this.withRefreshCookie(
+      res,
+      await this.authService.enable2fa(request.user, dto.code, {
+        ip: request.ip,
+        rememberMe: dto.rememberMe === true,
+      }),
+    );
   }
 
   @Post("2fa/verify")
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
-  verifyTwoFactor(
+  async verifyTwoFactor(
     @Req() request: AuthenticatedRequest,
     @Body() dto: VerifyTwoFactorDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.verify2fa(request.headers.authorization, dto.code, {
-      ip: request.ip,
-    });
+    return this.withRefreshCookie(
+      res,
+      await this.authService.verify2fa(
+        request.headers.authorization,
+        dto.code,
+        {
+          ip: request.ip,
+          rememberMe: dto.rememberMe === true,
+        },
+      ),
+    );
   }
 
   @Post("2fa/disable")

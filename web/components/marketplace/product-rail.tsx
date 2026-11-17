@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { buildImageUrl } from "../../lib/media";
 import { mapApiProduct, type ApiProduct, type Product } from "../../lib/catalog";
-import { authHeaders, getAccessToken } from "../../lib/auth";
+import { authHeaders, ensureSession } from "../../lib/auth";
 import RatingStarsGlyphs from "../mobile/rating-stars";
 import { ProductRailSkeleton } from "./skeletons";
 
@@ -39,11 +39,17 @@ export default function ProductRail({
       ? `${API_BASE_URL}/api/products/picks?take=12`
       : `${API_BASE_URL}/api/products?sort=${sort}&take=12`;
 
-    // No token means a guest: resolve to an empty list without firing a
-    // request that would only come back 401 and clutter the console. The
-    // async wrapper keeps the setState out of the effect body itself.
+    // No session means a guest: resolve to an empty list without firing a
+    // request that would only come back 401 and clutter the console. HP5:
+    // with a session hint, ensureSession() restores the token from the
+    // HttpOnly cookie first (hard reload), so the picks request never
+    // fires a doomed 401 either. The async wrapper keeps the setState out
+    // of the effect body itself.
     const load = async (): Promise<ApiProduct[]> => {
-      if (isPicks && !getAccessToken()) return [];
+      if (isPicks) {
+        const token = await ensureSession();
+        if (!token) return [];
+      }
 
       const response = await fetch(url, {
         signal: controller.signal,

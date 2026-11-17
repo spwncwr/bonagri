@@ -11,6 +11,7 @@ import * as bcrypt from "bcryptjs";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
+import { buildRefreshCookie } from "./refresh-cookie";
 import { UserRole } from "../common/types";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
@@ -357,8 +358,10 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    // One transaction: the password changes and the link dies together, so a
-    // replay can never race a half-consumed reset.
+    // One transaction: the password changes, the link dies and every live
+    // refresh session is revoked together — a replay can never race a
+    // half-consumed reset, and a stolen cookie cannot mint another access
+    // token after the reset (HP5).
     await this.prisma.$transaction([
       this.prisma.user.update({
         where: { id: resetToken.userId },
@@ -368,12 +371,15 @@ export class AuthService {
         where: { id: resetToken.id },
         data: { usedAt: new Date() },
       }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: resetToken.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
     ]);
 
-    // HP5 not landed yet: there are no refresh tokens/sessions to revoke —
-    // when HP5 adds them, kill them HERE. status/emailVerifiedAt are
-    // deliberately untouched: resetting a password must never let a
-    // SUSPENDED account past the login gates or verify an email.
+    // status/emailVerifiedAt are deliberately untouched: resetting a
+    // password must never let a SUSPENDED account past the login gates or
+    // verify an email.
 
     return {
       message: "Password updated. You can now sign in with your new password.",
@@ -426,7 +432,17 @@ export class AuthService {
         : { twoFactorSetupRequired: true, preAuthToken };
     }
 
-    return this.issueToken(user);
+    const session = await this.issueToken(user);
+    return {
+      ...session,
+      // HP5: the rotating refresh cookie travels next to the short-lived
+      // access token; the controller moves it into Set-Cookie (never the
+      // JSON body).
+      refreshCookie: await this.issueRefreshSession(
+        user.id,
+        dto.rememberMe === true,
+      ),
+    };
   }
 
   // ---------- HP2: mandatory admin 2FA (TOTP) ----------
@@ -624,7 +640,7 @@ export class AuthService {
   async enable2fa(
     actor: { id: string; viaPreAuth: boolean },
     code: string,
-    meta: { ip?: string } = {},
+    meta: { ip?: string; rememberMe?: boolean } = {},
   ) {
     const user = await this.prisma.user.findUnique({
       where: { id: actor.id },
@@ -685,6 +701,7 @@ export class AuthService {
       twoFactorEnabled: true;
       accessToken?: string;
       user?: unknown;
+      refreshCookie?: string;
     } = { recoveryCodes, twoFactorEnabled: true };
 
     // Enrolment-as-login: the password was checked moments ago, so completing
@@ -693,6 +710,12 @@ export class AuthService {
       const session = await this.issueToken(user);
       result.accessToken = session.accessToken;
       result.user = session.user;
+      // HP5: enrolment-as-login is still a login — mint the same rotating
+      // refresh cookie the password step would have issued.
+      result.refreshCookie = await this.issueRefreshSession(
+        user.id,
+        meta.rememberMe === true,
+      );
       await this.sendLoginAlert(user, meta.ip);
     }
 
@@ -705,7 +728,7 @@ export class AuthService {
   async verify2fa(
     authorization: string | undefined,
     code: string,
-    meta: { ip?: string } = {},
+    meta: { ip?: string; rememberMe?: boolean } = {},
   ) {
     const userId = await this.resolvePreAuth(authorization, "2fa");
 
@@ -769,7 +792,15 @@ export class AuthService {
 
     await this.sendLoginAlert(user, meta.ip);
 
-    return this.issueToken(user);
+    const session = await this.issueToken(user);
+    return {
+      ...session,
+      // HP5: second step of the same sign-in — same rotating cookie.
+      refreshCookie: await this.issueRefreshSession(
+        user.id,
+        meta.rememberMe === true,
+      ),
+    };
   }
 
   // POST /auth/2fa/disable — password AND a current code (TOTP, or a
@@ -1052,5 +1083,174 @@ export class AuthService {
         emailVerifiedAt: user.emailVerifiedAt,
       },
     };
+  }
+
+  // ---------- HP5: rotating refresh sessions (G5) ----------
+
+  // The access token is now a 15-minute credential (auth.module.ts); the
+  // durable session is the HttpOnly refresh cookie. rememberMe widens the
+  // wire TTL to 30 days; without it the cookie dies with the browser
+  // session and the row (12h) sweeps any orphan.
+  private refreshTtlSeconds(rememberMe: boolean) {
+    return rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 12;
+  }
+
+  private hashRefreshToken(rawToken: string) {
+    return createHash("sha256").update(rawToken).digest("hex");
+  }
+
+  // Mint the row + cookie for a fresh sign-in. The raw value never touches
+  // the DB — a leak cannot be replayed (HP4 reset-token convention).
+  private async issueRefreshSession(userId: string, rememberMe: boolean) {
+    const rawToken = randomBytes(32).toString("base64url");
+    const ttlSeconds = this.refreshTtlSeconds(rememberMe);
+
+    await this.prisma.refreshToken.create({
+      data: {
+        userId,
+        tokenHash: this.hashRefreshToken(rawToken),
+        expiresAt: new Date(Date.now() + ttlSeconds * 1000),
+      },
+    });
+
+    return buildRefreshCookie(rawToken, rememberMe ? ttlSeconds : undefined);
+  }
+
+  // POST /auth/refresh — cookie-only rotation. A spent (revoked) row means
+  // someone replayed a rotated token: revoke the whole chain (theft
+  // detection) and reject — the attacker's copy and the victim's current
+  // leaf both die, so a stolen cookie buys at most one un-rotated window.
+  async refreshSession(rawToken: string | undefined) {
+    if (!rawToken) {
+      throw new UnauthorizedException("Missing refresh token");
+    }
+
+    const tokenHash = this.hashRefreshToken(rawToken);
+    const row = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+    });
+
+    if (!row) {
+      throw new UnauthorizedException("Invalid refresh token");
+    }
+
+    if (row.revokedAt) {
+      await this.revokeTokenChain(row);
+      throw new UnauthorizedException(
+        "Refresh token reused — session revoked",
+      );
+    }
+
+    if (row.expiresAt.getTime() <= Date.now()) {
+      await this.prisma.refreshToken.updateMany({
+        where: { id: row.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      throw new UnauthorizedException("Refresh token expired");
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: row.userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        status: true,
+        emailVerifiedAt: true,
+      },
+    });
+
+    if (!user || user.status !== "ACTIVE" || !user.emailVerifiedAt) {
+      await this.prisma.refreshToken.updateMany({
+        where: { id: row.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      throw new UnauthorizedException("Invalid refresh token");
+    }
+
+    // Rotation keeps the original persistence: a remembered session slides
+    // for another full window, an unremembered one stays a browser-session
+    // cookie. The row has no rememberMe column — the issuance TTL
+    // (30d vs 12h) IS the flag.
+    const remembered =
+      row.expiresAt.getTime() - row.createdAt.getTime() >=
+      this.refreshTtlSeconds(true) * 1000 - 60_000;
+    const ttlSeconds = this.refreshTtlSeconds(remembered);
+    const nextRawToken = randomBytes(32).toString("base64url");
+    const nextHash = this.hashRefreshToken(nextRawToken);
+
+    // The revokedAt guard makes rotation atomic: of two concurrent replays
+    // exactly one wins (count 1); the loser lands in the reuse branch.
+    const rotated = await this.prisma.refreshToken.updateMany({
+      where: { id: row.id, revokedAt: null },
+      data: { revokedAt: new Date(), replacedByHash: nextHash },
+    });
+
+    if (rotated.count === 0) {
+      await this.revokeTokenChain(row);
+      throw new UnauthorizedException(
+        "Refresh token reused — session revoked",
+      );
+    }
+
+    await this.prisma.refreshToken.create({
+      data: {
+        userId: row.userId,
+        tokenHash: nextHash,
+        expiresAt: new Date(Date.now() + ttlSeconds * 1000),
+      },
+    });
+
+    const session = await this.issueToken(user);
+    return {
+      ...session,
+      refreshCookie: buildRefreshCookie(
+        nextRawToken,
+        remembered ? ttlSeconds : undefined,
+      ),
+    };
+  }
+
+  // POST /auth/logout — kill the presented session server-side and let the
+  // controller clear the cookie. Idempotent: a dead or foreign cookie
+  // still answers OK (SameSite=Lax already blocks cross-site replay).
+  async logoutSession(rawToken: string | undefined) {
+    if (rawToken) {
+      await this.prisma.refreshToken.updateMany({
+        where: { tokenHash: this.hashRefreshToken(rawToken), revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+
+    return { ok: true };
+  }
+
+  // Walk replacedByHash forward and revoke every descendant. The chain is
+  // linear (each rotation replaces exactly one token), so this kills the
+  // replayed copy's successors — including the victim's current leaf.
+  private async revokeTokenChain(start: {
+    tokenHash: string;
+    replacedByHash: string | null;
+  }) {
+    const seen = new Set<string>([start.tokenHash]);
+    let nextHash: string | null = start.replacedByHash;
+
+    while (nextHash && !seen.has(nextHash)) {
+      seen.add(nextHash);
+      const next = await this.prisma.refreshToken.findUnique({
+        where: { tokenHash: nextHash },
+        select: { id: true, replacedByHash: true },
+      });
+      if (!next) return;
+
+      await this.prisma.refreshToken.update({
+        where: { id: next.id },
+        data: { revokedAt: new Date() },
+      });
+      nextHash = next.replacedByHash;
+    }
   }
 }

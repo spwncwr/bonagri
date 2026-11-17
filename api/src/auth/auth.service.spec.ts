@@ -3,6 +3,12 @@ import * as bcrypt from "bcryptjs";
 import { createHash } from "node:crypto";
 import { AuthService } from "./auth.service";
 
+// The resetPassword tests deliberately exercise bcrypt cost 12 (the real
+// production setting, pinned by assertion) — ~1s of CPU on an idle box and
+// easily 5s+ on a loaded dev machine. The default 5s jest budget flakes
+// there, so give the file a realistic ceiling; assertions are unchanged.
+jest.setTimeout(15_000);
+
 function makeService() {
   const prisma = {
     user: {
@@ -10,6 +16,14 @@ function makeService() {
       update: jest.fn().mockResolvedValue({}),
     },
     passwordResetToken: {
+      findUnique: jest.fn(),
+      create: jest.fn().mockResolvedValue({}),
+      update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
+    // HP5: resetPassword revokes live sessions in the same transaction;
+    // the refresh specs exercise the rest of this model.
+    refreshToken: {
       findUnique: jest.fn(),
       create: jest.fn().mockResolvedValue({}),
       update: jest.fn().mockResolvedValue({}),
@@ -295,5 +309,23 @@ describe("AuthService.resetPassword (HP4, single-use link)", () => {
     // ONLY the hash may change: no status/emailVerifiedAt — resetting a
     // password must never un-suspend an account or verify an email.
     expect(Object.keys(userUpdate.data)).toEqual(["passwordHash"]);
+  });
+
+  it("revokes every live refresh session in the same transaction (HP5)", async () => {
+    const { service, prisma } = mockLookup();
+
+    await service.resetPassword({
+      token: presentedToken,
+      password: "brand-new-pass",
+    });
+
+    expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { userId: "user-1", revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+
+    // and it rides the SAME $transaction as the password swap
+    const ops = prisma.$transaction.mock.calls[0][0] as unknown[];
+    expect(ops).toHaveLength(3);
   });
 });

@@ -48,7 +48,15 @@ function definitelyWrongCode(secret: string) {
 describe("HP2 admin 2FA (mandatory TOTP)", () => {
   let app: INestApplication;
   let users: Record<string, TestUser>;
-  let prismaMock: { user: { findUnique: jest.Mock; update: jest.Mock } };
+  let prismaMock: {
+    user: { findUnique: jest.Mock; update: jest.Mock };
+    refreshToken: {
+      findUnique: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+      updateMany: jest.Mock;
+    };
+  };
   let mailMock: { sendAdminLoginAlert: jest.Mock };
 
   const adminId = "admin-1";
@@ -156,6 +164,19 @@ describe("HP2 admin 2FA (mandatory TOTP)", () => {
             return { ...record };
           },
         ),
+      },
+      // HP5: 2FA verify / enrolment-as-login mint a refresh session — the
+      // rows are write-only here (rotation itself lives in auth.refresh.spec).
+      refreshToken: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn(
+          async ({ data }: { data: Record<string, unknown> }) => ({
+            id: `rt-${Math.random().toString(36).slice(2)}`,
+            ...data,
+          }),
+        ),
+        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
 

@@ -190,6 +190,8 @@ model User {
   emailVerificationTokens EmailVerificationToken[]
   // HP4: single-use password reset tokens (hash at rest, 30-minute TTL).
   passwordResetTokens     PasswordResetToken[]
+  // HP5: rotating refresh sessions (hash at rest, cookie-backed).
+  refreshTokens           RefreshToken[]
   phoneOtpCodes       PhoneOtpCode[]
   verificationApplications VerificationApplication[] @relation("VerificationApplicant")
   latestApplication   VerificationApplication? @relation("LatestApplication", fields: [latestApplicationId], references: [id], onDelete: SetNull)
@@ -242,6 +244,23 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+// HP5: rotating refresh sessions. Only the SHA-256 hash is stored (same
+// convention as the HP4 reset tokens); `replacedByHash` chains each rotation
+// so replaying a spent token can revoke the whole family (theft detection).
+model RefreshToken {
+  id             String    @id @default(uuid())
+  userId         String
+  tokenHash      String    @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  replacedByHash String?
+  createdAt      DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model SupplierProfile {

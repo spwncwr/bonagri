@@ -30,8 +30,20 @@ async function bootstrap() {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  // HP5: the refresh cookie makes auth a credentialed cross-origin flow —
+  // the browser only attaches it when CORS echoes an EXACT allowlisted
+  // origin with credentials enabled. WEB_BASE_URL (the deployed frontend)
+  // joins the existing CORS_ORIGIN list so production never has to juggle
+  // two overlapping envs.
+  const webOrigins = (process.env.WEB_BASE_URL ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const allowedOrigins = [...new Set([...corsOrigins, ...webOrigins])];
+
   app.enableCors({
-    origin: corsOrigins,
+    origin: allowedOrigins,
+    credentials: true,
   });
 
   app.useGlobalPipes(

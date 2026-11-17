@@ -188,6 +188,8 @@ model User {
   supplierProfile SupplierProfile?
   addresses       Address[]
   emailVerificationTokens EmailVerificationToken[]
+  // HP4: single-use password reset tokens (hash at rest, 30-minute TTL).
+  passwordResetTokens     PasswordResetToken[]
   phoneOtpCodes       PhoneOtpCode[]
   verificationApplications VerificationApplication[] @relation("VerificationApplicant")
   latestApplication   VerificationApplication? @relation("LatestApplication", fields: [latestApplicationId], references: [id], onDelete: SetNull)
@@ -213,6 +215,22 @@ model User {
 }
 
 model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// HP4: account recovery. Single-use, short-lived token; only the SHA-256 hash
+// is stored so a database leak cannot be replayed against the reset link.
+model PasswordResetToken {
   id        String    @id @default(uuid())
   userId    String
   tokenHash String    @unique

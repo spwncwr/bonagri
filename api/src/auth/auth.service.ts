@@ -14,6 +14,7 @@ import { MailService } from "../mail/mail.service";
 import { UserRole } from "../common/types";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
 import {
   buildOtpauthUri,
   generateBase32Secret,
@@ -28,6 +29,10 @@ const PRE_AUTH_TTL_MS = 5 * 60 * 1000;
 // HP3: how long a step-up confirmation lasts. Deliberately NOT single-use —
 // one password re-entry may cover several quick dangerous actions.
 const STEP_UP_TTL_MS = 5 * 60 * 1000;
+// HP4: how long a password-reset link lives. Single-use and short-lived, and
+// only its SHA-256 hash is persisted, so an inbox leak or a DB dump alone is
+// not enough to take over an account.
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 const RECOVERY_CODE_COUNT = 10;
 
 type PreAuthPurpose = "2fa" | "setup";
@@ -267,6 +272,112 @@ export class AuthService {
     return {
       message: "A new verification email has been sent.",
       emailVerificationRequired: true,
+    };
+  }
+
+  // ---------- HP4: account recovery (plan G4) ----------
+
+  // Always answers the same 202 body — for unknown addresses, unverified
+  // accounts and mail-delivery failures alike — so this route can never be
+  // used to enumerate accounts. The generic message is the only contract the
+  // web UI relies on.
+  async forgotPassword(emailInput: string) {
+    const email = emailInput.trim().toLowerCase();
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, firstName: true },
+    });
+
+    if (user) {
+      // Only the newest link may work: burn anything still outstanding.
+      await this.prisma.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+
+      const resetToken = randomBytes(32).toString("hex");
+      const tokenHash = this.hashToken(resetToken);
+      const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+
+      await this.prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt,
+        },
+      });
+
+      const webBaseUrl =
+        process.env.WEB_BASE_URL ?? "http://localhost:3001";
+
+      const resetUrl =
+        `${webBaseUrl}/reset-password?token=${resetToken}`;
+
+      try {
+        await this.mailService.sendPasswordResetEmail(
+          user.email,
+          user.firstName,
+          resetUrl,
+        );
+      } catch (error) {
+        // Swallow it: an SMTP failure would otherwise answer 500 only for
+        // registered addresses — a live enumeration oracle. Operators still
+        // see it in the logs.
+        console.error("BonAgri password reset email delivery error:", error);
+      }
+    }
+
+    return {
+      message:
+        "If an account exists for that email, a password reset link has been sent.",
+      passwordResetRequested: true,
+    };
+  }
+
+  // Consumes a single-use link: unknown, already-used and expired tokens all
+  // fail with the SAME generic error so probing the endpoint learns nothing.
+  async resetPassword(dto: ResetPasswordDto) {
+    const tokenHash = this.hashToken(dto.token);
+
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      select: { id: true, userId: true, expiresAt: true, usedAt: true },
+    });
+
+    if (
+      !resetToken ||
+      resetToken.usedAt ||
+      resetToken.expiresAt.getTime() < Date.now()
+    ) {
+      throw new BadRequestException(
+        "This reset link is invalid or has expired",
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    // One transaction: the password changes and the link dies together, so a
+    // replay can never race a half-consumed reset.
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { passwordHash },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    // HP5 not landed yet: there are no refresh tokens/sessions to revoke —
+    // when HP5 adds them, kill them HERE. status/emailVerifiedAt are
+    // deliberately untouched: resetting a password must never let a
+    // SUSPENDED account past the login gates or verify an email.
+
+    return {
+      message: "Password updated. You can now sign in with your new password.",
+      passwordUpdated: true,
     };
   }
 

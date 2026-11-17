@@ -113,6 +113,86 @@ export class MailService {
     }
   }
 
+  // HP4: account recovery link. Same E2E capture convention as the other
+  // transactional mails — smoke runs read the reset URL from a file instead
+  // of a real inbox.
+  async sendPasswordResetEmail(
+    email: string,
+    firstName: string,
+    resetUrl: string,
+  ) {
+    if (
+      process.env.E2E_CAPTURE_MAIL === "true" &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      const captureFile =
+        process.env.E2E_RESET_CAPTURE_FILE ?? ".e2e/reset-url.txt";
+
+      const { mkdir, writeFile } = await import("node:fs/promises");
+
+      await mkdir(dirname(captureFile), { recursive: true });
+      await writeFile(captureFile, resetUrl, "utf8");
+
+      // Capture mode short-circuits: E2E runs must never hit real SMTP.
+      return;
+    }
+
+    if (!this.transporter) {
+      throw new ServiceUnavailableException(
+        "Email delivery is not configured",
+      );
+    }
+
+    const from =
+      process.env.SMTP_FROM ??
+      process.env.SMTP_USER;
+
+    try {
+      await this.transporter.sendMail({
+      from,
+      to: email,
+      subject: "Reset your BonAgri password",
+      text: [
+        `Hello ${firstName},`,
+        "",
+        "Someone asked to reset the password for your BonAgri account.",
+        "",
+        "Choose a new password here:",
+        resetUrl,
+        "",
+        "This link expires in 30 minutes and can only be used once.",
+        "",
+        "If you did not request this, you can ignore this email —",
+        "your password stays unchanged.",
+        "",
+        "BonAgri",
+        "Agricultural trade, connected.",
+      ].join("\n"),
+      html: `
+        <div style="font-family:Arial,sans-serif;line-height:1.6;max-width:600px;margin:auto">
+          <h2>Reset your password</h2>
+          <p>Hello ${firstName},</p>
+          <p>Someone asked to reset the password for your BonAgri account.</p>
+          <p>
+            <a
+              href="${resetUrl}"
+              style="display:inline-block;padding:12px 20px;background:#047857;color:#fff;text-decoration:none;border-radius:6px"
+            >
+              Choose a new password
+            </a>
+          </p>
+          <p>This link expires in 30 minutes and can only be used once.</p>
+          <p>If you did not request this, ignore this email — your password stays unchanged.</p>
+          <p>BonAgri<br />Agricultural trade, connected.</p>
+        </div>
+      `,
+      });
+    } catch (error) {
+      console.error("BonAgri SMTP delivery error:", error);
+      throw error;
+    }
+  }
+
   // CP17: buyer phone verification. There is no SMS provider in this stack —
   // the code travels over the already-verified account email (the trusted
   // channel we have). 6 digits, 10 minute expiry; the caller stores only the

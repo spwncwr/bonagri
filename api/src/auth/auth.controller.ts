@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Post,
   Query,
   Req,
@@ -12,6 +14,8 @@ import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
+import { ForgotPasswordDto } from "./dto/forgot-password.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { ResendVerificationDto } from "./dto/resend-verification.dto";
 import { EnableTwoFactorDto } from "./dto/enable-two-factor.dto";
 import { VerifyTwoFactorDto } from "./dto/verify-two-factor.dto";
@@ -135,5 +139,26 @@ export class AuthController {
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   stepUp(@Req() request: AuthenticatedRequest, @Body() dto: StepUpDto) {
     return this.authService.stepUp(request.user.id, dto.password);
+  }
+
+  // ---------- HP4: password reset (plan G4) ----------
+
+  // Unauthenticated, triggers outbound email, and is a spam/abuse surface —
+  // budgeted like resend-verification (5/min). Always 202: the response must
+  // be byte-identical whether or not the address exists.
+  @Post("forgot-password")
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  // Token guessing surface: only 64-hex tokens that hash to an unexpired,
+  // unused row succeed, but brute-force attempts still count against this
+  // budget like any other credential probe.
+  @Post("reset-password")
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }

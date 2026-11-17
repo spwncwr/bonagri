@@ -291,6 +291,17 @@ export default function LoginPage() {
                   onChange={setPassword}
                 />
 
+                {/* HP4: account recovery — only on the password step; the
+                    two-step code screen has no password to reset. */}
+                <div className="pt-1 text-center">
+                  <Link
+                    href="/forgot-password"
+                    className="text-[12px] font-semibold text-[#17633a]/70 underline-offset-2 transition hover:text-[#2d9d5e] hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+
                 <div className="flex items-center justify-center gap-2 pt-1">
                   <input
                     id="remember-me"

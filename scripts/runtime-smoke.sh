@@ -301,12 +301,16 @@ OTP_CAPTURE_FILE="$ROOT/.e2e/phone-otp.txt"
 # HP2: admin sign-in alert — its own file so section T's assertion cannot be
 # clobbered by other notification mail.
 ADMIN_LOGIN_CAPTURE_FILE="$ROOT/.e2e/admin-login-alert.txt"
+# HP4: password-reset link — its own file so section W can tell a fresh link
+# apart from the verification URL captured earlier.
+RESET_CAPTURE_FILE="$ROOT/.e2e/reset-url.txt"
 mkdir -p "$ROOT/.e2e"
 rm -f "$CAPTURE_FILE"
 rm -f "$DISPUTE_CAPTURE_FILE"
 rm -f "$NOTIFY_CAPTURE_FILE"
 rm -f "$OTP_CAPTURE_FILE"
 rm -f "$ADMIN_LOGIN_CAPTURE_FILE"
+rm -f "$RESET_CAPTURE_FILE"
 
 E2E_CAPTURE_MAIL=true \
 E2E_MAIL_CAPTURE_FILE="$CAPTURE_FILE" \
@@ -314,6 +318,7 @@ E2E_DISPUTE_CAPTURE_FILE="$DISPUTE_CAPTURE_FILE" \
 E2E_NOTIFY_CAPTURE_FILE="$NOTIFY_CAPTURE_FILE" \
 E2E_OTP_CAPTURE_FILE="$OTP_CAPTURE_FILE" \
 E2E_ADMIN_LOGIN_CAPTURE_FILE="$ADMIN_LOGIN_CAPTURE_FILE" \
+E2E_RESET_CAPTURE_FILE="$RESET_CAPTURE_FILE" \
 npm run start:dev >"$LOG_DIR/api.log" 2>&1 &
 API_PID=$!
 
@@ -7900,6 +7905,345 @@ echo
 echo "✓ ADMIN STEP-UP + AUDIT FLOW ACCEPTANCE PASSED"
 
 fi
+
+echo
+echo "ACCOUNT RECOVERY FLOW (PASSWORD RESET)"
+echo "========================================"
+
+# HP4 (plan G4): a buyer who forgot their password recovers access end to end
+# WITHOUT db surgery — forgot-password answers 202 for known and unknown
+# addresses alike (no enumeration oracle), the emailed link is single-use, and
+# the old password dies with it. Runs BEFORE L (L hammers /auth/login and owns
+# that window; W still performs real logins) and spends only its own
+# /auth/forgot-password budget (5/min).
+# (Plan §HP4 calls this section P; P is CP-promotions' campaign flow — the
+# same letter-collision deviation HP2/HP3 recorded for N → T and O → U.
+# Q stays reserved for HP5.)
+
+echo
+echo "[W1/8] Register a dedicated recovery account..."
+
+W_EMAIL="hp4_recovery_$(date +%s)_$$@bonagri.local"
+W_OLD_PASSWORD="Original-Restore-789"
+W_NEW_PASSWORD="Recovered-Access-456"
+
+# The verification capture file still holds section F/M/PICKS' URL — clear it
+# so this poll can only pass on W's own link.
+rm -f "$CAPTURE_FILE"
+
+W_REGISTER_HTTP="$(
+  curl -sS -o "$LOG_DIR/w-register.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/register" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$W_EMAIL\",\"password\":\"$W_OLD_PASSWORD\",\"firstName\":\"Recovery\",\"lastName\":\"Tester\"}")"
+
+if [[ "$W_REGISTER_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/w-register.json"
+  fail "Recovery account registration failed. HTTP $W_REGISTER_HTTP"
+fi
+
+for _ in $(seq 1 30); do
+  if [[ -s "$CAPTURE_FILE" ]]; then
+    break
+  fi
+  sleep 0.5
+done
+
+if [[ ! -s "$CAPTURE_FILE" ]]; then
+  fail "Recovery account verification URL was not captured."
+fi
+
+W_VERIFY_TOKEN="$(cat "$CAPTURE_FILE")"
+W_VERIFY_TOKEN="${W_VERIFY_TOKEN##*token=}"
+
+W_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/w-verify.json" -w "%{http_code}" \
+    "$API_URL$API_PREFIX/auth/verify-email?token=$W_VERIFY_TOKEN")"
+
+if [[ "$W_VERIFY_HTTP" != "200" && "$W_VERIFY_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/w-verify.json"
+  fail "Recovery account email verification failed. HTTP $W_VERIFY_HTTP"
+fi
+
+echo "✓ Dedicated recovery account registered and verified"
+
+echo
+echo "[W2/8] The account signs in with its original password..."
+
+W_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/w-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$W_EMAIL" "$W_OLD_PASSWORD")"
+)"
+
+if [[ "$W_LOGIN_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/w-login.json"
+  fail "Baseline login failed. HTTP $W_LOGIN_HTTP"
+fi
+
+W_HASH_BEFORE="$(psql "${E2E_PSQL_TARGET:-bonagri}" -v ON_ERROR_STOP=1 -v email="$W_EMAIL" -At <<'SQL' || true
+SELECT "passwordHash" FROM "User" WHERE "email" = :'email';
+SQL
+)"
+
+case "$W_HASH_BEFORE" in
+  '$2'*) ;;
+  *) fail "Could not read the account's bcrypt hash before the reset." ;;
+esac
+
+echo "✓ Original password signs in; bcrypt hash recorded"
+
+echo
+echo "[W3/8] forgot-password answers 202 and mails a captured link..."
+
+rm -f "$RESET_CAPTURE_FILE"
+
+W_FORGOT_HTTP="$(
+  curl -sS -o "$LOG_DIR/w-forgot.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/forgot-password" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$W_EMAIL\"}"
+)"
+
+if [[ "$W_FORGOT_HTTP" != "202" ]]; then
+  cat "$LOG_DIR/w-forgot.json"
+  fail "forgot-password must answer 202 (never 201/404). HTTP $W_FORGOT_HTTP"
+fi
+
+if ! grep -q '"passwordResetRequested"[[:space:]]*:[[:space:]]*true' "$LOG_DIR/w-forgot.json"; then
+  cat "$LOG_DIR/w-forgot.json"
+  fail "forgot-password did not return the generic confirmation."
+fi
+
+for _ in $(seq 1 30); do
+  if [[ -s "$RESET_CAPTURE_FILE" ]]; then
+    break
+  fi
+  sleep 0.5
+done
+
+if [[ ! -s "$RESET_CAPTURE_FILE" ]]; then
+  fail "Password reset link was not captured."
+fi
+
+W_RESET_URL="$(cat "$RESET_CAPTURE_FILE")"
+
+if [[ "$W_RESET_URL" != *"/reset-password?token="* ]]; then
+  cat "$RESET_CAPTURE_FILE"
+  fail "Captured reset URL is invalid."
+fi
+
+W_RESET_TOKEN="${W_RESET_URL##*token=}"
+
+if [[ -z "$W_RESET_TOKEN" ]]; then
+  fail "Reset token could not be extracted."
+fi
+
+echo "✓ 202 + reset link captured (raw token only travels in the email)"
+
+echo
+echo "[W4/8] An unknown address gets the identical 202 and no link..."
+
+rm -f "$RESET_CAPTURE_FILE"
+W_GHOST_EMAIL="hp4_ghost_$(date +%s)_$$@bonagri.local"
+
+W_GHOST_HTTP="$(
+  curl -sS -o "$LOG_DIR/w-forgot-ghost.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/forgot-password" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$W_GHOST_EMAIL\"}"
+)"
+
+if [[ "$W_GHOST_HTTP" != "202" ]]; then
+  cat "$LOG_DIR/w-forgot-ghost.json"
+  fail "Unknown address must also get 202. HTTP $W_GHOST_HTTP"
+fi
+
+python3 - "$LOG_DIR/w-forgot.json" "$LOG_DIR/w-forgot-ghost.json" <<'PYJSON'
+import json, sys
+known = json.load(open(sys.argv[1], encoding="utf-8"))
+ghost = json.load(open(sys.argv[2], encoding="utf-8"))
+if known.get("message") != ghost.get("message"):
+    raise SystemExit(
+        "ERROR: known/unknown responses differ — enumeration oracle: "
+        + json.dumps([known, ghost])[:400]
+    )
+print("✓ Known and unknown addresses return the same message")
+PYJSON
+
+if [[ -e "$RESET_CAPTURE_FILE" ]]; then
+  fail "A reset link was minted for an address that does not exist."
+fi
+
+echo "✓ No link minted for the unknown address"
+
+echo
+echo "[W5/8] forgot-password is capped at 5 requests per minute..."
+
+# W3 + W4 already spent two of the five slots in this window.
+for W_I in $(seq 1 3); do
+  W_BUDGET_HTTP="$(
+    curl -sS -o "$LOG_DIR/w-budget-$W_I.json" -w "%{http_code}" \
+      -X POST "$API_URL$API_PREFIX/auth/forgot-password" \
+      -H "Content-Type: application/json" \
+      -d "{\"email\":\"$W_GHOST_EMAIL\"}"
+  )"
+
+  if [[ "$W_BUDGET_HTTP" == "429" ]]; then
+    fail "forgot-password throttled after only $((2 + W_I)) requests (limit is 5/min)"
+  fi
+done
+
+W_BLOCKED_HTTP="$(
+  curl -sS -o "$LOG_DIR/w-throttle-blocked.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/forgot-password" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$W_GHOST_EMAIL\"}"
+)"
+
+if [[ "$W_BLOCKED_HTTP" != "429" ]]; then
+  cat "$LOG_DIR/w-throttle-blocked.json"
+  fail "forgot-password was never rate limited (6th request: HTTP $W_BLOCKED_HTTP)"
+fi
+
+echo "✓ forgot-password blocked with 429 on request 6 of the 5/min budget"
+
+echo
+echo "[W6/8] The emailed link sets a new password and is burned..."
+
+W_RESET_HTTP="$(
+  curl -sS -o "$LOG_DIR/w-reset.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/reset-password" \
+    -H "Content-Type: application/json" \
+    -d "{\"token\":\"$W_RESET_TOKEN\",\"password\":\"$W_NEW_PASSWORD\"}"
+)"
+
+if [[ "$W_RESET_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/w-reset.json"
+  fail "reset-password rejected the emailed link. HTTP $W_RESET_HTTP"
+fi
+
+if ! grep -q '"passwordUpdated"[[:space:]]*:[[:space:]]*true' "$LOG_DIR/w-reset.json"; then
+  cat "$LOG_DIR/w-reset.json"
+  fail "reset-password did not confirm the update."
+fi
+
+W_HASH_AFTER="$(psql "${E2E_PSQL_TARGET:-bonagri}" -v ON_ERROR_STOP=1 -v email="$W_EMAIL" -At <<'SQL' || true
+SELECT "passwordHash" FROM "User" WHERE "email" = :'email';
+SQL
+)"
+
+if [[ -z "$W_HASH_AFTER" || "$W_HASH_AFTER" == "$W_HASH_BEFORE" ]]; then
+  fail "passwordHash did not change after a successful reset."
+fi
+
+case "$W_HASH_AFTER" in
+  '$2'*) ;;
+  *) fail "The new hash is not a bcrypt digest." ;;
+esac
+
+# Every link ever minted for this account must now be burned — a live row
+# after a successful reset would mean the single-use guarantee is broken.
+W_TOKEN_STATE="$(psql "${E2E_PSQL_TARGET:-bonagri}" -v ON_ERROR_STOP=1 -v email="$W_EMAIL" -At <<'SQL' || true
+SELECT count(*) || '/' || count(t."usedAt")
+FROM "PasswordResetToken" t
+JOIN "User" u ON u."id" = t."userId"
+WHERE u."email" = :'email';
+SQL
+)"
+
+W_TOKENS_TOTAL="${W_TOKEN_STATE%%/*}"
+W_TOKENS_USED="${W_TOKEN_STATE##*/}"
+
+if [[ -z "$W_TOKENS_TOTAL" || "$W_TOKENS_TOTAL" == "0" ]]; then
+  fail "No reset token rows exist for the recovery account."
+fi
+
+if [[ "$W_TOKENS_TOTAL" != "$W_TOKENS_USED" ]]; then
+  fail "Reset tokens left live after the reset: $W_TOKEN_STATE (total/used)"
+fi
+
+echo "✓ Password hash swapped and all $W_TOKENS_TOTAL token row(s) burned"
+
+echo
+echo "[W7/8] The old password is dead; the new one signs in..."
+
+W_OLD_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/w-old-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$W_EMAIL" "$W_OLD_PASSWORD")"
+)"
+
+if [[ "$W_OLD_LOGIN_HTTP" != "401" ]]; then
+  cat "$LOG_DIR/w-old-login.json"
+  fail "Old password still works after the reset. HTTP $W_OLD_LOGIN_HTTP"
+fi
+
+W_NEW_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/w-new-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$W_EMAIL" "$W_NEW_PASSWORD")"
+)"
+
+if [[ "$W_NEW_LOGIN_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/w-new-login.json"
+  fail "New password did not sign in (recovery incomplete). HTTP $W_NEW_LOGIN_HTTP"
+fi
+
+echo "✓ Old password rejected; new password signs in — recovery complete"
+
+echo
+echo "[W8/8] The link is single-use; unknown tokens die the same way..."
+
+W_REPLAY_HTTP="$(
+  curl -sS -o "$LOG_DIR/w-replay.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/reset-password" \
+    -H "Content-Type: application/json" \
+    -d "{\"token\":\"$W_RESET_TOKEN\",\"password\":\"Another-Pass-000\"}"
+)"
+
+if [[ "$W_REPLAY_HTTP" != "400" ]]; then
+  cat "$LOG_DIR/w-replay.json"
+  fail "Burned reset link was accepted again. HTTP $W_REPLAY_HTTP"
+fi
+
+W_BOGUS_TOKEN="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+
+W_BOGUS_HTTP="$(
+  curl -sS -o "$LOG_DIR/w-bogus.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/reset-password" \
+    -H "Content-Type: application/json" \
+    -d "{\"token\":\"$W_BOGUS_TOKEN\",\"password\":\"Another-Pass-000\"}"
+)"
+
+if [[ "$W_BOGUS_HTTP" != "400" ]]; then
+  cat "$LOG_DIR/w-bogus.json"
+  fail "Unknown reset token was not rejected. HTTP $W_BOGUS_HTTP"
+fi
+
+# Replay and unknown-token probing must be indistinguishable, so the endpoint
+# cannot be used to test whether a token exists.
+python3 - "$LOG_DIR/w-replay.json" "$LOG_DIR/w-bogus.json" <<'PYJSON'
+import json, sys
+replay = json.load(open(sys.argv[1], encoding="utf-8"))
+bogus = json.load(open(sys.argv[2], encoding="utf-8"))
+if replay.get("message") != bogus.get("message"):
+    raise SystemExit(
+        "ERROR: dead-link errors differ — token probing oracle: "
+        + json.dumps([replay, bogus])[:400]
+    )
+if "invalid or has expired" not in (replay.get("message") or ""):
+    raise SystemExit("ERROR: unexpected dead-link message: " + json.dumps(replay)[:400])
+print("✓ Burned and unknown links fail with one generic message")
+PYJSON
+
+echo "✓ Single-use link enforced; no token-probing oracle"
+
+echo
+echo "✓ ACCOUNT RECOVERY FLOW ACCEPTANCE PASSED"
 
 echo
 echo "RATE LIMITING FLOW"

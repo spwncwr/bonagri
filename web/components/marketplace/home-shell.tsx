@@ -841,26 +841,6 @@ export default function HomeShell({
     };
   }, [currentUser]);
 
-  // Silent refresh after a delivery pin is saved from the cart screen —
-  // keeps the selected address (only the rows are replaced).
-  async function refreshAddresses() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/addresses`, {
-        cache: "no-store",
-        headers: authHeaders(),
-      });
-
-      if (!response.ok) return;
-
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setAddresses(data as Address[]);
-      }
-    } catch {
-      // A failed refresh leaves the current list in place — never fatal.
-    }
-  }
-
   // Facets power the filter sheet; one bounded read, no per-keystroke cost.
   useEffect(() => {
     let cancelled = false;
@@ -3181,12 +3161,10 @@ export default function HomeShell({
         <div className="relative z-10">
           <CartScreen
             items={cartItems}
-            addresses={addresses}
             error={cartError}
             onPatch={patchCartItem}
             onRemove={removeCartItem}
             onBrowse={() => goTo("explore")}
-            onAddressUpdated={() => void refreshAddresses()}
           />
         </div>
       ) : null}
@@ -3654,7 +3632,9 @@ export default function HomeShell({
           }}
           onCheckout={() => {
             setCartOpen(false);
-            router.push("/checkout");
+            // C1: the cart no longer collects delivery details — the drawer
+            // drops the buyer on the delivery step of the split flow.
+            router.push("/checkout/delivery");
           }}
         />
 

@@ -3817,7 +3817,7 @@ fi
 echo "OK Anon read/add 401, vendor add 403, unknown item patch 404"
 
 echo
-echo "[I4/4] Checkout page serves..."
+echo "[I4/4] Checkout flow pages serve..."
 
 I_WEB_CODE="$(
   curl -sS -m 90 -o /dev/null -w "%{http_code}" "$WEB_URL/checkout")"
@@ -3826,7 +3826,16 @@ if [[ "$I_WEB_CODE" != "200" ]]; then
   fail "Web route /checkout returned HTTP $I_WEB_CODE"
 fi
 
-echo "✓ Web route /checkout -> 200"
+# C1: the cart → delivery → checkout split adds the delivery step as its
+# own route — it must render like the other two.
+I_DELIVERY_CODE="$(
+  curl -sS -m 90 -o /dev/null -w "%{http_code}" "$WEB_URL/checkout/delivery")"
+
+if [[ "$I_DELIVERY_CODE" != "200" ]]; then
+  fail "Web route /checkout/delivery returned HTTP $I_DELIVERY_CODE"
+fi
+
+echo "✓ Web routes /checkout and /checkout/delivery -> 200"
 
 echo
 echo "✓ CART & MULTI-ITEM CHECKOUT FLOW ACCEPTANCE PASSED"
@@ -8406,6 +8415,12 @@ echo "✓ Cookie HttpOnly; SameSite=Lax; Secure; Path=/api/auth; Max-Age=30d; JW
 
 echo
 echo "[Q2/5] /auth/refresh rotates the cookie and mints a new access token..."
+
+# JWTs carry a second-granularity iat: if login and refresh land in the same
+# wall-clock second, the "fresh" token is byte-identical to the login token
+# and the inequality check below false-fails (hit on 2026-11-18 when a fast
+# run finished Q1→Q2 inside one second). A 1s gap guarantees a different iat.
+sleep 1
 
 Q_REFRESH_HEADERS="$LOG_DIR/q-refresh-headers.txt"
 Q_REFRESH_HTTP="$(

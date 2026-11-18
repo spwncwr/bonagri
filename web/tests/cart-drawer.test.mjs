@@ -213,7 +213,12 @@ test("failed updates re-sync so totals never go stale", () => {
 test("checkout and full cart reuse the existing flows", () => {
   const mount = drawerMount();
   assert.match(mount, /goTo\("cart"\)/, "View full cart -> existing view");
-  assert.match(mount, /router\.push\("\/checkout"\)/, "existing checkout route");
+  // C1: the drawer starts the split flow at the delivery step
+  assert.match(
+    mount,
+    /router\.push\("\/checkout\/delivery"\)/,
+    "delivery step is the flow entry",
+  );
   assert.ok(
     !/\/checkout/.test(drawer),
     "drawer itself must not hardcode routes",
@@ -223,7 +228,8 @@ test("checkout and full cart reuse the existing flows", () => {
 test("mobile cart experience is untouched", () => {
   // the full cart screen still renders with its own navigation intact
   assert.match(cartScreen, /export default function CartScreen/);
-  assert.match(cartScreen, /router\.push\("\/checkout"\)/);
+  // C1: its CTA now hands off to the delivery step, not straight to payment
+  assert.match(cartScreen, /router\.push\("\/checkout\/delivery"\)/);
   // AppHeader still takes a single onCart callback (mobile path unchanged)
   assert.match(header, /onCart: \(\) => void;/);
 });

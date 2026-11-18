@@ -5,9 +5,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AuthGuard from "../../components/auth/auth-guard";
 import { BrandLogo } from "../../components/brand/logo";
-import { CHECKOUT_NOTES_KEY } from "../../components/mobile/cart-screen";
+import CheckoutStepper from "../../components/checkout/stepper";
 import { ArrowLeftIcon, CheckIcon } from "../../components/mobile/icons";
 import { authHeaders } from "../../lib/auth";
+import {
+  clearCheckoutDraft,
+  readCheckoutAddressId,
+  readCheckoutNotes,
+} from "../../lib/checkout-draft";
 import { goBackOr } from "../../lib/navigation";
 import {
   CHECKOUT_PAYMENT_METHOD_KEY,
@@ -60,7 +65,6 @@ export default function CheckoutPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
-  const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>(
     DEFAULT_PAYMENT_METHOD,
   );
@@ -72,10 +76,11 @@ export default function CheckoutPage() {
   // to the right verification screen instead of showing a dead-end error.
   const [blockedCode, setBlockedCode] = useState<string | null>(null);
 
-  // True back: return to the screen the buyer came from (usually the cart).
-  // Fresh deep links fall back to the cart — see lib/navigation.ts.
+  // True back: return to the delivery step (or the screen the buyer came
+  // from). Fresh deep links fall back to the delivery step — see
+  // lib/navigation.ts.
   function goBack() {
-    goBackOr(router, "/cart");
+    goBackOr(router, "/checkout/delivery");
   }
 
   useEffect(() => {
@@ -117,26 +122,28 @@ export default function CheckoutPage() {
         setCartItems(Array.isArray(cartData) ? (cartData as CartItem[]) : []);
         setAddresses(Array.isArray(addressData) ? (addressData as Address[]) : []);
 
-        const defaultAddress = Array.isArray(addressData)
-          ? (addressData as Address[]).find(
-              (address) => address.isDefault,
-            ) ?? (addressData as Address[])[0]
-          : undefined;
+        // C1: address + instructions belong to the delivery step — checkout
+        // only restores the draft it was handed. A deep link that skipped
+        // that step (or a deleted address) falls back to the default, so the
+        // read-only summary always has something to show.
+        const loadedAddresses = Array.isArray(addressData)
+          ? (addressData as Address[])
+          : [];
+        const storedAddressId = readCheckoutAddressId();
+        const draftIsValid = loadedAddresses.some(
+          (address) => address.id === storedAddressId,
+        );
+        const defaultAddress =
+          loadedAddresses.find((address) => address.isDefault) ??
+          loadedAddresses[0];
 
-        setSelectedAddressId(defaultAddress?.id ?? "");
-
-        // Delivery instructions typed on the mobile cart screen carry over
-        // into the existing notes field (then clear, so a later checkout
-        // starts fresh).
-        const storedNotes = window.sessionStorage.getItem(CHECKOUT_NOTES_KEY);
-
-        if (storedNotes) {
-          setNotes(storedNotes);
-          window.sessionStorage.removeItem(CHECKOUT_NOTES_KEY);
-        }
+        setSelectedAddressId(
+          draftIsValid ? storedAddressId : (defaultAddress?.id ?? ""),
+        );
 
         // HP1: restore the payment-method choice (same hand-off pattern as
-        // notes). A stale/unknown value falls back to the default.
+        // the delivery drafts). A stale/unknown value falls back to the
+        // default.
         const storedMethod = window.sessionStorage.getItem(
           CHECKOUT_PAYMENT_METHOD_KEY,
         );
@@ -195,6 +202,9 @@ export default function CheckoutPage() {
     (total, item) => total + Number(item.lineTotal),
     0,
   );
+  const selectedAddress = addresses.find(
+    (address) => address.id === selectedAddressId,
+  );
   const allInStock = cartItems.every((item) => item.inStock);
   const canPlace =
     cartItems.length > 0 && allInStock && Boolean(selectedAddressId) && !placing;
@@ -213,6 +223,10 @@ export default function CheckoutPage() {
     setError("");
     setBlockedCode(null);
 
+    // C1: instructions were drafted on the delivery step — checkout only
+    // forwards them (the API body is unchanged from HP1/plan D1).
+    const notes = readCheckoutNotes();
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/cart/checkout`, {
         method: "POST",
@@ -222,7 +236,7 @@ export default function CheckoutPage() {
         },
         body: JSON.stringify({
           deliveryAddressId: selectedAddressId,
-          notes: notes.trim() ? notes.trim() : undefined,
+          notes: notes ? notes : undefined,
         }),
       });
 
@@ -244,6 +258,9 @@ export default function CheckoutPage() {
       // the default selection never touches choosePaymentMethod(), and the
       // order-detail echo reads this hand-off (sessionStorage, plan D1).
       window.sessionStorage.setItem(CHECKOUT_PAYMENT_METHOD_KEY, paymentMethod);
+      // The order is in — drop the delivery drafts so the next checkout
+      // starts fresh.
+      clearCheckoutDraft();
       setPlacedOrders(
         Array.isArray(data?.orders) ? (data.orders as PlacedOrder[]) : [],
       );
@@ -368,6 +385,8 @@ export default function CheckoutPage() {
         </header>
 
         <div className="mx-auto max-w-2xl space-y-4 px-4 py-6">
+          <CheckoutStepper current="payment" />
+
           {/* CP17: a verification gate replaces the generic error with an
               action — the buyer clears it without hunting through settings. */}
           {error && blockedCode === "PHONE_VERIFICATION_REQUIRED" ? (
@@ -417,7 +436,9 @@ export default function CheckoutPage() {
           ) : (
             <div className="grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start">
               <div className="space-y-4">
-                {/* Delivery address */}
+                {/* C1: read-only delivery summary — the address lives on the
+                    delivery step; checkout only echoes it (with a way back)
+                    and never edits it. */}
                 <section className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5">
                   <div className="flex items-center justify-between gap-3">
                     <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[#7b867d]">
@@ -425,76 +446,57 @@ export default function CheckoutPage() {
                     </h2>
 
                     <Link
-                      href="/addresses"
+                      href="/checkout/delivery"
                       className="shrink-0 text-xs font-bold text-[#17633a] hover:underline"
                     >
-                      Manage addresses
+                      Change
                     </Link>
                   </div>
 
-                  {addresses.length === 0 ? (
-                    <div className="mt-4 rounded-xl border border-dashed border-[#cbd5ca] p-4 text-sm text-[#69756c]">
-                      No delivery addresses yet.{" "}
-                      <Link
-                        href="/addresses"
-                        className="font-semibold text-[#17633a] hover:underline"
+                  {selectedAddress ? (
+                    <div className="mt-3">
+                      <div className="text-sm font-black text-[#17251b]">
+                        {selectedAddress.label}
+                        {selectedAddress.isDefault ? (
+                          <span className="ml-2 text-[10px] font-black uppercase tracking-wide text-[#17633a]">
+                            Default
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-0.5 text-xs leading-5 text-[#69756c]">
+                        {selectedAddress.recipientName} —{" "}
+                        {selectedAddress.addressLine1},{" "}
+                        {selectedAddress.city}
+                        {selectedAddress.province
+                          ? `, ${selectedAddress.province}`
+                          : ""}
+                      </div>
+                      {/* Pin status stays informational — checkout is never
+                          blocked by a missing destination pin. */}
+                      <span
+                        className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${
+                          selectedAddress.lat != null &&
+                          selectedAddress.lng != null
+                            ? "bg-[#e5f1e4] text-[#17633a]"
+                            : "bg-[#eee8c9] text-[#8a6d12]"
+                        }`}
                       >
-                        Add one
-                      </Link>{" "}
-                      to place an order.
+                        {selectedAddress.lat != null &&
+                        selectedAddress.lng != null
+                          ? "Location confirmed"
+                          : "Needs location confirmation"}
+                      </span>
                     </div>
                   ) : (
-                    <div className="mt-4 space-y-2">
-                      {addresses.map((address) => (
-                        <label
-                          key={address.id}
-                          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
-                            selectedAddressId === address.id
-                              ? "border-[#17633a] bg-[#f0f7f1]"
-                              : "border-[#dce2d9] hover:bg-[#f7f8f4]"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="delivery-address"
-                            value={address.id}
-                            checked={selectedAddressId === address.id}
-                            onChange={(event) =>
-                              setSelectedAddressId(event.target.value)
-                            }
-                            className="mt-1 shrink-0 accent-[#17633a]"
-                          />
-
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-bold text-[#17251b]">
-                              {address.label}
-                              {address.isDefault ? (
-                                <span className="ml-2 text-[10px] font-black uppercase tracking-wide text-[#17633a]">
-                                  Default
-                                </span>
-                              ) : null}
-                            </span>
-                            <span className="mt-0.5 block text-xs leading-5 text-[#69756c]">
-                              {address.recipientName} — {address.addressLine1},{" "}
-                              {address.city}
-                              {address.province ? `, ${address.province}` : ""}
-                            </span>
-                            {/* Pin status is informational only — checkout is
-                                never blocked by a missing destination pin. */}
-                            <span
-                              className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${
-                                address.lat != null && address.lng != null
-                                  ? "bg-[#e5f1e4] text-[#17633a]"
-                                  : "bg-[#eee8c9] text-[#8a6d12]"
-                              }`}
-                            >
-                              {address.lat != null && address.lng != null
-                                ? "Location confirmed"
-                                : "Needs location confirmation"}
-                            </span>
-                          </span>
-                        </label>
-                      ))}
+                    <div className="mt-3 rounded-xl border border-dashed border-[#cbd5ca] p-4 text-sm text-[#69756c]">
+                      No delivery address yet.{" "}
+                      <Link
+                        href="/checkout/delivery"
+                        className="font-semibold text-[#17633a] hover:underline"
+                      >
+                        Choose one
+                      </Link>{" "}
+                      to place an order.
                     </div>
                   )}
                 </section>
@@ -628,27 +630,6 @@ export default function CheckoutPage() {
                       </div>
                     ))}
                   </div>
-                </section>
-
-                {/* Notes */}
-                <section className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5">
-                  <label
-                    htmlFor="checkout-notes"
-                    className="text-sm font-black text-[#243229]"
-                  >
-                    Delivery notes{" "}
-                    <span className="font-medium text-[#7b867d]">
-                      (optional)
-                    </span>
-                  </label>
-                  <textarea
-                    id="checkout-notes"
-                    rows={3}
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Gate code, best delivery time, quality requirements..."
-                    className="mt-2 w-full rounded-xl border border-[#cfd8ce] bg-[#fbfcf9] px-3.5 py-3 text-sm text-[#17251b] outline-none transition placeholder:text-[#9aa49b] focus:border-[#17633a] focus:ring-2 focus:ring-[#e5f1e4]"
-                  />
                 </section>
               </div>
 

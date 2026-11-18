@@ -12,6 +12,8 @@ import {
   clearCheckoutDraft,
   readCheckoutAddressId,
   readCheckoutNotes,
+  readCheckoutQuote,
+  type CheckoutQuoteDraft,
 } from "../../lib/checkout-draft";
 import { goBackOr } from "../../lib/navigation";
 import {
@@ -72,6 +74,9 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [placing, setPlacing] = useState(false);
   const [placedOrders, setPlacedOrders] = useState<PlacedOrder[] | null>(null);
+  // F1: quote mode — placing converts the accepted quote at its agreed
+  // price instead of POSTing the cart (null = normal cart flow).
+  const [quote, setQuote] = useState<CheckoutQuoteDraft | null>(null);
   // CP17: machine-readable gate code from a 403 checkout — routes the buyer
   // to the right verification screen instead of showing a dead-end error.
   const [blockedCode, setBlockedCode] = useState<string | null>(null);
@@ -91,18 +96,25 @@ export default function CheckoutPage() {
         setLoading(true);
         setError("");
 
+        const quoteDraft = readCheckoutQuote();
+        setQuote(quoteDraft);
+
+        // Quote mode never touches the cart — an empty cart must not
+        // bounce this flow to the empty-cart card.
         const [cartResponse, addressResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/cart`, {
-            cache: "no-store",
-            headers: authHeaders(),
-          }),
+          quoteDraft
+            ? Promise.resolve(null)
+            : fetch(`${API_BASE_URL}/api/cart`, {
+                cache: "no-store",
+                headers: authHeaders(),
+              }),
           fetch(`${API_BASE_URL}/api/addresses`, {
             cache: "no-store",
             headers: authHeaders(),
           }),
         ]);
 
-        if (!cartResponse.ok) {
+        if (cartResponse && !cartResponse.ok) {
           throw new Error(`Cart request failed: ${cartResponse.status}`);
         }
 
@@ -112,7 +124,7 @@ export default function CheckoutPage() {
           );
         }
 
-        const cartData = await cartResponse.json();
+        const cartData = cartResponse ? await cartResponse.json() : [];
         const addressData = await addressResponse.json();
 
         if (cancelled) {
@@ -206,8 +218,12 @@ export default function CheckoutPage() {
     (address) => address.id === selectedAddressId,
   );
   const allInStock = cartItems.every((item) => item.inStock);
-  const canPlace =
-    cartItems.length > 0 && allInStock && Boolean(selectedAddressId) && !placing;
+  // Quote mode: one order at the agreed price — stock was checked when the
+  // quote converted (the API re-checks anyway) and the cart is not read.
+  const quoteTotal = quote ? quote.quotedPrice * quote.quantity : 0;
+  const canPlace = quote
+    ? Boolean(selectedAddressId) && !placing
+    : cartItems.length > 0 && allInStock && Boolean(selectedAddressId) && !placing;
 
   function choosePaymentMethod(id: PaymentMethodId) {
     setPaymentMethod(id);
@@ -228,17 +244,24 @@ export default function CheckoutPage() {
     const notes = readCheckoutNotes();
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cart/checkout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders(),
+      // F1: quote mode posts to the conversion endpoint (same body shape);
+      // cart mode keeps the untouched POST /api/cart/checkout.
+      const response = await fetch(
+        quote
+          ? `${API_BASE_URL}/api/product-requests/responses/${quote.responseId}/checkout`
+          : `${API_BASE_URL}/api/cart/checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+          },
+          body: JSON.stringify({
+            deliveryAddressId: selectedAddressId,
+            notes: notes ? notes : undefined,
+          }),
         },
-        body: JSON.stringify({
-          deliveryAddressId: selectedAddressId,
-          notes: notes ? notes : undefined,
-        }),
-      });
+      );
 
       const data = await response.json();
 
@@ -418,7 +441,7 @@ export default function CheckoutPage() {
                 Loading your cart...
               </div>
             </div>
-          ) : cartItems.length === 0 ? (
+          ) : !quote && cartItems.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#cbd5ca] bg-white p-8 text-center">
               <div className="text-base font-black text-[#243229]">
                 Your cart is empty
@@ -571,14 +594,58 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                {/* Per-supplier order preview */}
+                {/* Per-supplier order preview — quote mode shows the one
+                    agreed-price line instead of cart supplier groups. */}
                 <section>
                   <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[#7b867d]">
-                    Your orders ({orderCount})
+                    Your orders ({quote ? 1 : orderCount})
                   </h2>
 
                   <div className="mt-3 space-y-4">
-                    {supplierGroups.map((group) => (
+                    {quote ? (
+                      <div className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 truncate text-sm font-black text-[#17251b]">
+                            {quote.supplier}
+                          </div>
+                          <div className="shrink-0 text-[10px] font-black uppercase tracking-[0.14em] text-[#7b867d]">
+                            1 order
+                          </div>
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3 border-b border-[#e9ede7] pb-3 last:border-b-0 last:pb-0">
+                            <div className="min-w-0">
+                              <div className="text-sm font-bold text-[#17251b]">
+                                {quote.product}
+                              </div>
+                              <div className="mt-0.5 text-xs text-[#69756c]">
+                                {quote.quantity.toLocaleString("en-ZA")}{" "}
+                                {quote.unit} × R
+                                {quote.quotedPrice.toLocaleString("en-ZA", {
+                                  minimumFractionDigits: 2,
+                                })}{" "}
+                                <span className="font-bold text-[#17633a]">
+                                  (agreed price)
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 text-sm font-black text-[#17633a]">
+                              R{quoteTotal.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#e3e8e0] pt-4 text-sm font-black text-[#243229]">
+                          <span>Order subtotal</span>
+                          <span className="text-[#17633a]">
+                            R{quoteTotal.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      supplierGroups.map((group) => (
                       <div
                         key={group.supplierName}
                         className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5"
@@ -628,7 +695,8 @@ export default function CheckoutPage() {
                           </span>
                         </div>
                       </div>
-                    ))}
+                    ))
+                    )}
                   </div>
                 </section>
               </div>
@@ -643,22 +711,24 @@ export default function CheckoutPage() {
                   <div className="flex items-center justify-between">
                     <dt className="text-[#69756c]">Items</dt>
                     <dd className="font-bold text-[#243229]">
-                      {cartItems.length}
+                      {quote ? 1 : cartItems.length}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="text-[#69756c]">Orders to place</dt>
-                    <dd className="font-bold text-[#243229]">{orderCount}</dd>
+                    <dd className="font-bold text-[#243229]">
+                      {quote ? 1 : orderCount}
+                    </dd>
                   </div>
                   <div className="flex items-center justify-between border-t border-[#e3e8e0] pt-3 text-base">
                     <dt className="font-black text-[#243229]">Total</dt>
                     <dd className="font-black text-[#17633a]">
-                      R{cartTotal.toFixed(2)}
+                      R{(quote ? quoteTotal : cartTotal).toFixed(2)}
                     </dd>
                   </div>
                 </dl>
 
-                {!allInStock ? (
+                {!quote && !allInStock ? (
                   <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
                     Some items are out of stock. Adjust quantities in your
                     cart.
@@ -673,11 +743,15 @@ export default function CheckoutPage() {
                 >
                   {placing
                     ? "Placing orders..."
-                    : `Place ${orderCount} ${orderCount === 1 ? "order" : "orders"}`}
+                    : quote
+                      ? "Place order"
+                      : `Place ${orderCount} ${orderCount === 1 ? "order" : "orders"}`}
                 </button>
 
                 <p className="mt-3 text-center text-[11px] leading-4 text-[#7b867d]">
-                  One order per supplier so each can fulfil independently.
+                  {quote
+                    ? "Charged at your agreed quote price."
+                    : "One order per supplier so each can fulfil independently."}
                 </p>
               </aside>
             </div>

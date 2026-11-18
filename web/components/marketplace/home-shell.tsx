@@ -28,6 +28,7 @@ import {
   type Product,
 } from "../../lib/catalog";
 import { buildImageUrl } from "../../lib/media";
+import { clearCheckoutQuote } from "../../lib/checkout-draft";
 import AppHeader from "../mobile/app-header";
 import BuyerSidebar from "./buyer-sidebar";
 import CartDrawer from "../cart/cart-drawer";
@@ -3634,6 +3635,8 @@ export default function HomeShell({
             setCartOpen(false);
             // C1: the cart no longer collects delivery details — the drawer
             // drops the buyer on the delivery step of the split flow.
+            // F1: cart entry always starts a cart checkout, never a quote.
+            clearCheckoutQuote();
             router.push("/checkout/delivery");
           }}
         />

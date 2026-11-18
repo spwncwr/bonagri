@@ -3496,6 +3496,8 @@ export const RequestResponseScalarFieldEnum = {
   id: 'id',
   requestId: 'requestId',
   supplierId: 'supplierId',
+  productId: 'productId',
+  orderId: 'orderId',
   message: 'message',
   quotedPrice: 'quotedPrice',
   quotedUnit: 'quotedUnit',

@@ -283,6 +283,9 @@ test("no new endpoints were invented to support the redesign", () => {
     "/api/product-requests",
     "/api/profile/me",
     "/api/supplier/inventory",
+    // F1: pre-existing catalog endpoint, now also read by the demand form
+    // for its product picker (quotes are product-backed).
+    "/api/supplier/products",
     "/api/supplier/profile",
     "/api/transport/transporters",
   ];

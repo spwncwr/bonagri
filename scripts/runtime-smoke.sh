@@ -2811,7 +2811,7 @@ H_RESPOND_HTTP="$(
     -X POST "$API_URL$API_PREFIX/product-requests/$H_REQUEST_ID/responses" \
     -H "Authorization: Bearer $DEALER_TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"message\":\"We can supply this from our Polokwane depot\",\"quotedPrice\":12.5,\"quotedUnit\":\"per kg\"}")"
+    -d "{\"message\":\"We can supply this from our Polokwane depot\",\"productId\":\"$DEALER_PRODUCT_ID\",\"quotedPrice\":12.5,\"quotedUnit\":\"per kg\"}")"
 
 if [[ "$H_RESPOND_HTTP" != "201" ]]; then
   cat "$LOG_DIR/h-respond.json"
@@ -2830,7 +2830,7 @@ H_DUP_HTTP="$(
     -X POST "$API_URL$API_PREFIX/product-requests/$H_REQUEST_ID/responses" \
     -H "Authorization: Bearer $DEALER_TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"message\":\"Second try\"}")"
+    -d "{\"message\":\"Second try\",\"productId\":\"$DEALER_PRODUCT_ID\"}")"
 
 if [[ "$H_DUP_HTTP" != "409" ]]; then
   fail "Duplicate response returned HTTP $H_DUP_HTTP, expected 409"
@@ -2984,12 +2984,19 @@ for H2_TOKEN_VAR in SUPPLIER_TOKEN DEALER_TOKEN
 do
   eval "H2_TOKEN=\$$H2_TOKEN_VAR"
 
+  # F1: each quote is backed by that actor's own ACTIVE listing.
+  if [[ "$H2_TOKEN_VAR" == "SUPPLIER_TOKEN" ]]; then
+    H2_PRODUCT_ID="$PRODUCT_ID"
+  else
+    H2_PRODUCT_ID="$DEALER_PRODUCT_ID"
+  fi
+
   H2_RESPOND_HTTP="$(
     curl -sS -o "$LOG_DIR/h2-respond-$H2_TOKEN_VAR.json" -w "%{http_code}" \
       -X POST "$API_URL$API_PREFIX/product-requests/$H2_REQUEST_ID/responses" \
       -H "Authorization: Bearer $H2_TOKEN" \
       -H "Content-Type: application/json" \
-      -d "{\"message\":\"We can cover this demand\"}")"
+      -d "{\"message\":\"We can cover this demand\",\"productId\":\"$H2_PRODUCT_ID\"}")"
 
   if [[ "$H2_RESPOND_HTTP" != "201" ]]; then
     fail "H2 respond as $H2_TOKEN_VAR failed. HTTP $H2_RESPOND_HTTP"
@@ -3047,7 +3054,7 @@ H2_LATE_HTTP="$(
     -X POST "$API_URL$API_PREFIX/product-requests/$H2_REQUEST_ID/responses" \
     -H "Authorization: Bearer $SUPPLIER_TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"message\":\"late\"}")"
+    -d "{\"message\":\"late\",\"productId\":\"$PRODUCT_ID\"}")"
 
 if [[ "$H2_LATE_HTTP" != "409" ]]; then
   fail "Responding to a withdrawn request returned HTTP $H2_LATE_HTTP, expected 409"
@@ -3518,6 +3525,338 @@ else
 echo "⚠ Business verification gate checks SKIPPED: no admin credentials (glue section skipped)."
 
 fi
+
+echo
+echo "QUOTE TO ORDER CONVERSION FLOW (F1)"
+echo "===================================="
+
+# F1: an accepted, product-backed quote becomes ONE PENDING order priced
+# at the agreed figure — never the catalog price. Positioned after CP17
+# because converting is money-moving: the buyer's phone must already be
+# verified by then (V2), exactly like cart checkout.
+
+echo
+echo "[Y1/7] Buyer posts a demand; the supplier quotes their own listing..."
+
+Y_FUTURE_DATE="$(date -v+14d +%Y-%m-%d 2>/dev/null || date -d '+14 days' +%Y-%m-%d)"
+Y_TITLE="Smoke Quote Checkout $(date +%s)"
+Y_QUOTED_PRICE="9.75"
+
+Y_CREATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/y-request.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"title\":\"$Y_TITLE\",\"quantity\":40,\"unit\":\"kg\",\"destinationCity\":\"Tzaneen\",\"requiredBy\":\"$Y_FUTURE_DATE\"}")"
+
+if [[ "$Y_CREATE_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/y-request.json"
+  fail "F1 request creation failed. HTTP $Y_CREATE_HTTP"
+fi
+
+Y_REQUEST_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/y-request.json")"
+
+if [[ -z "$Y_REQUEST_ID" ]]; then
+  fail "F1 request creation returned no id."
+fi
+
+Y_RESPOND_HTTP="$(
+  curl -sS -o "$LOG_DIR/y-respond.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/$Y_REQUEST_ID/responses" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"message\":\"We can cover this at a better price\",\"productId\":\"$PRODUCT_ID\",\"quotedPrice\":$Y_QUOTED_PRICE,\"quotedUnit\":\"per kg\"}")"
+
+if [[ "$Y_RESPOND_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/y-respond.json"
+  fail "F1 supplier quote failed. HTTP $Y_RESPOND_HTTP"
+fi
+
+Y_RESPONSE_ID="$(
+  python3 -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); assert d.get("productId"), "quote response is missing productId"; print(d.get("id",""))' "$LOG_DIR/y-respond.json")"
+
+if [[ -z "$Y_RESPONSE_ID" ]]; then
+  fail "F1 quote returned no id."
+fi
+
+echo "✓ Quote posted against the supplier's active listing (productId echoed)"
+
+echo
+echo "[Y2/7] Buyer accepts the quote..."
+
+Y_ACCEPT_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/product-requests/responses/$Y_RESPONSE_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"status\":\"ACCEPTED\"}")"
+
+if [[ "$Y_ACCEPT_HTTP" != "200" ]]; then
+  fail "F1 quote accept failed. HTTP $Y_ACCEPT_HTTP"
+fi
+
+echo "✓ Quote ACCEPTED"
+
+echo
+echo "[Y3/7] Converting creates ONE order at the agreed price..."
+
+Y_CONVERT_HTTP="$(
+  curl -sS -o "$LOG_DIR/y-convert.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/responses/$Y_RESPONSE_ID/checkout" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"notes\":\"F1 quote checkout\"}")"
+
+if [[ "$Y_CONVERT_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/y-convert.json"
+  fail "F1 quote conversion failed. HTTP $Y_CONVERT_HTTP"
+fi
+
+python3 - "$LOG_DIR/y-convert.json" <<'PYJSON'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if data.get("orderCount") != 1:
+    raise SystemExit("ERROR: expected exactly one order, got {}".format(data.get("orderCount")))
+
+orders = data.get("orders") or []
+
+if len(orders) != 1:
+    raise SystemExit("ERROR: orders[] should hold one order, got {}".format(len(orders)))
+
+order = orders[0]
+items = order.get("items") or []
+
+if len(items) != 1:
+    raise SystemExit("ERROR: quote order should hold exactly one line item")
+
+item = items[0]
+
+# 9.75 agreed x 40 kg requested. The catalog lists this product at R18 —
+# pricing must come from the quote, never the product row.
+if float(item.get("unitPrice") or 0) != 9.75:
+    raise SystemExit("ERROR: unitPrice should be the quoted 9.75, got {}".format(item.get("unitPrice")))
+
+if int(item.get("quantity") or 0) != 40:
+    raise SystemExit("ERROR: quantity should be the requested 40, got {}".format(item.get("quantity")))
+
+if float(item.get("lineTotal") or 0) != 390.0:
+    raise SystemExit("ERROR: lineTotal should be 390, got {}".format(item.get("lineTotal")))
+
+if float(order.get("deliveryFee") or 0) != 0.0:
+    raise SystemExit("ERROR: quote orders carry no delivery fee, got {}".format(order.get("deliveryFee")))
+
+if float(order.get("total") or 0) != 390.0:
+    raise SystemExit("ERROR: total should be 390, got {}".format(order.get("total")))
+
+if order.get("status") != "PENDING":
+    raise SystemExit("ERROR: new quote order should be PENDING, got {}".format(order.get("status")))
+
+if not str(order.get("orderNumber") or "").startswith("BON-"):
+    raise SystemExit("ERROR: orderNumber missing BON- prefix: {}".format(order.get("orderNumber")))
+
+print("OK One PENDING order priced from the quote (9.75 x 40 = R390, fee 0)")
+PYJSON
+
+echo
+echo "[Y4/7] The quote now reports its order; reconverting is refused..."
+
+curl -sS "$API_URL$API_PREFIX/product-requests/$Y_REQUEST_ID/responses" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/y-responses-after.json"
+
+Y_CLAIMED="$(
+  python3 -c 'import json,sys; items=json.load(open(sys.argv[1],encoding="utf-8")); m={i.get("id"): i for i in items}; r=m.get(sys.argv[2], {}); print("yes" if r.get("orderId") and r.get("productId") else "no")' \
+    "$LOG_DIR/y-responses-after.json" "$Y_RESPONSE_ID")"
+
+if [[ "$Y_CLAIMED" != "yes" ]]; then
+  fail "Converted quote should expose productId + orderId to the buyer."
+fi
+
+Y_RECONVERT_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/responses/$Y_RESPONSE_ID/checkout" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\"}")"
+
+if [[ "$Y_RECONVERT_HTTP" != "409" ]]; then
+  fail "Reconverting a claimed quote returned HTTP $Y_RECONVERT_HTTP, expected 409"
+fi
+
+echo "✓ Quote carries productId + orderId; double conversion refused (409)"
+
+echo
+echo "[Y5/7] An unaccepted quote cannot convert..."
+
+Y_OPEN_TITLE="Smoke Quote Unaccepted $(date +%s)"
+
+Y_OPEN_CREATE_HTTP="$(
+  curl -sS -o "$LOG_DIR/y-open-request.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"title\":\"$Y_OPEN_TITLE\",\"quantity\":25,\"unit\":\"kg\",\"destinationCity\":\"Polokwane\"}")"
+
+if [[ "$Y_OPEN_CREATE_HTTP" != "201" ]]; then
+  fail "F1 unaccepted-quote request creation failed. HTTP $Y_OPEN_CREATE_HTTP"
+fi
+
+Y_OPEN_REQUEST_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/y-open-request.json")"
+
+Y_OPEN_RESPOND_HTTP="$(
+  curl -sS -o "$LOG_DIR/y-open-respond.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/$Y_OPEN_REQUEST_ID/responses" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"message\":\"Ready when you are\",\"productId\":\"$PRODUCT_ID\",\"quotedPrice\":8.5}")"
+
+if [[ "$Y_OPEN_RESPOND_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/y-open-respond.json"
+  fail "F1 unaccepted-quote respond failed. HTTP $Y_OPEN_RESPOND_HTTP"
+fi
+
+Y_OPEN_RESPONSE_ID="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("id",""))' "$LOG_DIR/y-open-respond.json")"
+
+# No ACCEPT step — the quote stays OPEN and must never become an order.
+Y_OPEN_CONVERT_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/responses/$Y_OPEN_RESPONSE_ID/checkout" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\"}")"
+
+if [[ "$Y_OPEN_CONVERT_HTTP" != "409" ]]; then
+  fail "Converting an unaccepted quote returned HTTP $Y_OPEN_CONVERT_HTTP, expected 409"
+fi
+
+echo "✓ Unaccepted quote conversion refused (409)"
+
+echo
+echo "[Y6/7] Another buyer cannot convert someone else's quote..."
+
+# Ownership is checked before any precondition, so a second BUYER needs
+# nothing but an account: register -> verify email -> login -> convert.
+rm -f "$CAPTURE_FILE"
+Y_FOREIGN_EMAIL="f1_foreign_$(date +%s)@bonagri.local"
+
+Y_FOREIGN_REGISTER_HTTP="$(
+  curl -sS -o "$LOG_DIR/y-foreign-register.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/register" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$Y_FOREIGN_EMAIL\",\"password\":\"$TEST_PASSWORD\",\"firstName\":\"Foreign\",\"lastName\":\"Buyer\"}")"
+
+if [[ "$Y_FOREIGN_REGISTER_HTTP" != "200" && "$Y_FOREIGN_REGISTER_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/y-foreign-register.json"
+  fail "F1 foreign-buyer registration failed. HTTP $Y_FOREIGN_REGISTER_HTTP"
+fi
+
+for _ in $(seq 1 30); do
+  if [[ -s "$CAPTURE_FILE" ]]; then
+    break
+  fi
+  sleep 0.5
+done
+
+if [[ ! -s "$CAPTURE_FILE" ]]; then
+  fail "Verification URL was not captured for the foreign buyer."
+fi
+
+Y_FOREIGN_VERIFY_URL="$(cat "$CAPTURE_FILE")"
+Y_FOREIGN_VERIFY_TOKEN="${Y_FOREIGN_VERIFY_URL##*token=}"
+
+if [[ -z "$Y_FOREIGN_VERIFY_TOKEN" ]]; then
+  fail "Foreign buyer verification token could not be extracted."
+fi
+
+Y_FOREIGN_VERIFY_HTTP="$(
+  curl -sS -o "$LOG_DIR/y-foreign-verify.json" -w "%{http_code}" \
+    --get \
+    --data-urlencode "token=$Y_FOREIGN_VERIFY_TOKEN" \
+    "$API_URL$API_PREFIX/auth/verify-email"
+)"
+
+if [[ "$Y_FOREIGN_VERIFY_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/y-foreign-verify.json"
+  fail "F1 foreign-buyer email verification failed. HTTP $Y_FOREIGN_VERIFY_HTTP"
+fi
+
+Y_FOREIGN_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/y-foreign-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$Y_FOREIGN_EMAIL\",\"password\":\"$TEST_PASSWORD\"}")"
+
+if [[ "$Y_FOREIGN_LOGIN_HTTP" != "200" && "$Y_FOREIGN_LOGIN_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/y-foreign-login.json"
+  fail "F1 foreign-buyer login failed. HTTP $Y_FOREIGN_LOGIN_HTTP"
+fi
+
+Y_FOREIGN_TOKEN="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("accessToken",""))' "$LOG_DIR/y-foreign-login.json")"
+
+if [[ -z "$Y_FOREIGN_TOKEN" ]]; then
+  fail "Foreign buyer access token missing."
+fi
+
+Y_FOREIGN_CONVERT_HTTP="$(
+  curl -sS -o "$LOG_DIR/y-foreign-convert.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/responses/$Y_RESPONSE_ID/checkout" \
+    -H "Authorization: Bearer $Y_FOREIGN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\"}")"
+
+if [[ "$Y_FOREIGN_CONVERT_HTTP" != "404" ]]; then
+  cat "$LOG_DIR/y-foreign-convert.json"
+  fail "Foreign quote conversion returned HTTP $Y_FOREIGN_CONVERT_HTTP, expected 404"
+fi
+
+python3 - "$LOG_DIR/y-foreign-convert.json" <<'PYJSON'
+import json
+import sys
+
+body = json.load(open(sys.argv[1], encoding="utf-8"))
+
+# Ownership fires before phone/address gates: the stranger must see the
+# flat "quote not found", never a precondition hinting the quote exists.
+if body.get("statusCode") != 404 or body.get("message") != "Quote not found":
+    raise SystemExit("ERROR: expected 404 'Quote not found', got {}".format(body))
+
+print("OK Foreign buyer refused with the flat 404 (no existence leak)")
+PYJSON
+
+echo
+echo "[Y7/7] Route guard: only an authenticated BUYER may convert..."
+
+Y_SUPPLIER_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/responses/$Y_RESPONSE_ID/checkout" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\"}")"
+
+if [[ "$Y_SUPPLIER_HTTP" != "403" ]]; then
+  fail "Supplier converting a quote returned HTTP $Y_SUPPLIER_HTTP, expected 403"
+fi
+
+Y_ANON_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/product-requests/responses/$Y_RESPONSE_ID/checkout" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\"}")"
+
+if [[ "$Y_ANON_HTTP" != "401" ]]; then
+  fail "Anonymous conversion returned HTTP $Y_ANON_HTTP, expected 401"
+fi
+
+echo "✓ Supplier 403, anonymous 401"
+
+echo
+echo "✓ QUOTE TO ORDER CONVERSION ACCEPTANCE PASSED"
 
 echo
 echo "CART & MULTI-ITEM CHECKOUT FLOW"

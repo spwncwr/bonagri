@@ -26,6 +26,10 @@ type MyResponse = {
   message: string;
   quotedPrice: string | null;
   quotedUnit: string | null;
+  // F1: the listing this quote is backed by (null on pre-F1 rows).
+  productId: string | null;
+  orderId: string | null;
+  product: { id: string; name: string; unit: string; price: string } | null;
   createdAt: string;
   request: {
     id: string;
@@ -35,6 +39,17 @@ type MyResponse = {
     destinationCity: string | null;
     status: "OPEN" | "FULFILLED" | "WITHDRAWN";
   };
+};
+
+// F1: quotes are product-backed — the picker offers the supplier's own
+// ACTIVE listings (GET /supplier/products returns all; drafts/DRAFT are
+// filtered here since only ACTIVE products may back a quote).
+type SupplierProduct = {
+  id: string;
+  name: string;
+  unit: string;
+  price: string;
+  status: "DRAFT" | "ACTIVE" | "INACTIVE";
 };
 
 const RESPONSE_STATUS_STYLES: Record<MyResponse["status"], string> = {
@@ -51,6 +66,10 @@ function DemandContent() {
   const [respondMessage, setRespondMessage] = useState("");
   const [respondPrice, setRespondPrice] = useState("");
   const [respondUnit, setRespondUnit] = useState("");
+  const [respondProductId, setRespondProductId] = useState("");
+  const [supplierProducts, setSupplierProducts] = useState<SupplierProduct[]>(
+    [],
+  );
   const [responding, setResponding] = useState(false);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [respondError, setRespondError] = useState("");
@@ -122,6 +141,41 @@ function DemandContent() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    // F1: the quote form needs the supplier's own listings to attach one.
+    const loadSupplierProducts = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/supplier/products`,
+          {
+            cache: "no-store",
+            headers: authHeaders(),
+          },
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as SupplierProduct[];
+
+        if (!cancelled) {
+          setSupplierProducts(data.filter((item) => item.status === "ACTIVE"));
+        }
+      } catch {
+        // The picker stays empty; the form disables until a product loads.
+      }
+    };
+
+    void loadSupplierProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   async function submitResponse(requestId: string) {
     setResponding(true);
     setRespondError("");
@@ -138,6 +192,8 @@ function DemandContent() {
           },
           body: JSON.stringify({
             message: respondMessage,
+            // F1: required — the quote is backed by this listing.
+            productId: respondProductId,
             ...(respondPrice ? { quotedPrice: Number(respondPrice) } : {}),
             ...(respondUnit ? { quotedUnit: respondUnit } : {}),
           }),
@@ -159,12 +215,18 @@ function DemandContent() {
       }
 
       const request = buyerRequests.find((item) => item.id === requestId);
+      const attached = supplierProducts.find(
+        (item) => item.id === respondProductId,
+      );
       const created = (await response.json()) as {
         id: string;
         status: MyResponse["status"];
         message: string;
         quotedPrice: string | null;
         quotedUnit: string | null;
+        productId: string | null;
+        orderId: string | null;
+        product: MyResponse["product"];
         createdAt: string;
       };
 
@@ -188,7 +250,12 @@ function DemandContent() {
       setRespondMessage("");
       setRespondPrice("");
       setRespondUnit("");
-      setRespondNotice("Response sent — the buyer will see it on their request.");
+      setRespondProductId("");
+      setRespondNotice(
+        attached
+          ? `Response sent for ${attached.name} — the buyer will see it on their request.`
+          : "Response sent — the buyer will see it on their request.",
+      );
     } catch (err) {
       setRespondError(
         err instanceof Error ? err.message : "Unable to send your response",
@@ -367,6 +434,42 @@ function DemandContent() {
                     <div className="mt-4 space-y-3 rounded-xl border border-[#dce2d9] bg-white p-4">
                       <div>
                         <label
+                          htmlFor={`respond-product-${request.id}`}
+                          className="block text-xs font-bold uppercase tracking-wide text-[#7b867d]"
+                        >
+                          Product to supply *
+                        </label>
+                        <select
+                          id={`respond-product-${request.id}`}
+                          value={respondProductId}
+                          onChange={(event) =>
+                            setRespondProductId(event.target.value)
+                          }
+                          className="mt-1 w-full rounded-xl border border-[#dce2d9] bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#17633a] focus:outline-none"
+                        >
+                          <option value="">
+                            {supplierProducts.length === 0
+                              ? "No active products — publish a listing first"
+                              : "Select one of your active products"}
+                          </option>
+                          {supplierProducts.map((product) => (
+                            <option key={product.id} value={product.id}>
+                              {product.name} — R{" "}
+                              {Number(product.price).toLocaleString("en-ZA", {
+                                minimumFractionDigits: 2,
+                              })}
+                              /{product.unit}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-1 text-[11px] leading-4 text-[#7a857d]">
+                          The buyer converts an accepted quote into an order
+                          for this listing at your quoted price.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label
                           htmlFor={`respond-message-${request.id}`}
                           className="block text-xs font-bold uppercase tracking-wide text-[#7b867d]"
                         >
@@ -428,7 +531,11 @@ function DemandContent() {
 
                       <button
                         type="button"
-                        disabled={responding || respondMessage.trim().length === 0}
+                        disabled={
+                          responding ||
+                          respondMessage.trim().length === 0 ||
+                          respondProductId === ""
+                        }
                         onClick={() => void submitResponse(request.id)}
                         className="rounded-xl bg-[#17633a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#12512f] disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -498,6 +605,21 @@ function DemandContent() {
                           minimumFractionDigits: 2,
                         })}
                         {item.quotedUnit ? ` ${item.quotedUnit}` : ""}
+                      </p>
+                    ) : null}
+
+                    {/* F1: which listing backs this quote — and whether it
+                        has already become an order. */}
+                    {item.product ? (
+                      <p className="mt-1 text-xs text-[#69756c]">
+                        <span className="rounded-full bg-[#e8f1e6] px-2 py-0.5 text-[10px] font-bold text-[#17633a]">
+                          {item.product.name}
+                        </span>
+                        {item.orderId ? (
+                          <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                            ORDER PLACED
+                          </span>
+                        ) : null}
                       </p>
                     ) : null}
                   </div>

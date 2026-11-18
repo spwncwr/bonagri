@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -14,6 +15,12 @@ export class CreateRequestResponseDto {
   @IsNotEmpty()
   @MaxLength(2000)
   message!: string;
+
+  // F1: quotes are product-backed — the supplier attaches their own active
+  // listing so an accepted quote can convert into an order (validated
+  // against the caller's profile in the service, not just any UUID).
+  @IsUUID()
+  productId!: string;
 
   @IsOptional()
   @Type(() => Number)

@@ -38,6 +38,8 @@ export type RequestResponseMinAggregateOutputType = {
   id: string | null
   requestId: string | null
   supplierId: string | null
+  productId: string | null
+  orderId: string | null
   message: string | null
   quotedPrice: runtime.Decimal | null
   quotedUnit: string | null
@@ -50,6 +52,8 @@ export type RequestResponseMaxAggregateOutputType = {
   id: string | null
   requestId: string | null
   supplierId: string | null
+  productId: string | null
+  orderId: string | null
   message: string | null
   quotedPrice: runtime.Decimal | null
   quotedUnit: string | null
@@ -62,6 +66,8 @@ export type RequestResponseCountAggregateOutputType = {
   id: number
   requestId: number
   supplierId: number
+  productId: number
+  orderId: number
   message: number
   quotedPrice: number
   quotedUnit: number
@@ -84,6 +90,8 @@ export type RequestResponseMinAggregateInputType = {
   id?: true
   requestId?: true
   supplierId?: true
+  productId?: true
+  orderId?: true
   message?: true
   quotedPrice?: true
   quotedUnit?: true
@@ -96,6 +104,8 @@ export type RequestResponseMaxAggregateInputType = {
   id?: true
   requestId?: true
   supplierId?: true
+  productId?: true
+  orderId?: true
   message?: true
   quotedPrice?: true
   quotedUnit?: true
@@ -108,6 +118,8 @@ export type RequestResponseCountAggregateInputType = {
   id?: true
   requestId?: true
   supplierId?: true
+  productId?: true
+  orderId?: true
   message?: true
   quotedPrice?: true
   quotedUnit?: true
@@ -207,6 +219,8 @@ export type RequestResponseGroupByOutputType = {
   id: string
   requestId: string
   supplierId: string
+  productId: string | null
+  orderId: string | null
   message: string
   quotedPrice: runtime.Decimal | null
   quotedUnit: string | null
@@ -242,6 +256,8 @@ export type RequestResponseWhereInput = {
   id?: Prisma.StringFilter<"RequestResponse"> | string
   requestId?: Prisma.StringFilter<"RequestResponse"> | string
   supplierId?: Prisma.StringFilter<"RequestResponse"> | string
+  productId?: Prisma.StringNullableFilter<"RequestResponse"> | string | null
+  orderId?: Prisma.StringNullableFilter<"RequestResponse"> | string | null
   message?: Prisma.StringFilter<"RequestResponse"> | string
   quotedPrice?: Prisma.DecimalNullableFilter<"RequestResponse"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.StringNullableFilter<"RequestResponse"> | string | null
@@ -250,12 +266,15 @@ export type RequestResponseWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"RequestResponse"> | Date | string
   request?: Prisma.XOR<Prisma.ProductRequestScalarRelationFilter, Prisma.ProductRequestWhereInput>
   supplier?: Prisma.XOR<Prisma.SupplierProfileScalarRelationFilter, Prisma.SupplierProfileWhereInput>
+  product?: Prisma.XOR<Prisma.ProductNullableScalarRelationFilter, Prisma.ProductWhereInput> | null
 }
 
 export type RequestResponseOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   supplierId?: Prisma.SortOrder
+  productId?: Prisma.SortOrderInput | Prisma.SortOrder
+  orderId?: Prisma.SortOrderInput | Prisma.SortOrder
   message?: Prisma.SortOrder
   quotedPrice?: Prisma.SortOrderInput | Prisma.SortOrder
   quotedUnit?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -264,16 +283,19 @@ export type RequestResponseOrderByWithRelationInput = {
   updatedAt?: Prisma.SortOrder
   request?: Prisma.ProductRequestOrderByWithRelationInput
   supplier?: Prisma.SupplierProfileOrderByWithRelationInput
+  product?: Prisma.ProductOrderByWithRelationInput
 }
 
 export type RequestResponseWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  orderId?: string
   requestId_supplierId?: Prisma.RequestResponseRequestIdSupplierIdCompoundUniqueInput
   AND?: Prisma.RequestResponseWhereInput | Prisma.RequestResponseWhereInput[]
   OR?: Prisma.RequestResponseWhereInput[]
   NOT?: Prisma.RequestResponseWhereInput | Prisma.RequestResponseWhereInput[]
   requestId?: Prisma.StringFilter<"RequestResponse"> | string
   supplierId?: Prisma.StringFilter<"RequestResponse"> | string
+  productId?: Prisma.StringNullableFilter<"RequestResponse"> | string | null
   message?: Prisma.StringFilter<"RequestResponse"> | string
   quotedPrice?: Prisma.DecimalNullableFilter<"RequestResponse"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.StringNullableFilter<"RequestResponse"> | string | null
@@ -282,12 +304,15 @@ export type RequestResponseWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"RequestResponse"> | Date | string
   request?: Prisma.XOR<Prisma.ProductRequestScalarRelationFilter, Prisma.ProductRequestWhereInput>
   supplier?: Prisma.XOR<Prisma.SupplierProfileScalarRelationFilter, Prisma.SupplierProfileWhereInput>
-}, "id" | "requestId_supplierId">
+  product?: Prisma.XOR<Prisma.ProductNullableScalarRelationFilter, Prisma.ProductWhereInput> | null
+}, "id" | "orderId" | "requestId_supplierId">
 
 export type RequestResponseOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   supplierId?: Prisma.SortOrder
+  productId?: Prisma.SortOrderInput | Prisma.SortOrder
+  orderId?: Prisma.SortOrderInput | Prisma.SortOrder
   message?: Prisma.SortOrder
   quotedPrice?: Prisma.SortOrderInput | Prisma.SortOrder
   quotedUnit?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -308,6 +333,8 @@ export type RequestResponseScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"RequestResponse"> | string
   requestId?: Prisma.StringWithAggregatesFilter<"RequestResponse"> | string
   supplierId?: Prisma.StringWithAggregatesFilter<"RequestResponse"> | string
+  productId?: Prisma.StringNullableWithAggregatesFilter<"RequestResponse"> | string | null
+  orderId?: Prisma.StringNullableWithAggregatesFilter<"RequestResponse"> | string | null
   message?: Prisma.StringWithAggregatesFilter<"RequestResponse"> | string
   quotedPrice?: Prisma.DecimalNullableWithAggregatesFilter<"RequestResponse"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.StringNullableWithAggregatesFilter<"RequestResponse"> | string | null
@@ -318,6 +345,7 @@ export type RequestResponseScalarWhereWithAggregatesInput = {
 
 export type RequestResponseCreateInput = {
   id?: string
+  orderId?: string | null
   message: string
   quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: string | null
@@ -326,12 +354,15 @@ export type RequestResponseCreateInput = {
   updatedAt?: Date | string
   request: Prisma.ProductRequestCreateNestedOneWithoutResponsesInput
   supplier: Prisma.SupplierProfileCreateNestedOneWithoutResponsesInput
+  product?: Prisma.ProductCreateNestedOneWithoutQuotesInput
 }
 
 export type RequestResponseUncheckedCreateInput = {
   id?: string
   requestId: string
   supplierId: string
+  productId?: string | null
+  orderId?: string | null
   message: string
   quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: string | null
@@ -342,6 +373,7 @@ export type RequestResponseUncheckedCreateInput = {
 
 export type RequestResponseUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   message?: Prisma.StringFieldUpdateOperationsInput | string
   quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -350,12 +382,15 @@ export type RequestResponseUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   request?: Prisma.ProductRequestUpdateOneRequiredWithoutResponsesNestedInput
   supplier?: Prisma.SupplierProfileUpdateOneRequiredWithoutResponsesNestedInput
+  product?: Prisma.ProductUpdateOneWithoutQuotesNestedInput
 }
 
 export type RequestResponseUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   supplierId?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   message?: Prisma.StringFieldUpdateOperationsInput | string
   quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -368,6 +403,8 @@ export type RequestResponseCreateManyInput = {
   id?: string
   requestId: string
   supplierId: string
+  productId?: string | null
+  orderId?: string | null
   message: string
   quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: string | null
@@ -378,6 +415,7 @@ export type RequestResponseCreateManyInput = {
 
 export type RequestResponseUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   message?: Prisma.StringFieldUpdateOperationsInput | string
   quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -390,6 +428,8 @@ export type RequestResponseUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
   supplierId?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   message?: Prisma.StringFieldUpdateOperationsInput | string
   quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -417,6 +457,8 @@ export type RequestResponseCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   supplierId?: Prisma.SortOrder
+  productId?: Prisma.SortOrder
+  orderId?: Prisma.SortOrder
   message?: Prisma.SortOrder
   quotedPrice?: Prisma.SortOrder
   quotedUnit?: Prisma.SortOrder
@@ -433,6 +475,8 @@ export type RequestResponseMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   supplierId?: Prisma.SortOrder
+  productId?: Prisma.SortOrder
+  orderId?: Prisma.SortOrder
   message?: Prisma.SortOrder
   quotedPrice?: Prisma.SortOrder
   quotedUnit?: Prisma.SortOrder
@@ -445,6 +489,8 @@ export type RequestResponseMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   requestId?: Prisma.SortOrder
   supplierId?: Prisma.SortOrder
+  productId?: Prisma.SortOrder
+  orderId?: Prisma.SortOrder
   message?: Prisma.SortOrder
   quotedPrice?: Prisma.SortOrder
   quotedUnit?: Prisma.SortOrder
@@ -496,6 +542,48 @@ export type RequestResponseUncheckedUpdateManyWithoutSupplierNestedInput = {
   connect?: Prisma.RequestResponseWhereUniqueInput | Prisma.RequestResponseWhereUniqueInput[]
   update?: Prisma.RequestResponseUpdateWithWhereUniqueWithoutSupplierInput | Prisma.RequestResponseUpdateWithWhereUniqueWithoutSupplierInput[]
   updateMany?: Prisma.RequestResponseUpdateManyWithWhereWithoutSupplierInput | Prisma.RequestResponseUpdateManyWithWhereWithoutSupplierInput[]
+  deleteMany?: Prisma.RequestResponseScalarWhereInput | Prisma.RequestResponseScalarWhereInput[]
+}
+
+export type RequestResponseCreateNestedManyWithoutProductInput = {
+  create?: Prisma.XOR<Prisma.RequestResponseCreateWithoutProductInput, Prisma.RequestResponseUncheckedCreateWithoutProductInput> | Prisma.RequestResponseCreateWithoutProductInput[] | Prisma.RequestResponseUncheckedCreateWithoutProductInput[]
+  connectOrCreate?: Prisma.RequestResponseCreateOrConnectWithoutProductInput | Prisma.RequestResponseCreateOrConnectWithoutProductInput[]
+  createMany?: Prisma.RequestResponseCreateManyProductInputEnvelope
+  connect?: Prisma.RequestResponseWhereUniqueInput | Prisma.RequestResponseWhereUniqueInput[]
+}
+
+export type RequestResponseUncheckedCreateNestedManyWithoutProductInput = {
+  create?: Prisma.XOR<Prisma.RequestResponseCreateWithoutProductInput, Prisma.RequestResponseUncheckedCreateWithoutProductInput> | Prisma.RequestResponseCreateWithoutProductInput[] | Prisma.RequestResponseUncheckedCreateWithoutProductInput[]
+  connectOrCreate?: Prisma.RequestResponseCreateOrConnectWithoutProductInput | Prisma.RequestResponseCreateOrConnectWithoutProductInput[]
+  createMany?: Prisma.RequestResponseCreateManyProductInputEnvelope
+  connect?: Prisma.RequestResponseWhereUniqueInput | Prisma.RequestResponseWhereUniqueInput[]
+}
+
+export type RequestResponseUpdateManyWithoutProductNestedInput = {
+  create?: Prisma.XOR<Prisma.RequestResponseCreateWithoutProductInput, Prisma.RequestResponseUncheckedCreateWithoutProductInput> | Prisma.RequestResponseCreateWithoutProductInput[] | Prisma.RequestResponseUncheckedCreateWithoutProductInput[]
+  connectOrCreate?: Prisma.RequestResponseCreateOrConnectWithoutProductInput | Prisma.RequestResponseCreateOrConnectWithoutProductInput[]
+  upsert?: Prisma.RequestResponseUpsertWithWhereUniqueWithoutProductInput | Prisma.RequestResponseUpsertWithWhereUniqueWithoutProductInput[]
+  createMany?: Prisma.RequestResponseCreateManyProductInputEnvelope
+  set?: Prisma.RequestResponseWhereUniqueInput | Prisma.RequestResponseWhereUniqueInput[]
+  disconnect?: Prisma.RequestResponseWhereUniqueInput | Prisma.RequestResponseWhereUniqueInput[]
+  delete?: Prisma.RequestResponseWhereUniqueInput | Prisma.RequestResponseWhereUniqueInput[]
+  connect?: Prisma.RequestResponseWhereUniqueInput | Prisma.RequestResponseWhereUniqueInput[]
+  update?: Prisma.RequestResponseUpdateWithWhereUniqueWithoutProductInput | Prisma.RequestResponseUpdateWithWhereUniqueWithoutProductInput[]
+  updateMany?: Prisma.RequestResponseUpdateManyWithWhereWithoutProductInput | Prisma.RequestResponseUpdateManyWithWhereWithoutProductInput[]
+  deleteMany?: Prisma.RequestResponseScalarWhereInput | Prisma.RequestResponseScalarWhereInput[]
+}
+
+export type RequestResponseUncheckedUpdateManyWithoutProductNestedInput = {
+  create?: Prisma.XOR<Prisma.RequestResponseCreateWithoutProductInput, Prisma.RequestResponseUncheckedCreateWithoutProductInput> | Prisma.RequestResponseCreateWithoutProductInput[] | Prisma.RequestResponseUncheckedCreateWithoutProductInput[]
+  connectOrCreate?: Prisma.RequestResponseCreateOrConnectWithoutProductInput | Prisma.RequestResponseCreateOrConnectWithoutProductInput[]
+  upsert?: Prisma.RequestResponseUpsertWithWhereUniqueWithoutProductInput | Prisma.RequestResponseUpsertWithWhereUniqueWithoutProductInput[]
+  createMany?: Prisma.RequestResponseCreateManyProductInputEnvelope
+  set?: Prisma.RequestResponseWhereUniqueInput | Prisma.RequestResponseWhereUniqueInput[]
+  disconnect?: Prisma.RequestResponseWhereUniqueInput | Prisma.RequestResponseWhereUniqueInput[]
+  delete?: Prisma.RequestResponseWhereUniqueInput | Prisma.RequestResponseWhereUniqueInput[]
+  connect?: Prisma.RequestResponseWhereUniqueInput | Prisma.RequestResponseWhereUniqueInput[]
+  update?: Prisma.RequestResponseUpdateWithWhereUniqueWithoutProductInput | Prisma.RequestResponseUpdateWithWhereUniqueWithoutProductInput[]
+  updateMany?: Prisma.RequestResponseUpdateManyWithWhereWithoutProductInput | Prisma.RequestResponseUpdateManyWithWhereWithoutProductInput[]
   deleteMany?: Prisma.RequestResponseScalarWhereInput | Prisma.RequestResponseScalarWhereInput[]
 }
 
@@ -555,6 +643,7 @@ export type EnumRequestResponseStatusFieldUpdateOperationsInput = {
 
 export type RequestResponseCreateWithoutSupplierInput = {
   id?: string
+  orderId?: string | null
   message: string
   quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: string | null
@@ -562,11 +651,14 @@ export type RequestResponseCreateWithoutSupplierInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   request: Prisma.ProductRequestCreateNestedOneWithoutResponsesInput
+  product?: Prisma.ProductCreateNestedOneWithoutQuotesInput
 }
 
 export type RequestResponseUncheckedCreateWithoutSupplierInput = {
   id?: string
   requestId: string
+  productId?: string | null
+  orderId?: string | null
   message: string
   quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: string | null
@@ -608,6 +700,8 @@ export type RequestResponseScalarWhereInput = {
   id?: Prisma.StringFilter<"RequestResponse"> | string
   requestId?: Prisma.StringFilter<"RequestResponse"> | string
   supplierId?: Prisma.StringFilter<"RequestResponse"> | string
+  productId?: Prisma.StringNullableFilter<"RequestResponse"> | string | null
+  orderId?: Prisma.StringNullableFilter<"RequestResponse"> | string | null
   message?: Prisma.StringFilter<"RequestResponse"> | string
   quotedPrice?: Prisma.DecimalNullableFilter<"RequestResponse"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.StringNullableFilter<"RequestResponse"> | string | null
@@ -616,8 +710,61 @@ export type RequestResponseScalarWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"RequestResponse"> | Date | string
 }
 
+export type RequestResponseCreateWithoutProductInput = {
+  id?: string
+  orderId?: string | null
+  message: string
+  quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  quotedUnit?: string | null
+  status?: $Enums.RequestResponseStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  request: Prisma.ProductRequestCreateNestedOneWithoutResponsesInput
+  supplier: Prisma.SupplierProfileCreateNestedOneWithoutResponsesInput
+}
+
+export type RequestResponseUncheckedCreateWithoutProductInput = {
+  id?: string
+  requestId: string
+  supplierId: string
+  orderId?: string | null
+  message: string
+  quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  quotedUnit?: string | null
+  status?: $Enums.RequestResponseStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type RequestResponseCreateOrConnectWithoutProductInput = {
+  where: Prisma.RequestResponseWhereUniqueInput
+  create: Prisma.XOR<Prisma.RequestResponseCreateWithoutProductInput, Prisma.RequestResponseUncheckedCreateWithoutProductInput>
+}
+
+export type RequestResponseCreateManyProductInputEnvelope = {
+  data: Prisma.RequestResponseCreateManyProductInput | Prisma.RequestResponseCreateManyProductInput[]
+  skipDuplicates?: boolean
+}
+
+export type RequestResponseUpsertWithWhereUniqueWithoutProductInput = {
+  where: Prisma.RequestResponseWhereUniqueInput
+  update: Prisma.XOR<Prisma.RequestResponseUpdateWithoutProductInput, Prisma.RequestResponseUncheckedUpdateWithoutProductInput>
+  create: Prisma.XOR<Prisma.RequestResponseCreateWithoutProductInput, Prisma.RequestResponseUncheckedCreateWithoutProductInput>
+}
+
+export type RequestResponseUpdateWithWhereUniqueWithoutProductInput = {
+  where: Prisma.RequestResponseWhereUniqueInput
+  data: Prisma.XOR<Prisma.RequestResponseUpdateWithoutProductInput, Prisma.RequestResponseUncheckedUpdateWithoutProductInput>
+}
+
+export type RequestResponseUpdateManyWithWhereWithoutProductInput = {
+  where: Prisma.RequestResponseScalarWhereInput
+  data: Prisma.XOR<Prisma.RequestResponseUpdateManyMutationInput, Prisma.RequestResponseUncheckedUpdateManyWithoutProductInput>
+}
+
 export type RequestResponseCreateWithoutRequestInput = {
   id?: string
+  orderId?: string | null
   message: string
   quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: string | null
@@ -625,11 +772,14 @@ export type RequestResponseCreateWithoutRequestInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   supplier: Prisma.SupplierProfileCreateNestedOneWithoutResponsesInput
+  product?: Prisma.ProductCreateNestedOneWithoutQuotesInput
 }
 
 export type RequestResponseUncheckedCreateWithoutRequestInput = {
   id?: string
   supplierId: string
+  productId?: string | null
+  orderId?: string | null
   message: string
   quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: string | null
@@ -667,6 +817,8 @@ export type RequestResponseUpdateManyWithWhereWithoutRequestInput = {
 export type RequestResponseCreateManySupplierInput = {
   id?: string
   requestId: string
+  productId?: string | null
+  orderId?: string | null
   message: string
   quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: string | null
@@ -677,6 +829,7 @@ export type RequestResponseCreateManySupplierInput = {
 
 export type RequestResponseUpdateWithoutSupplierInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   message?: Prisma.StringFieldUpdateOperationsInput | string
   quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -684,11 +837,14 @@ export type RequestResponseUpdateWithoutSupplierInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   request?: Prisma.ProductRequestUpdateOneRequiredWithoutResponsesNestedInput
+  product?: Prisma.ProductUpdateOneWithoutQuotesNestedInput
 }
 
 export type RequestResponseUncheckedUpdateWithoutSupplierInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   message?: Prisma.StringFieldUpdateOperationsInput | string
   quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -700,6 +856,60 @@ export type RequestResponseUncheckedUpdateWithoutSupplierInput = {
 export type RequestResponseUncheckedUpdateManyWithoutSupplierInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  message?: Prisma.StringFieldUpdateOperationsInput | string
+  quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumRequestResponseStatusFieldUpdateOperationsInput | $Enums.RequestResponseStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type RequestResponseCreateManyProductInput = {
+  id?: string
+  requestId: string
+  supplierId: string
+  orderId?: string | null
+  message: string
+  quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  quotedUnit?: string | null
+  status?: $Enums.RequestResponseStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type RequestResponseUpdateWithoutProductInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  message?: Prisma.StringFieldUpdateOperationsInput | string
+  quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumRequestResponseStatusFieldUpdateOperationsInput | $Enums.RequestResponseStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  request?: Prisma.ProductRequestUpdateOneRequiredWithoutResponsesNestedInput
+  supplier?: Prisma.SupplierProfileUpdateOneRequiredWithoutResponsesNestedInput
+}
+
+export type RequestResponseUncheckedUpdateWithoutProductInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  supplierId?: Prisma.StringFieldUpdateOperationsInput | string
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  message?: Prisma.StringFieldUpdateOperationsInput | string
+  quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumRequestResponseStatusFieldUpdateOperationsInput | $Enums.RequestResponseStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type RequestResponseUncheckedUpdateManyWithoutProductInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  requestId?: Prisma.StringFieldUpdateOperationsInput | string
+  supplierId?: Prisma.StringFieldUpdateOperationsInput | string
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   message?: Prisma.StringFieldUpdateOperationsInput | string
   quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -711,6 +921,8 @@ export type RequestResponseUncheckedUpdateManyWithoutSupplierInput = {
 export type RequestResponseCreateManyRequestInput = {
   id?: string
   supplierId: string
+  productId?: string | null
+  orderId?: string | null
   message: string
   quotedPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: string | null
@@ -721,6 +933,7 @@ export type RequestResponseCreateManyRequestInput = {
 
 export type RequestResponseUpdateWithoutRequestInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   message?: Prisma.StringFieldUpdateOperationsInput | string
   quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -728,11 +941,14 @@ export type RequestResponseUpdateWithoutRequestInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   supplier?: Prisma.SupplierProfileUpdateOneRequiredWithoutResponsesNestedInput
+  product?: Prisma.ProductUpdateOneWithoutQuotesNestedInput
 }
 
 export type RequestResponseUncheckedUpdateWithoutRequestInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   supplierId?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   message?: Prisma.StringFieldUpdateOperationsInput | string
   quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -744,6 +960,8 @@ export type RequestResponseUncheckedUpdateWithoutRequestInput = {
 export type RequestResponseUncheckedUpdateManyWithoutRequestInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   supplierId?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   message?: Prisma.StringFieldUpdateOperationsInput | string
   quotedPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   quotedUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -758,6 +976,8 @@ export type RequestResponseSelect<ExtArgs extends runtime.Types.Extensions.Inter
   id?: boolean
   requestId?: boolean
   supplierId?: boolean
+  productId?: boolean
+  orderId?: boolean
   message?: boolean
   quotedPrice?: boolean
   quotedUnit?: boolean
@@ -766,12 +986,15 @@ export type RequestResponseSelect<ExtArgs extends runtime.Types.Extensions.Inter
   updatedAt?: boolean
   request?: boolean | Prisma.ProductRequestDefaultArgs<ExtArgs>
   supplier?: boolean | Prisma.SupplierProfileDefaultArgs<ExtArgs>
+  product?: boolean | Prisma.RequestResponse$productArgs<ExtArgs>
 }, ExtArgs["result"]["requestResponse"]>
 
 export type RequestResponseSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   requestId?: boolean
   supplierId?: boolean
+  productId?: boolean
+  orderId?: boolean
   message?: boolean
   quotedPrice?: boolean
   quotedUnit?: boolean
@@ -780,12 +1003,15 @@ export type RequestResponseSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   updatedAt?: boolean
   request?: boolean | Prisma.ProductRequestDefaultArgs<ExtArgs>
   supplier?: boolean | Prisma.SupplierProfileDefaultArgs<ExtArgs>
+  product?: boolean | Prisma.RequestResponse$productArgs<ExtArgs>
 }, ExtArgs["result"]["requestResponse"]>
 
 export type RequestResponseSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   requestId?: boolean
   supplierId?: boolean
+  productId?: boolean
+  orderId?: boolean
   message?: boolean
   quotedPrice?: boolean
   quotedUnit?: boolean
@@ -794,12 +1020,15 @@ export type RequestResponseSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   updatedAt?: boolean
   request?: boolean | Prisma.ProductRequestDefaultArgs<ExtArgs>
   supplier?: boolean | Prisma.SupplierProfileDefaultArgs<ExtArgs>
+  product?: boolean | Prisma.RequestResponse$productArgs<ExtArgs>
 }, ExtArgs["result"]["requestResponse"]>
 
 export type RequestResponseSelectScalar = {
   id?: boolean
   requestId?: boolean
   supplierId?: boolean
+  productId?: boolean
+  orderId?: boolean
   message?: boolean
   quotedPrice?: boolean
   quotedUnit?: boolean
@@ -808,18 +1037,21 @@ export type RequestResponseSelectScalar = {
   updatedAt?: boolean
 }
 
-export type RequestResponseOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestId" | "supplierId" | "message" | "quotedPrice" | "quotedUnit" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["requestResponse"]>
+export type RequestResponseOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestId" | "supplierId" | "productId" | "orderId" | "message" | "quotedPrice" | "quotedUnit" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["requestResponse"]>
 export type RequestResponseInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   request?: boolean | Prisma.ProductRequestDefaultArgs<ExtArgs>
   supplier?: boolean | Prisma.SupplierProfileDefaultArgs<ExtArgs>
+  product?: boolean | Prisma.RequestResponse$productArgs<ExtArgs>
 }
 export type RequestResponseIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   request?: boolean | Prisma.ProductRequestDefaultArgs<ExtArgs>
   supplier?: boolean | Prisma.SupplierProfileDefaultArgs<ExtArgs>
+  product?: boolean | Prisma.RequestResponse$productArgs<ExtArgs>
 }
 export type RequestResponseIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   request?: boolean | Prisma.ProductRequestDefaultArgs<ExtArgs>
   supplier?: boolean | Prisma.SupplierProfileDefaultArgs<ExtArgs>
+  product?: boolean | Prisma.RequestResponse$productArgs<ExtArgs>
 }
 
 export type $RequestResponsePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -827,11 +1059,14 @@ export type $RequestResponsePayload<ExtArgs extends runtime.Types.Extensions.Int
   objects: {
     request: Prisma.$ProductRequestPayload<ExtArgs>
     supplier: Prisma.$SupplierProfilePayload<ExtArgs>
+    product: Prisma.$ProductPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     requestId: string
     supplierId: string
+    productId: string | null
+    orderId: string | null
     message: string
     quotedPrice: runtime.Decimal | null
     quotedUnit: string | null
@@ -1234,6 +1469,7 @@ export interface Prisma__RequestResponseClient<T, Null = never, ExtArgs extends 
   readonly [Symbol.toStringTag]: "PrismaPromise"
   request<T extends Prisma.ProductRequestDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductRequestDefaultArgs<ExtArgs>>): Prisma.Prisma__ProductRequestClient<runtime.Types.Result.GetResult<Prisma.$ProductRequestPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   supplier<T extends Prisma.SupplierProfileDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SupplierProfileDefaultArgs<ExtArgs>>): Prisma.Prisma__SupplierProfileClient<runtime.Types.Result.GetResult<Prisma.$SupplierProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  product<T extends Prisma.RequestResponse$productArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RequestResponse$productArgs<ExtArgs>>): Prisma.Prisma__ProductClient<runtime.Types.Result.GetResult<Prisma.$ProductPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1266,6 +1502,8 @@ export interface RequestResponseFieldRefs {
   readonly id: Prisma.FieldRef<"RequestResponse", 'String'>
   readonly requestId: Prisma.FieldRef<"RequestResponse", 'String'>
   readonly supplierId: Prisma.FieldRef<"RequestResponse", 'String'>
+  readonly productId: Prisma.FieldRef<"RequestResponse", 'String'>
+  readonly orderId: Prisma.FieldRef<"RequestResponse", 'String'>
   readonly message: Prisma.FieldRef<"RequestResponse", 'String'>
   readonly quotedPrice: Prisma.FieldRef<"RequestResponse", 'Decimal'>
   readonly quotedUnit: Prisma.FieldRef<"RequestResponse", 'String'>
@@ -1670,6 +1908,25 @@ export type RequestResponseDeleteManyArgs<ExtArgs extends runtime.Types.Extensio
    * Limit how many RequestResponses to delete.
    */
   limit?: number
+}
+
+/**
+ * RequestResponse.product
+ */
+export type RequestResponse$productArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Product
+   */
+  select?: Prisma.ProductSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Product
+   */
+  omit?: Prisma.ProductOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ProductInclude<ExtArgs> | null
+  where?: Prisma.ProductWhereInput
 }
 
 /**

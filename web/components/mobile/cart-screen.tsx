@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import CheckoutStepper from "../checkout/stepper";
+import { clearCheckoutQuote } from "../../lib/checkout-draft";
 import {
   ChevronRightIcon,
   MinusIcon,
@@ -50,6 +51,9 @@ export default function CartScreen({
   const allInStock = items.every((item) => item.inStock);
 
   function continueToDelivery() {
+    // F1: cart flow must never inherit a lingering quote draft — the
+    // delivery/payment steps branch on its presence.
+    clearCheckoutQuote();
     router.push("/checkout/delivery");
   }
 

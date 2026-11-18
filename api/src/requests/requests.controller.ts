@@ -18,6 +18,7 @@ import { CreateProductRequestDto } from "./dto/create-product-request.dto";
 import { UpdateProductRequestDto } from "./dto/update-product-request.dto";
 import { CreateRequestResponseDto } from "./dto/create-request-response.dto";
 import { UpdateRequestResponseDto } from "./dto/update-request-response.dto";
+import { CheckoutDto } from "../cart/dto/checkout.dto";
 
 type AuthenticatedRequest = Request & {
   user: {
@@ -82,6 +83,20 @@ export class RequestsController {
     @Body() dto: CreateRequestResponseDto,
   ) {
     return this.requestsService.respond(id, request.user.id, dto);
+  }
+
+  // F1: buyer converts their ACCEPTED quote into an order at the agreed
+  // price (payment screen follows exactly like cart checkout). BUYER-only;
+  // ownership/acceptance/claim guards live in the service.
+  @Post("responses/:id/checkout")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("BUYER")
+  checkoutResponse(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() dto: CheckoutDto,
+  ) {
+    return this.requestsService.checkoutResponse(id, request.user.id, dto);
   }
 
   @Patch("responses/:id")

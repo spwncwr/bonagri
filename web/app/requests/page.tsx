@@ -7,6 +7,7 @@ import AuthGuard from "../../components/auth/auth-guard";
 import { BrandLogo } from "../../components/brand/logo";
 import { ArrowLeftIcon } from "../../components/mobile/icons";
 import { authHeaders } from "../../lib/auth";
+import { writeCheckoutQuote } from "../../lib/checkout-draft";
 import { goBackOr } from "../../lib/navigation";
 
 const API_BASE_URL =
@@ -37,6 +38,11 @@ type RequestResponse = {
   quotedPrice: string | null;
   quotedUnit: string | null;
   status: "OPEN" | "ACCEPTED" | "DECLINED" | "WITHDRAWN";
+  // F1: product-backed quote metadata — productId/orderId come straight
+  // from the API; product is the attached listing (null on pre-F1 rows).
+  productId: string | null;
+  orderId: string | null;
+  product: { id: string; name: string; unit: string; price: string } | null;
   createdAt: string;
   supplier: {
     businessName: string;
@@ -338,6 +344,24 @@ export default function RequestsPage() {
     quantity.trim().length > 0 &&
     Number(quantity) >= 1 &&
     unit.trim().length > 0;
+
+  // F1: an accepted, product-backed, not-yet-converted quote proceeds to
+  // the shared C1 delivery → payment steps. The draft carries display
+  // sugar only — the API re-validates status/ownership/price server-side.
+  function proceedToCheckout(
+    response: RequestResponse,
+    request: ProductRequest,
+  ) {
+    writeCheckoutQuote({
+      responseId: response.id,
+      product: response.product?.name ?? request.title,
+      supplier: response.supplier.businessName,
+      quantity: request.quantity,
+      unit: request.unit,
+      quotedPrice: response.quotedPrice ? Number(response.quotedPrice) : 0,
+    });
+    router.push("/checkout/delivery");
+  }
 
   return (
     <AuthGuard allowedRoles={["BUYER"]}>
@@ -715,6 +739,30 @@ export default function RequestsPage() {
                                       Decline
                                     </button>
                                   </div>
+                                ) : null}
+
+                                {/* F1: convert an accepted, product-backed,
+                                    un-ordered quote into an order at the
+                                    agreed price (pre-F1 free-text quotes
+                                    have no product and cannot convert). */}
+                                {response.status === "ACCEPTED" &&
+                                response.productId &&
+                                response.quotedPrice ? (
+                                  response.orderId ? (
+                                    <span className="rounded-full bg-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-600">
+                                      Ordered
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        proceedToCheckout(response, request)
+                                      }
+                                      className="w-full rounded-full bg-[#17633a] px-3.5 py-2 text-[11px] font-black text-white shadow-sm transition hover:bg-[#0f4d2b] active:scale-[0.98] sm:w-auto sm:shrink-0"
+                                    >
+                                      Proceed to checkout
+                                    </button>
+                                  )
                                 ) : null}
                               </div>
                             </div>

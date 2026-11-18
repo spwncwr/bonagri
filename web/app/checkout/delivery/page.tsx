@@ -10,8 +10,10 @@ import LocationPicker from "../../../components/addresses/location-picker";
 import { ArrowLeftIcon, MapPinIcon } from "../../../components/mobile/icons";
 import { authHeaders } from "../../../lib/auth";
 import {
+  CheckoutQuoteDraft,
   readCheckoutAddressId,
   readCheckoutNotes,
+  readCheckoutQuote,
   writeCheckoutAddressId,
   writeCheckoutNotes,
 } from "../../../lib/checkout-draft";
@@ -59,6 +61,9 @@ export default function DeliveryPage() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // F1: quote mode — an accepted quote draft replaces the cart contents
+  // entirely (the cart guard is skipped; the summary shows the quote).
+  const [quote, setQuote] = useState<CheckoutQuoteDraft | null>(null);
 
   // Delivery-destination pin sheet — saves {lat, lng} onto the selected
   // address only; the manual address text is never modified from here.
@@ -70,7 +75,8 @@ export default function DeliveryPage() {
   const [pinError, setPinError] = useState("");
 
   function goBack() {
-    goBackOr(router, "/cart");
+    // Quote flow starts from the request card; cart flow from the cart.
+    goBackOr(router, quote ? "/requests" : "/cart");
   }
 
   useEffect(() => {
@@ -81,18 +87,25 @@ export default function DeliveryPage() {
         setLoading(true);
         setError("");
 
+        const quoteDraft = readCheckoutQuote();
+        setQuote(quoteDraft);
+
+        // Quote mode never touches the cart — an empty cart must not
+        // bounce this flow to the empty-cart card.
         const [cartResponse, addressResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/cart`, {
-            cache: "no-store",
-            headers: authHeaders(),
-          }),
+          quoteDraft
+            ? Promise.resolve(null)
+            : fetch(`${API_BASE_URL}/api/cart`, {
+                cache: "no-store",
+                headers: authHeaders(),
+              }),
           fetch(`${API_BASE_URL}/api/addresses`, {
             cache: "no-store",
             headers: authHeaders(),
           }),
         ]);
 
-        if (!cartResponse.ok) {
+        if (cartResponse && !cartResponse.ok) {
           throw new Error(`Cart request failed: ${cartResponse.status}`);
         }
 
@@ -102,7 +115,7 @@ export default function DeliveryPage() {
           );
         }
 
-        const cartData = await cartResponse.json();
+        const cartData = cartResponse ? await cartResponse.json() : [];
         const addressData = await addressResponse.json();
 
         if (cancelled) {
@@ -158,7 +171,11 @@ export default function DeliveryPage() {
   const selectedAddress =
     addresses.find((address) => address.id === selectedAddressId) ??
     undefined;
-  const canContinue = cartItems.length > 0 && Boolean(selectedAddressId);
+  // Quote mode only needs an address — the cart can be (and usually is)
+  // empty; cart mode still requires items.
+  const canContinue = quote
+    ? Boolean(selectedAddressId)
+    : cartItems.length > 0 && Boolean(selectedAddressId);
 
   function continueToPayment() {
     if (!canContinue) return;
@@ -295,7 +312,7 @@ export default function DeliveryPage() {
                 Loading delivery details...
               </div>
             </div>
-          ) : cartItems.length === 0 ? (
+          ) : !quote && cartItems.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#cbd5ca] bg-white p-8 text-center">
               <div className="text-base font-black text-[#243229]">
                 Your cart is empty
@@ -312,6 +329,47 @@ export default function DeliveryPage() {
             </div>
           ) : (
             <>
+              {/* F1: quote mode shows WHAT is being ordered (the agreed
+                  quote) instead of cart line items — everything below is
+                  shared with the cart flow. */}
+              {quote ? (
+                <section className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5">
+                  <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[#7b867d]">
+                    Your quote order
+                  </h2>
+                  <div className="mt-3 flex flex-wrap items-start justify-between gap-2 rounded-xl border border-[#e3e8e1] bg-[#fafbf8] p-3.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[#17251b]">
+                        {quote.product}
+                      </p>
+                      <p className="mt-0.5 text-xs leading-5 text-[#69756c]">
+                        {quote.supplier} •{" "}
+                        {quote.quantity.toLocaleString("en-ZA")} {quote.unit}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-black text-[#17633a]">
+                        R{" "}
+                        {quote.quotedPrice.toLocaleString("en-ZA", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </p>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-[#7b867d]">
+                        agreed price
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-4 text-[#7a857d]">
+                    Total: R{" "}
+                    {(quote.quotedPrice * quote.quantity).toLocaleString(
+                      "en-ZA",
+                      { minimumFractionDigits: 2 },
+                    )}{" "}
+                    — charged at the agreed quote price, not the catalog
+                    price.
+                  </p>
+                </section>
+              ) : null}
               {/* Address selection — the concern that used to live (twice)
                   in the cart and checkout screens. */}
               <section className="rounded-2xl border border-[#dce2d9] bg-white p-4 shadow-sm sm:p-5">

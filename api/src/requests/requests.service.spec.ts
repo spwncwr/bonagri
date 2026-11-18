@@ -4,6 +4,12 @@ import { RequestsService } from "./requests.service";
 function makeService() {
   const prisma = {
     category: { findUnique: jest.fn() },
+    user: { findUnique: jest.fn() },
+    address: { findFirst: jest.fn() },
+    product: { findFirst: jest.fn(), findUnique: jest.fn() },
+    inventory: { update: jest.fn() },
+    order: { create: jest.fn() },
+    orderStatusHistory: { create: jest.fn() },
     productRequest: {
       create: jest.fn(),
       findMany: jest.fn(),
@@ -18,7 +24,14 @@ function makeService() {
       update: jest.fn(),
       updateMany: jest.fn(),
     },
-    $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
+    // Both Prisma flavours used in the codebase: array form (parallel
+    // promises) and interactive callback form (F1 quote checkout).
+    $transaction: jest.fn((arg: unknown) => {
+      if (typeof arg === "function") {
+        return (arg as (tx: unknown) => Promise<unknown>)(prisma);
+      }
+      return Promise.all(arg as Promise<unknown>[]);
+    }),
   };
 
   const notifications = {
@@ -243,30 +256,40 @@ describe("RequestsService (CP7 product requests)", () => {
     });
   });
 
-  describe("respond (CP9)", () => {
+  describe("respond (CP9 + F1 product-backed quotes)", () => {
     const openRequest = { id: "req-1", status: "OPEN" };
 
-    it("creates a response for a supplier with a profile", async () => {
+    it("creates a response for a supplier with a profile and their product", async () => {
       const { service, prisma } = makeService();
 
       prisma.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
       prisma.productRequest.findUnique.mockResolvedValue(openRequest);
+      prisma.product.findFirst.mockResolvedValue({ id: "prod-1" });
       prisma.requestResponse.findUnique.mockResolvedValue(null);
       prisma.requestResponse.create.mockResolvedValue({ id: "resp-1" });
 
       await expect(
         service.respond("req-1", "vendor-1", {
           message: "  We can supply this  ",
+          productId: "prod-1",
           quotedPrice: 12.5,
           quotedUnit: "per kg",
         }),
       ).resolves.toEqual({ id: "resp-1" });
 
+      // The product must be the caller's OWN active listing — that is what
+      // an accepted quote later converts into an order for.
+      expect(prisma.product.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "prod-1", supplierId: "sup-1", status: "ACTIVE" },
+        }),
+      );
       expect(prisma.requestResponse.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             requestId: "req-1",
             supplierId: "sup-1",
+            productId: "prod-1",
             message: "We can supply this",
             quotedPrice: 12.5,
             quotedUnit: "per kg",
@@ -281,8 +304,28 @@ describe("RequestsService (CP7 product requests)", () => {
       prisma.supplierProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.respond("req-1", "buyer-1", { message: "hi" }),
+        service.respond("req-1", "buyer-1", {
+          message: "hi",
+          productId: "prod-1",
+        }),
       ).rejects.toThrow(ForbiddenException);
+      expect(prisma.requestResponse.create).not.toHaveBeenCalled();
+    });
+
+    it("400s a quote whose product is not the caller's active listing", async () => {
+      const { service, prisma } = makeService();
+
+      prisma.supplierProfile.findUnique.mockResolvedValue({ id: "sup-1" });
+      prisma.productRequest.findUnique.mockResolvedValue(openRequest);
+      // Wrong supplier, DRAFT, or simply missing — all resolve to null.
+      prisma.product.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.respond("req-1", "vendor-1", {
+          message: "hi",
+          productId: "prod-x",
+        }),
+      ).rejects.toThrow(BadRequestException);
       expect(prisma.requestResponse.create).not.toHaveBeenCalled();
     });
 
@@ -295,13 +338,20 @@ describe("RequestsService (CP7 product requests)", () => {
         status: "WITHDRAWN",
       });
       await expect(
-        service.respond("req-1", "vendor-1", { message: "hi" }),
+        service.respond("req-1", "vendor-1", {
+          message: "hi",
+          productId: "prod-1",
+        }),
       ).rejects.toThrow(ConflictException);
 
       prisma.productRequest.findUnique.mockResolvedValue(openRequest);
+      prisma.product.findFirst.mockResolvedValue({ id: "prod-1" });
       prisma.requestResponse.findUnique.mockResolvedValue({ id: "resp-x" });
       await expect(
-        service.respond("req-1", "vendor-1", { message: "hi" }),
+        service.respond("req-1", "vendor-1", {
+          message: "hi",
+          productId: "prod-1",
+        }),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -439,6 +489,278 @@ describe("RequestsService (CP7 product requests)", () => {
         service.updateResponse("resp-1", "buyer-1", { status: "ACCEPTED" }),
       ).rejects.toThrow(ConflictException);
       expect(prisma.requestResponse.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("checkoutResponse (F1 quote → order)", () => {
+    const acceptedQuote = {
+      id: "resp-1",
+      status: "ACCEPTED",
+      orderId: null,
+      productId: "prod-1",
+      quotedPrice: 12.5,
+      supplierId: "sup-1",
+      request: { buyerId: "buyer-1", quantity: 40, unit: "kg" },
+    };
+
+    const buyer = {
+      id: "buyer-1",
+      role: "BUYER",
+      status: "ACTIVE",
+      phoneVerifiedAt: new Date("2026-11-01"),
+    };
+
+    const address = { id: "addr-1", userId: "buyer-1" };
+
+    const product = {
+      id: "prod-1",
+      name: "Tomatoes",
+      unit: "kg",
+      status: "ACTIVE",
+      supplierId: "sup-1",
+      supplier: { businessName: "Fresh Farm" },
+      inventory: { quantity: 500, reservedQuantity: 100 },
+    };
+
+    // Wires every model the happy path touches; individual tests override.
+    function primeHappyPath(prisma: ReturnType<typeof makeService>["prisma"]) {
+      prisma.user.findUnique.mockResolvedValue(buyer);
+      prisma.address.findFirst.mockResolvedValue(address);
+      prisma.requestResponse.findUnique.mockResolvedValue(acceptedQuote);
+      prisma.product.findUnique.mockResolvedValue(product);
+      prisma.order.create.mockResolvedValue({
+        id: "order-1",
+        orderNumber: "BON-20261118-123456",
+        status: "PENDING",
+        subtotal: 500,
+        deliveryFee: 0,
+        total: 500,
+        items: [
+          { productId: "prod-1", productName: "Tomatoes", unitPrice: 12.5, quantity: 40, lineTotal: 500 },
+        ],
+        deliveryAddress: { id: "addr-1" },
+      });
+      prisma.requestResponse.updateMany.mockResolvedValue({ count: 1 });
+      prisma.inventory.update.mockResolvedValue({});
+      prisma.orderStatusHistory.create.mockResolvedValue({});
+    }
+
+    const dto = { deliveryAddressId: "addr-1", notes: "Gate 4" };
+
+    it("prices the order at the quoted figure, not the catalog price", async () => {
+      const { service, prisma } = makeService();
+      primeHappyPath(prisma);
+
+      const result = await service.checkoutResponse(
+        "resp-1",
+        "buyer-1",
+        dto,
+      );
+
+      // 12.5 quoted × 40 requested = 500 agreed — regardless of what the
+      // product row lists.
+      expect(prisma.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            subtotal: 500,
+            deliveryFee: 0,
+            total: 500,
+            notes: "Gate 4",
+            items: {
+              create: [
+                expect.objectContaining({
+                  productId: "prod-1",
+                  unitPrice: 12.5,
+                  quantity: 40,
+                  lineTotal: 500,
+                }),
+              ],
+            },
+          }),
+        }),
+      );
+
+      expect(result).toMatchObject({ orderCount: 1 });
+      expect(result.orders[0]).toMatchObject({
+        orderNumber: "BON-20261118-123456",
+        supplierName: "Fresh Farm",
+        total: 500,
+      });
+
+      // Claim + reserve + history all ran.
+      expect(prisma.requestResponse.updateMany).toHaveBeenCalledWith({
+        where: { id: "resp-1", orderId: null },
+        data: { orderId: "order-1" },
+      });
+      expect(prisma.inventory.update).toHaveBeenCalledWith({
+        where: { productId: "prod-1" },
+        data: { reservedQuantity: { increment: 40 } },
+      });
+      expect(prisma.orderStatusHistory.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          orderId: "order-1",
+          toStatus: "PENDING",
+          note: "Order placed from accepted quote",
+        }),
+      });
+      // Single order — no group id.
+      expect(
+        prisma.order.create.mock.calls[0][0].data.orderGroupId,
+      ).toBeUndefined();
+    });
+
+    it("404s foreign and unknown quotes alike", async () => {
+      const { service, prisma } = makeService();
+      primeHappyPath(prisma);
+
+      prisma.requestResponse.findUnique.mockResolvedValue(null);
+      await expect(
+        service.checkoutResponse("ghost", "buyer-1", dto),
+      ).rejects.toThrow(NotFoundException);
+
+      prisma.requestResponse.findUnique.mockResolvedValue({
+        ...acceptedQuote,
+        request: { ...acceptedQuote.request, buyerId: "someone-else" },
+      });
+      await expect(
+        service.checkoutResponse("resp-1", "buyer-1", dto),
+      ).rejects.toThrow(NotFoundException);
+
+      // Ownership is decided BEFORE caller preconditions: even an
+      // unverified stranger gets the flat 404, never a phone-gate 403
+      // that would hint the quote exists.
+      prisma.user.findUnique.mockResolvedValue({
+        ...buyer,
+        phoneVerifiedAt: null,
+      });
+      await expect(
+        service.checkoutResponse("resp-1", "buyer-1", dto),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it("409s quotes that are not ACCEPTED", async () => {
+      const { service, prisma } = makeService();
+      primeHappyPath(prisma);
+
+      for (const status of ["OPEN", "DECLINED", "WITHDRAWN"]) {
+        prisma.requestResponse.findUnique.mockResolvedValue({
+          ...acceptedQuote,
+          status,
+        });
+        await expect(
+          service.checkoutResponse("resp-1", "buyer-1", dto),
+        ).rejects.toThrow(ConflictException);
+      }
+
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it("409s an already-converted quote (double-submit guard)", async () => {
+      const { service, prisma } = makeService();
+      primeHappyPath(prisma);
+
+      prisma.requestResponse.findUnique.mockResolvedValue({
+        ...acceptedQuote,
+        orderId: "order-prev",
+      });
+
+      await expect(
+        service.checkoutResponse("resp-1", "buyer-1", dto),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it("409s when the claim loses the race (count 0 rolls the order back)", async () => {
+      const { service, prisma } = makeService();
+      primeHappyPath(prisma);
+
+      // Another submit claimed the quote between our read and our write.
+      prisma.requestResponse.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.checkoutResponse("resp-1", "buyer-1", dto),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.inventory.update).not.toHaveBeenCalled();
+    });
+
+    it("409s legacy quotes without a product or agreed price", async () => {
+      const { service, prisma } = makeService();
+      primeHappyPath(prisma);
+
+      prisma.requestResponse.findUnique.mockResolvedValue({
+        ...acceptedQuote,
+        productId: null,
+      });
+      await expect(
+        service.checkoutResponse("resp-1", "buyer-1", dto),
+      ).rejects.toThrow(ConflictException);
+
+      prisma.requestResponse.findUnique.mockResolvedValue({
+        ...acceptedQuote,
+        quotedPrice: null,
+      });
+      await expect(
+        service.checkoutResponse("resp-1", "buyer-1", dto),
+      ).rejects.toThrow(ConflictException);
+
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it("409s when the product went inactive or stock is short", async () => {
+      const { service, prisma } = makeService();
+      primeHappyPath(prisma);
+
+      prisma.product.findUnique.mockResolvedValue({
+        ...product,
+        status: "DRAFT",
+      });
+      await expect(
+        service.checkoutResponse("resp-1", "buyer-1", dto),
+      ).rejects.toThrow(ConflictException);
+
+      // 40 requested vs 400 free (500 - 100) — fine; drop it below 40.
+      prisma.product.findUnique.mockResolvedValue({
+        ...product,
+        inventory: { quantity: 50, reservedQuantity: 20 },
+      });
+      await expect(
+        service.checkoutResponse("resp-1", "buyer-1", dto),
+      ).rejects.toThrow(ConflictException);
+
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it("404s an address that is not the caller's", async () => {
+      const { service, prisma } = makeService();
+      primeHappyPath(prisma);
+
+      prisma.address.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.checkoutResponse("resp-1", "buyer-1", {
+          deliveryAddressId: "addr-x",
+        }),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it("blocks ordering without a verified phone (CP17, same code as cart)", async () => {
+      const { service, prisma } = makeService();
+      primeHappyPath(prisma);
+
+      prisma.user.findUnique.mockResolvedValue({
+        ...buyer,
+        phoneVerifiedAt: null,
+      });
+
+      await expect(
+        service.checkoutResponse("resp-1", "buyer-1", dto),
+      ).rejects.toMatchObject({
+        response: { code: "PHONE_VERIFICATION_REQUIRED" },
+      });
+      expect(prisma.order.create).not.toHaveBeenCalled();
     });
   });
 });

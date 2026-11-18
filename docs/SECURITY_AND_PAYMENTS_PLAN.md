@@ -330,6 +330,8 @@ Target structure:
   happen only on the delivery step; `Change` returns without losing drafts;
   existing checkout smoke + HP1 payment tests still green; smoke extended.
 
+### F1 — Quote → checkout (agreed price → payment screen)
+
 - Wire the accepted-quote flow into checkout so the buyer proceeds to HP1's
   payment screen at the **quoted price**. Server-side pricing means the quote
   must be trusted by the API — investigate the cheapest mechanism at phase

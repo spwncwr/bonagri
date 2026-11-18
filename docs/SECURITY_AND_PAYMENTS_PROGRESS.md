@@ -46,7 +46,8 @@ record actuals in §3).
 | HP3 | Step-up confirmation + admin audit trail | 2026-11-15 | done (9012021, 2026-11-16) |
 | HP4 | Password reset / account recovery | 2026-11-16 | done (a04d649, 2026-11-17) |
 | HP5 | Session hardening (refresh rotation, no storage token) | 2026-11-17 | done (16a07a6, 2026-11-17) |
-| HP6 | Security hygiene + admin runbook | — | pending |
+| HP6 | Security hygiene + admin runbook | 2026-11-18 | done (657ce13, 2026-11-18) |
+| C1 | Checkout UX split: cart → delivery → payment | — | pending |
 | F1 | Quote → checkout (agreed price → payment screen) | — | pending |
 | F2 | Order-scoped messaging (buyer/supplier/transporter) | — | pending |
 | F3 | Payment-after-acceptance timing (optional) | — | pending |
@@ -399,6 +400,88 @@ separate calls); background shells need
 `export PATH="/usr/local/bin:$PATH"` (missing PATH → smoke exit 127).
 
 ### HP6 — Security hygiene + admin runbook
+**Status**: done (657ce13, 2026-11-18)
+**Shipped**:
+- **API**: `src/security.ts` — `resolveCorsOrigins` (deduped `CORS_ORIGIN ∪
+  WEB_BASE_URL`, no trailing slash) + `applySecurity(app)` (helmet v8 + CORS),
+  called from `main.ts` right after trust-proxy so unit/e2e tests assert the
+  exact wiring production serves (e2e boots AppModule without `main.ts`).
+  Helmet: JSON-only CSP (`useDefaults:false` → `script-src 'none'`,
+  `object-src 'none'`, `base-uri 'none'`), `crossOriginResourcePolicy:
+  cross-origin`, HSTS `max-age=15552000` (host-only), `xFrameOptions:
+  {action:"deny"}`; X-Powered-By stripped by helmet's **default** (the
+  `xPoweredBy:false` option disables removal — investigated, not used).
+- **Web**: `next.config.ts` `headers()` on `/:path*` — enforcing
+  `Content-Security-Policy` (started report-only per plan, flipped after
+  pass A), HSTS `max-age=15552000; includeSubDomains`, `X-Frame-Options:
+  DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+  strict-origin-when-cross-origin`, `Permissions-Policy:
+  geolocation=(self), camera=(), microphone=(), payment=()`. CSP pins:
+  `img-src` cloudinary + OSM tiles + `blob:` + broad `https:` (see
+  deviations), `connect-src` API origin + `api.cloudinary.com` +
+  `nominatim.openstreetmap.org` + `router.project-osrm.org`, `script-src
+  'self' 'unsafe-inline'` in production.
+- **Tests**: `api/src/security.spec.ts` (8 — exact header set incl. the
+  pinned HSTS value, allowlist echo + credentials, foreign GET/preflight
+  show **no** `Access-Control-Allow-Origin`, allowlisted preflight passes)
+  and `web/tests/security-headers.test.mjs` (5 — imports `next.config.ts`
+  directly with `NODE_ENV=production` + pinned
+  `NEXT_PUBLIC_API_BASE_URL`, so it pins the policy `next build` ships:
+  exact header keys, enforcing-CSP, per-directive origin pins, no
+  `unsafe-eval`).
+- **Docs**: `docs/ADMIN_ONBOARDING.md` — env-gated seed gates, mandatory
+  2FA enrolment, 10 single-use recovery codes (usable at `2fa/verify` and
+  admin-only `2fa/disable`), 30-min password reset that revokes refresh
+  sessions, the env-gated DB reset ladder for "both TOTP device and codes
+  lost" (`ADMIN_2FA_RESET_APPROVED=yes`, SELECT-first, psql with `DB_URL`
+  read from `.env` and never echoed; production refuses the seed, so the
+  SQL path is the production path), the 17-action audit list + weekly
+  review cadence, and a sign-off checklist.
+- **Smoke section X** (after mobile M, before cleanup): X1 web headers
+  (enforcing CSP asserted, report-only rejected, pinned HSTS), X2 API
+  helmet headers with X-Powered-By gone, X3 CORS echo of `$WEB_URL` with
+  credentials, X4 foreign-origin rejection for simple + preflight (asserts
+  **ACAO absence only** — the `cors` package still sends
+  `Access-Control-Allow-Credentials`/`allow-headers` for disallowed
+  origins), X5 health answers 15/15 rapid requests unthrottled.
+- **Smoke sleep guard**: the script now re-execs itself under
+  `caffeinate -is` (no-op without the command). Two runs died in macOS
+  deep sleep mid-suite — the pause blew past HP5's 15-minute access token
+  between two adjacent curls and surfaced as a false 401 at step 11b.
+**Deviations from plan**:
+- CSP is enforcing (plan: "start report-only, tighten after a browser
+  pass" — that sequence was executed: pass A report-only → flipped → pass
+  B enforcing, both green).
+- `script-src` carries `'unsafe-eval'` **in dev only**: pass B caught
+  React's development build calling `eval()` under enforcement; the
+  production branch stays `'self' 'unsafe-inline'`.
+- `img-src` keeps a broad `https:` allowance because the promotion form
+  accepts a *pasted* external image URL (documented in the config comment)
+  — pinning alone would break that field.
+- helmet v8 chosen for the API (plan: "helmet if not double-handled by the
+  proxy — investigate first"): API and web each serve their own headers on
+  their own origin, no proxy double-handling.
+**Gates**: api build ✓, **521/521** ✓, lint ✓ (4 pre-existing `mail`
+warnings); web build ✓, **117/117** ✓, lint ✓ (0 errors, 17 baseline
+warnings); full `scripts/runtime-smoke.sh` **exit 0** with section X green.
+**Live journey**: pass A (report-only) — marketplace images (external
+unsplash, 0 broken) with 0 violations, login 201 → `/auth/me` 200, cart →
+checkout → order `BON-20261118-293637` (Manual EFT, PENDING), invoice page
+renders with its Print button, 0 JS errors; pass B (enforcing, hard
+reload) — invoice + full checkout render (PAYMENT METHOD region, SUMMARY,
+YOUR ORDERS, Place button, images), **0 console errors, 0 CSP
+violations**; every console 401 accounted for as the HP5 refresh chain
+(401 → refresh 200 → replayed 200).
+**Residue / follow-ups**:
+- nonce-based CSP would remove `'unsafe-inline'` from `script-src` (needs
+  Next middleware) — recorded, not in scope.
+- `img-src https:` broadening (above) — tighten if the promotion form
+  moves to upload-only.
+- Render/deployed-stack walkthrough still owed (carried from HP2–HP4).
+- Screenshot capture blocked ("needs a visible desktop window") — same
+  quirk as HP5; results shown via DOM/console assertions instead.
+
+### C1 — Checkout UX split: cart → delivery → payment
 **Status**: pending
 **Shipped**: —
 **Deviations from plan**: —
@@ -437,6 +520,14 @@ separate calls); background shells need
 Cross-phase observations (baseline drift, decisions confirmed mid-flight,
 environment issues). Newest first.
 
+- 2026-11-18 — HP6 done (`657ce13`); test baselines api 513 → **521** (+8
+  security), web 112 → **117** (+5 security-headers). Two smoke runs died
+  **not** from code: macOS entered deep sleep mid-suite (confirmed in
+  `pmset -g log`) and the pause expired HP5's 15-minute access token between
+  two adjacent curls → false 401 at step 11b. `runtime-smoke.sh` now re-execs
+  under `caffeinate -is`; a healthy run takes ~4 min, well inside the TTL.
+  Also: an `ACCESS_TOKEN_TTL_SECONDS` stretch breaks section Q, which pins
+  900s — don't "fix" the smoke that way.
 - 2026-11-15 — HP2 done (`518cf66`); test baselines drift api 453 → **473**
   (+20: totp vectors + two-factor suite), web 85 → **92** (+7 admin-2fa
   source assertions). Smoke grew to **21 flows** (new section T). Local dev

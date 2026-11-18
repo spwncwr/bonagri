@@ -270,12 +270,14 @@ finished state.
    order-scoped threads reusing existing notifications as pings; WebSocket and
    media are explicitly out of scope for F2.
 
-## 6. Follow-on product phases (F1–F3) — added 2026-11-14
+## 6. Follow-on product phases (C1, F1–F3)
 
 Raised in the 2026-11-14 review ("payment after the deal is agreed?", a chat
-screen for buyer↔supplier, mid-journey buyer↔transporter conversation).
-Nothing here was in the original HP scope — recorded so it is tracked.
-**Default order: F1 → F2 → F3, running after HP6** (user may reorder).
+screen for buyer↔supplier, mid-journey buyer↔transporter conversation), plus
+the 2026-11-18 checkout-UX call (C1). Nothing here was in the original HP
+scope — recorded so it is tracked.
+**Default order: C1 → F1 → F2 → F3** (C1 before F1 so payment work lands on
+the split structure; reorder only by explicit user call).
 
 Ground truth verified 2026-11-14:
 
@@ -298,7 +300,35 @@ Ground truth verified 2026-11-14:
   **do not gate the catalog checkout behind chat** — chat is coordination, not
   a paywall.
 
-### F1 — Quote → checkout (agreed price → payment screen)
+### C1 — Checkout UX split: cart → delivery → payment (added 2026-11-18)
+
+The cart screen currently does three jobs (line items + bill details, the
+DELIVER TO address block + SET LOCATION map picker, and delivery
+instructions), and `/checkout` (708 lines) duplicates the address concern a
+second time with its own address list. User call: each screen owns one job.
+
+Target structure:
+
+| Screen | Owns | Never touches |
+|---|---|---|
+| **Cart** (`/cart`) | line items, qty/remove, bill details, CTA *Continue to delivery* | address, map location, instructions |
+| **Delivery** (new `/checkout/delivery`) | address select/add/edit (reuse the existing `/addresses` machinery — no new CRUD), map location confirmation, delivery instructions, CTA *Continue to payment* | payment, cart edits |
+| **Checkout** (`/checkout`) | payment method (HP1 tiles), order total summary, **read-only** delivery summary with a *Change* link back to `/checkout/delivery`, CTA *Place order* | address editing, cart edits |
+
+- A **visible stepper** (Cart → Delivery → Payment) renders on all three
+  screens so the flow is never a hidden extra step.
+- Draft state (selected address, map location, instructions, payment choice)
+  carries across steps via the `sessionStorage` hand-off HP1 already uses
+  (`CHECKOUT_PAYMENT_METHOD_KEY` pattern) — no backend change expected: the
+  existing `POST /api/cart/checkout` payload already carries address +
+  instructions.
+- Guards: an empty cart bounces back to `/cart`; delivery step requires a
+  confirmed location where the API requires one (keep today's
+  `NEEDS LOCATION CONFIRMATION` gate).
+- **Exit criteria**: buyer journey cart → delivery → checkout reads as three
+  focused screens with the stepper; address/instructions/location edits
+  happen only on the delivery step; `Change` returns without losing drafts;
+  existing checkout smoke + HP1 payment tests still green; smoke extended.
 
 - Wire the accepted-quote flow into checkout so the buyer proceeds to HP1's
   payment screen at the **quoted price**. Server-side pricing means the quote

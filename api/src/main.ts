@@ -3,6 +3,7 @@ import "dotenv/config";
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
+import { applySecurity } from "./security";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -25,26 +26,10 @@ async function bootstrap() {
   };
   expressInstance.set("trust proxy", 3);
 
-  const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3001")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
-  // HP5: the refresh cookie makes auth a credentialed cross-origin flow —
-  // the browser only attaches it when CORS echoes an EXACT allowlisted
-  // origin with credentials enabled. WEB_BASE_URL (the deployed frontend)
-  // joins the existing CORS_ORIGIN list so production never has to juggle
-  // two overlapping envs.
-  const webOrigins = (process.env.WEB_BASE_URL ?? "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-  const allowedOrigins = [...new Set([...corsOrigins, ...webOrigins])];
-
-  app.enableCors({
-    origin: allowedOrigins,
-    credentials: true,
-  });
+  // HP6: CORS allowlist + helmet security headers live in security.ts so
+  // unit tests assert exactly what production serves (HP5's credentialed
+  // CORS allowlist included).
+  applySecurity(app);
 
   app.useGlobalPipes(
     new ValidationPipe({

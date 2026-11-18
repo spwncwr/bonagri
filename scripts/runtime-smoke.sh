@@ -5,6 +5,16 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
+# macOS idles into deep sleep once the display turns off, pausing the run
+# mid-flight (2026-11-18: two runs slept 16-17 min at step 11b and HP5's
+# 15-minute access token expired during the pause → false 401). Re-exec under
+# caffeinate so the machine stays awake for the whole suite; no-op anywhere
+# without the command (Linux CI, containers).
+if [[ "${SMOKE_AWAKE:-}" != "1" ]] && command -v caffeinate >/dev/null 2>&1; then
+  export SMOKE_AWAKE=1
+  exec caffeinate -is bash "$SCRIPT_DIR/runtime-smoke.sh" "$@"
+fi
+
 ROOT="$REPO_ROOT"
 API="$ROOT/api"
 WEB="$ROOT/web"
@@ -8594,6 +8604,135 @@ echo "✓ Mobile route /explore?cat=Fruits -> 200"
 
 echo
 echo "✓ MOBILE APP ROUTES ACCEPTANCE PASSED"
+
+echo
+echo "==============================================="
+echo "[X1/5] Web response security headers (HP6 G6)"
+echo "==============================================="
+
+# HP6: next.config headers() must ship the TIGHTENED (enforcing) CSP — the
+# plan starts report-only, flips after a green browser pass, and this suite
+# only ever asserts the shipped state.
+
+x_expect() {
+  # x_expect <file> <extended-regex> <description> — pattern must be PRESENT
+  if ! grep -Eiq "$2" "$1"; then
+    cat "$1"
+    fail "HP6 headers: missing $3"
+  fi
+}
+
+x_reject() {
+  # x_reject <file> <extended-regex> <description> — pattern must be ABSENT
+  if grep -Eiq "$2" "$1"; then
+    cat "$1"
+    fail "HP6 headers: $3"
+  fi
+}
+
+X_WEB_FILE="$LOG_DIR/x-web-headers.txt"
+curl -sS -o /dev/null -D - "$WEB_URL/" >"$X_WEB_FILE"
+
+x_expect "$X_WEB_FILE" "^content-security-policy:" \
+  "web CSP must be enforced (report-only flipped after the browser pass)"
+x_reject "$X_WEB_FILE" "^content-security-policy-report-only:" \
+  "web must not still be report-only"
+x_expect "$X_WEB_FILE" "frame-ancestors 'none'" "web CSP frame-ancestors"
+x_expect "$X_WEB_FILE" "res\\.cloudinary\\.com" "web CSP Cloudinary img allowance"
+x_expect "$X_WEB_FILE" "^x-frame-options: *deny" "web X-Frame-Options DENY"
+x_expect "$X_WEB_FILE" "^x-content-type-options: *nosniff" "web nosniff"
+x_expect "$X_WEB_FILE" "^referrer-policy: *strict-origin-when-cross-origin" \
+  "web Referrer-Policy"
+x_expect "$X_WEB_FILE" "^permissions-policy:.*geolocation=\\(self\\)" \
+  "web Permissions-Policy geolocation=(self)"
+x_expect "$X_WEB_FILE" "^strict-transport-security: *max-age=15552000" "web HSTS"
+echo "✓ web serves enforced CSP, HSTS, XFO, nosniff, Referrer-Policy, Permissions-Policy"
+
+echo
+echo "[X2/5] API helmet headers (health stays unthrottled)..."
+
+X_API_FILE="$LOG_DIR/x-api-headers.txt"
+curl -sS -o /dev/null -D - "$API_URL$API_PREFIX/health" >"$X_API_FILE"
+
+x_expect "$X_API_FILE" "^x-content-type-options: *nosniff" "API nosniff"
+x_expect "$X_API_FILE" "^x-frame-options: *deny" "API X-Frame-Options DENY"
+x_expect "$X_API_FILE" "^content-security-policy:.*frame-ancestors 'none'" \
+  "API CSP frame-ancestors"
+x_expect "$X_API_FILE" "^strict-transport-security: *max-age=15552000" "API HSTS"
+x_expect "$X_API_FILE" "^referrer-policy: *strict-origin-when-cross-origin" \
+  "API Referrer-Policy"
+x_reject "$X_API_FILE" "^x-powered-by:" "API must not advertise X-Powered-By"
+echo "✓ API helmet headers present (X-Powered-By stripped)"
+
+echo
+echo "[X3/5] CORS echoes the allowlisted web origin with credentials..."
+
+X_CORS_ALLOWED="$LOG_DIR/x-cors-allowed.txt"
+curl -sS -o /dev/null -D - -H "Origin: $WEB_URL" "$API_URL$API_PREFIX/health" \
+  >"$X_CORS_ALLOWED"
+
+X_ACO="$(
+  grep -i '^access-control-allow-origin:' "$X_CORS_ALLOWED" |
+    tr -d '\r' | awk '{print $2}'
+)"
+if [ "$X_ACO" != "$WEB_URL" ]; then
+  cat "$X_CORS_ALLOWED"
+  fail "HP6 CORS: expected Allow-Origin '$WEB_URL', got '$X_ACO'"
+fi
+
+if ! grep -qi '^access-control-allow-credentials: *true' "$X_CORS_ALLOWED"; then
+  cat "$X_CORS_ALLOWED"
+  fail "HP6 CORS: credentialed allowlisted origin must get Allow-Credentials: true"
+fi
+echo "✓ Allow-Origin echoes $WEB_URL with credentials"
+
+echo
+echo "[X4/5] CORS rejects a foreign origin (HP6 exit criterion)..."
+
+X_CORS_FOREIGN="$LOG_DIR/x-cors-foreign.txt"
+curl -sS -o /dev/null -D - -H "Origin: https://evil.example" \
+  "$API_URL$API_PREFIX/health" >"$X_CORS_FOREIGN"
+x_reject "$X_CORS_FOREIGN" "^access-control-allow-origin:" \
+  "foreign origin must not receive Allow-Origin on a simple request"
+echo "✓ simple request: no Allow-Origin for https://evil.example"
+
+X_CORS_FOREIGN_PREFLIGHT="$LOG_DIR/x-cors-foreign-preflight.txt"
+curl -sS -o /dev/null -D - -X OPTIONS \
+  -H "Origin: https://evil.example" \
+  -H "Access-Control-Request-Method: GET" \
+  -H "Access-Control-Request-Headers: authorization" \
+  "$API_URL$API_PREFIX/health" >"$X_CORS_FOREIGN_PREFLIGHT"
+x_reject "$X_CORS_FOREIGN_PREFLIGHT" "^access-control-allow-origin:" \
+  "foreign origin must not pass preflight"
+echo "✓ preflight: no Allow-Origin for https://evil.example"
+
+X_CORS_PREFLIGHT="$LOG_DIR/x-cors-preflight.txt"
+curl -sS -o /dev/null -D - -X OPTIONS \
+  -H "Origin: $WEB_URL" \
+  -H "Access-Control-Request-Method: GET" \
+  -H "Access-Control-Request-Headers: authorization" \
+  "$API_URL$API_PREFIX/health" >"$X_CORS_PREFLIGHT"
+x_expect "$X_CORS_PREFLIGHT" "^access-control-allow-origin:" \
+  "allowlisted preflight must echo Allow-Origin"
+x_expect "$X_CORS_PREFLIGHT" "^access-control-allow-methods:" \
+  "allowlisted preflight must list Allow-Methods"
+echo "✓ preflight allowed for $WEB_URL"
+
+echo
+echo "[X5/5] Health stays unthrottled (CP13)..."
+
+for i in $(seq 1 15); do
+  X_HEALTH_CODE="$(
+    curl -sS -o /dev/null -w '%{http_code}' "$API_URL$API_PREFIX/health"
+  )"
+  if [ "$X_HEALTH_CODE" != "200" ]; then
+    fail "HP6: /health must stay unthrottled — attempt $i answered HTTP $X_HEALTH_CODE"
+  fi
+done
+echo "✓ health answered 15/15 rapid requests with 200 (unthrottled)"
+
+echo
+echo "✓ SECURITY HEADERS & CORS ACCEPTANCE PASSED"
 
 echo
 echo "RUNTIME SMOKE TEST CLEANUP"

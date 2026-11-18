@@ -47,7 +47,7 @@ record actuals in §3).
 | HP4 | Password reset / account recovery | 2026-11-16 | done (a04d649, 2026-11-17) |
 | HP5 | Session hardening (refresh rotation, no storage token) | 2026-11-17 | done (16a07a6, 2026-11-17) |
 | HP6 | Security hygiene + admin runbook | 2026-11-18 | done (657ce13, 2026-11-18) |
-| C1 | Checkout UX split: cart → delivery → payment | — | pending |
+| C1 | Checkout UX split: cart → delivery → payment | 2026-11-18 | done (b2808a2, 2026-11-18) |
 | F1 | Quote → checkout (agreed price → payment screen) | — | pending |
 | F2 | Order-scoped messaging (buyer/supplier/transporter) | — | pending |
 | F3 | Payment-after-acceptance timing (optional) | — | pending |
@@ -482,12 +482,93 @@ violations**; every console 401 accounted for as the HP5 refresh chain
   quirk as HP5; results shown via DOM/console assertions instead.
 
 ### C1 — Checkout UX split: cart → delivery → payment
-**Status**: pending
-**Shipped**: —
-**Deviations from plan**: —
-**Gates**: —
-**Live journey**: —
-**Residue / follow-ups**: —
+**Status**: done (b2808a2, 2026-11-18)
+**Shipped**:
+- **New `/checkout/delivery` page** (`web/app/checkout/delivery/page.tsx`):
+  owns the whole WHERE concern — address radio select (3 seeded addresses),
+  the map pin sheet (`LocationPicker` → `PATCH /api/addresses/:id {lat,lng}`,
+  badge flips to "Location confirmed"), and the optional delivery-instructions
+  textarea (`#delivery-notes`). Guards: empty cart bounces to a "Your cart is
+  empty" card with a Back-to-cart link; pin status stays **informational**
+  (never blocks the flow — the API's `NEEDS LOCATION CONFIRMATION` gate is
+  not re-imposed); deep links with no draft fall back to the default address.
+- **Shared stepper** (`web/components/checkout/stepper.tsx`): Cart →
+  Delivery → Payment on all three screens; completed steps are links
+  (step back to edit), current step carries `aria-current="step"`, future
+  steps are inert.
+- **Draft hand-off** (`web/lib/checkout-draft.ts`): `CHECKOUT_NOTES_KEY` +
+  new `CHECKOUT_ADDRESS_KEY` in sessionStorage with read/write/clear
+  helpers (SSR-guarded); `clearCheckoutDraft()` runs after successful
+  placement. The `CHECKOUT_NOTES_KEY` constant moved out of cart-screen into
+  this module.
+- **Cart screen slimmed** (`components/mobile/cart-screen.tsx`, −196 lines):
+  line items + BILL DETAILS only; Deliver-to block, notes textarea, pin
+  sheet, `LocationPicker`/`authHeaders` imports and the `addresses` prop are
+  gone; CTA is now *Continue to delivery* → `/checkout/delivery`; stepper
+  added. Shell (`home-shell.tsx`) drops the matching props and the orphaned
+  `refreshAddresses()`; the cart drawer's `onCheckout` also routes to the
+  delivery step.
+- **Checkout slimmed** (`app/checkout/page.tsx`): address radios and the
+  notes textarea are replaced by a **read-only** DELIVER TO summary (label,
+  recipient, pin badge) with a *Change* link → `/checkout/delivery`; HP1
+  payment card + YOUR ORDERS + SUMMARY untouched; back-fallback is now
+  `/checkout/delivery`; `placeOrders` reads the notes draft at call time and
+  clears both drafts after success. **API body unchanged**
+  (`{deliveryAddressId, notes}`).
+- **Tests**: new `web/tests/checkout-flow.test.mjs` (5 — per-screen
+  ownership, draft write/read/clear wiring, stepper registry, both entry
+  points start at delivery); `cart-drawer.test.mjs` updated (2 pins asserted
+  the old `router.push("/checkout")` routes → now assert the delivery-step
+  entry, with C1 context in comments); HP1 `checkout-payment.test.mjs`
+  unchanged and still green (the delivery *echo* keeps the `Deliver to`
+  heading before the payment card).
+- **Smoke**: section I4 now asserts **both** `/checkout` and
+  `/checkout/delivery` return 200; plus a Q2 race fix (see deviations).
+**Deviations from plan**:
+- Plan's guard wording ("delivery step requires a confirmed location where
+  the API requires one") was interpreted as: keep today's informational
+  badge, **do not** hard-block — the existing checkout never blocked on the
+  pin either (badge-only), so C1 preserves behaviour rather than tightening
+  it.
+- Product-detail quick-order flow (`handleStartOrder` in home-shell) still
+  posts straight to `/api/orders` with its own address prompt — out of C1
+  scope (separate surface from the cart→delivery→checkout split).
+- Deep-link fallback: `/checkout` with no draft picks the default address
+  (recorded in the load effect) instead of emptying the summary.
+- **Smoke Q2 race fix** (pre-existing HP5 flake, exposed by a fast run):
+  login and refresh landing in the same wall-clock second made the
+  second-granularity `iat` JWTs byte-identical → false "did not mint a
+  fresh access token". Added a documented `sleep 1` before the Q2 refresh;
+  `floor(t+1) ≠ floor(t)` makes the inequality deterministic. (The earlier
+  `ACCESS_TOKEN_TTL_SECONDS` stretch idea remains rejected — section Q pins
+  900s.)
+**Gates**: api build ✓, **521/521** ✓, lint ✓ (4 pre-existing mail
+warnings); web build ✓ (route `/checkout/delivery` present), **122/122**
+✓ (5 new checkout-flow + 2 updated cart-drawer pins), lint ✓ (0 errors, 17
+baseline warnings); full `scripts/runtime-smoke.sh` **exit 0** (I4 checks
+both routes; Q1–Q5 green after the race fix; 0 failures).
+**Live journey** (local dev, 0 JS/uncaught console errors throughout):
+login 201 → `/cart` shows stepper `1 CART | 2 DELIVERY | 3 PAYMENT`, items +
+BILL DETAILS only, no delivery UI, CTA *Continue to delivery* →
+`/checkout/delivery` (3 address radios, delivery-location section,
+`#delivery-notes`, no payment UI) → typed instructions → `/checkout` (step 3
+PAYMENT; headings DELIVER TO → PAYMENT METHOD → YOUR ORDERS (1) → SUMMARY;
+*Change* → `/checkout/delivery`; 0 textareas, 0 address radios; both drafts
+in sessionStorage) → Change round-trip restored address **and** notes →
+placed order **BON-20261118-125811** (Manual EFT echo, PENDING) → drafts
+cleared → notes verified **server-side** via `GET /api/orders`
+(`'Gate 4 — leave at the packhouse, call on arrival'`) → empty-cart guard on
+`/checkout/delivery` (stepper still visible, Back-to-cart link) → 4×401s
+all accounted as the HP5 refresh chain (refresh 200 → replayed 200) → HP6
+headers re-verified on the new route (enforcing CSP, XFO DENY, nosniff,
+Referrer-Policy, Permissions-Policy, HSTS `max-age=15552000;
+includeSubDomains`, 0 report-only).
+**Residue / follow-ups**:
+- Screenshot capture blocked ("needs a visible desktop window") — same
+  quirk as HP5/HP6; journey evidenced via DOM/console assertions.
+- Render/deployed-stack walkthrough still owed (carried from HP2–HP4).
+- Consider routing the product-detail quick-order flow through the split
+  (its own future phase if wanted).
 
 ### F1 — Quote → checkout (agreed price → payment screen)
 **Status**: pending
@@ -520,6 +601,13 @@ violations**; every console 401 accounted for as the HP5 refresh chain
 Cross-phase observations (baseline drift, decisions confirmed mid-flight,
 environment issues). Newest first.
 
+- 2026-11-18 — C1 done (`b2808a2`); web test baseline 117 → **122** (+5
+  checkout-flow, 2 cart-drawer pins reworded), api unchanged **521**. New
+  smoke lesson: HP5 section Q2 false-failed when login+refresh landed in the
+  same wall-clock second (second-granularity `iat` → byte-identical JWTs) —
+  fixed with a documented `sleep 1`, not by weakening the assertion. Smoke
+  also carries the `caffeinate -is` re-exec from HP6 (no sleep stalls this
+  run).
 - 2026-11-18 — HP6 done (`657ce13`); test baselines api 513 → **521** (+8
   security), web 112 → **117** (+5 security-headers). Two smoke runs died
   **not** from code: macOS entered deep sleep mid-suite (confirmed in

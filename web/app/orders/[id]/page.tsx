@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthGuard from "../../../components/auth/auth-guard";
 import { BrandLogo } from "../../../components/brand/logo";
+import { OrderThread } from "../../../components/messages/order-thread";
 import { ArrowLeftIcon, ArrowRightIcon } from "../../../components/mobile/icons";
 import {
   authHeaders,
@@ -1111,6 +1112,17 @@ export default function OrderDetailPage() {
                     Manage your addresses
                     <ArrowRightIcon className="h-4 w-4" strokeWidth={2.2} />
                   </Link>
+                </div>
+              </section>
+
+              {/* F2: the order thread — buyer with the supplier (and the
+                  assigned transporter once a job is claimed). */}
+              <section className="rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm">
+                <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[#7b867d]">
+                  Messages
+                </h2>
+                <div className="mt-3">
+                  <OrderThread orderId={order.id} defaultOpen />
                 </div>
               </section>
             </div>

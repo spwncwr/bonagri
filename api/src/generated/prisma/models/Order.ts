@@ -292,6 +292,8 @@ export type OrderWhereInput = {
   invoice?: Prisma.XOR<Prisma.InvoiceNullableScalarRelationFilter, Prisma.InvoiceWhereInput> | null
   history?: Prisma.OrderStatusHistoryListRelationFilter
   dispute?: Prisma.XOR<Prisma.DisputeNullableScalarRelationFilter, Prisma.DisputeWhereInput> | null
+  messages?: Prisma.OrderMessageListRelationFilter
+  threadReads?: Prisma.OrderThreadReadListRelationFilter
 }
 
 export type OrderOrderByWithRelationInput = {
@@ -316,6 +318,8 @@ export type OrderOrderByWithRelationInput = {
   invoice?: Prisma.InvoiceOrderByWithRelationInput
   history?: Prisma.OrderStatusHistoryOrderByRelationAggregateInput
   dispute?: Prisma.DisputeOrderByWithRelationInput
+  messages?: Prisma.OrderMessageOrderByRelationAggregateInput
+  threadReads?: Prisma.OrderThreadReadOrderByRelationAggregateInput
 }
 
 export type OrderWhereUniqueInput = Prisma.AtLeast<{
@@ -343,6 +347,8 @@ export type OrderWhereUniqueInput = Prisma.AtLeast<{
   invoice?: Prisma.XOR<Prisma.InvoiceNullableScalarRelationFilter, Prisma.InvoiceWhereInput> | null
   history?: Prisma.OrderStatusHistoryListRelationFilter
   dispute?: Prisma.XOR<Prisma.DisputeNullableScalarRelationFilter, Prisma.DisputeWhereInput> | null
+  messages?: Prisma.OrderMessageListRelationFilter
+  threadReads?: Prisma.OrderThreadReadListRelationFilter
 }, "id" | "orderNumber">
 
 export type OrderOrderByWithAggregationInput = {
@@ -405,6 +411,8 @@ export type OrderCreateInput = {
   invoice?: Prisma.InvoiceCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateInput = {
@@ -427,6 +435,8 @@ export type OrderUncheckedCreateInput = {
   invoice?: Prisma.InvoiceUncheckedCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeUncheckedCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUpdateInput = {
@@ -449,6 +459,8 @@ export type OrderUpdateInput = {
   invoice?: Prisma.InvoiceUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateInput = {
@@ -471,6 +483,8 @@ export type OrderUncheckedUpdateInput = {
   invoice?: Prisma.InvoiceUncheckedUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUncheckedUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUncheckedUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderCreateManyInput = {
@@ -750,6 +764,34 @@ export type OrderUpdateOneRequiredWithoutDeliveryNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.OrderUpdateToOneWithWhereWithoutDeliveryInput, Prisma.OrderUpdateWithoutDeliveryInput>, Prisma.OrderUncheckedUpdateWithoutDeliveryInput>
 }
 
+export type OrderCreateNestedOneWithoutMessagesInput = {
+  create?: Prisma.XOR<Prisma.OrderCreateWithoutMessagesInput, Prisma.OrderUncheckedCreateWithoutMessagesInput>
+  connectOrCreate?: Prisma.OrderCreateOrConnectWithoutMessagesInput
+  connect?: Prisma.OrderWhereUniqueInput
+}
+
+export type OrderUpdateOneRequiredWithoutMessagesNestedInput = {
+  create?: Prisma.XOR<Prisma.OrderCreateWithoutMessagesInput, Prisma.OrderUncheckedCreateWithoutMessagesInput>
+  connectOrCreate?: Prisma.OrderCreateOrConnectWithoutMessagesInput
+  upsert?: Prisma.OrderUpsertWithoutMessagesInput
+  connect?: Prisma.OrderWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OrderUpdateToOneWithWhereWithoutMessagesInput, Prisma.OrderUpdateWithoutMessagesInput>, Prisma.OrderUncheckedUpdateWithoutMessagesInput>
+}
+
+export type OrderCreateNestedOneWithoutThreadReadsInput = {
+  create?: Prisma.XOR<Prisma.OrderCreateWithoutThreadReadsInput, Prisma.OrderUncheckedCreateWithoutThreadReadsInput>
+  connectOrCreate?: Prisma.OrderCreateOrConnectWithoutThreadReadsInput
+  connect?: Prisma.OrderWhereUniqueInput
+}
+
+export type OrderUpdateOneRequiredWithoutThreadReadsNestedInput = {
+  create?: Prisma.XOR<Prisma.OrderCreateWithoutThreadReadsInput, Prisma.OrderUncheckedCreateWithoutThreadReadsInput>
+  connectOrCreate?: Prisma.OrderCreateOrConnectWithoutThreadReadsInput
+  upsert?: Prisma.OrderUpsertWithoutThreadReadsInput
+  connect?: Prisma.OrderWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OrderUpdateToOneWithWhereWithoutThreadReadsInput, Prisma.OrderUpdateWithoutThreadReadsInput>, Prisma.OrderUncheckedUpdateWithoutThreadReadsInput>
+}
+
 export type OrderCreateNestedOneWithoutInvoiceInput = {
   create?: Prisma.XOR<Prisma.OrderCreateWithoutInvoiceInput, Prisma.OrderUncheckedCreateWithoutInvoiceInput>
   connectOrCreate?: Prisma.OrderCreateOrConnectWithoutInvoiceInput
@@ -783,6 +825,8 @@ export type OrderCreateWithoutUserInput = {
   invoice?: Prisma.InvoiceCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateWithoutUserInput = {
@@ -804,6 +848,8 @@ export type OrderUncheckedCreateWithoutUserInput = {
   invoice?: Prisma.InvoiceUncheckedCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeUncheckedCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderCreateOrConnectWithoutUserInput = {
@@ -870,6 +916,8 @@ export type OrderCreateWithoutDeliveryAddressInput = {
   invoice?: Prisma.InvoiceCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateWithoutDeliveryAddressInput = {
@@ -891,6 +939,8 @@ export type OrderUncheckedCreateWithoutDeliveryAddressInput = {
   invoice?: Prisma.InvoiceUncheckedCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeUncheckedCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderCreateOrConnectWithoutDeliveryAddressInput = {
@@ -938,6 +988,8 @@ export type OrderCreateWithoutHistoryInput = {
   delivery?: Prisma.DeliveryCreateNestedOneWithoutOrderInput
   invoice?: Prisma.InvoiceCreateNestedOneWithoutOrderInput
   dispute?: Prisma.DisputeCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateWithoutHistoryInput = {
@@ -959,6 +1011,8 @@ export type OrderUncheckedCreateWithoutHistoryInput = {
   delivery?: Prisma.DeliveryUncheckedCreateNestedOneWithoutOrderInput
   invoice?: Prisma.InvoiceUncheckedCreateNestedOneWithoutOrderInput
   dispute?: Prisma.DisputeUncheckedCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderCreateOrConnectWithoutHistoryInput = {
@@ -996,6 +1050,8 @@ export type OrderUpdateWithoutHistoryInput = {
   delivery?: Prisma.DeliveryUpdateOneWithoutOrderNestedInput
   invoice?: Prisma.InvoiceUpdateOneWithoutOrderNestedInput
   dispute?: Prisma.DisputeUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateWithoutHistoryInput = {
@@ -1017,6 +1073,8 @@ export type OrderUncheckedUpdateWithoutHistoryInput = {
   delivery?: Prisma.DeliveryUncheckedUpdateOneWithoutOrderNestedInput
   invoice?: Prisma.InvoiceUncheckedUpdateOneWithoutOrderNestedInput
   dispute?: Prisma.DisputeUncheckedUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUncheckedUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderCreateWithoutDisputeInput = {
@@ -1038,6 +1096,8 @@ export type OrderCreateWithoutDisputeInput = {
   delivery?: Prisma.DeliveryCreateNestedOneWithoutOrderInput
   invoice?: Prisma.InvoiceCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryCreateNestedManyWithoutOrderInput
+  messages?: Prisma.OrderMessageCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateWithoutDisputeInput = {
@@ -1059,6 +1119,8 @@ export type OrderUncheckedCreateWithoutDisputeInput = {
   delivery?: Prisma.DeliveryUncheckedCreateNestedOneWithoutOrderInput
   invoice?: Prisma.InvoiceUncheckedCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutOrderInput
+  messages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderCreateOrConnectWithoutDisputeInput = {
@@ -1096,6 +1158,8 @@ export type OrderUpdateWithoutDisputeInput = {
   delivery?: Prisma.DeliveryUpdateOneWithoutOrderNestedInput
   invoice?: Prisma.InvoiceUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUpdateManyWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateWithoutDisputeInput = {
@@ -1117,6 +1181,8 @@ export type OrderUncheckedUpdateWithoutDisputeInput = {
   delivery?: Prisma.DeliveryUncheckedUpdateOneWithoutOrderNestedInput
   invoice?: Prisma.InvoiceUncheckedUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUncheckedUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderCreateWithoutItemsInput = {
@@ -1138,6 +1204,8 @@ export type OrderCreateWithoutItemsInput = {
   invoice?: Prisma.InvoiceCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateWithoutItemsInput = {
@@ -1159,6 +1227,8 @@ export type OrderUncheckedCreateWithoutItemsInput = {
   invoice?: Prisma.InvoiceUncheckedCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeUncheckedCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderCreateOrConnectWithoutItemsInput = {
@@ -1196,6 +1266,8 @@ export type OrderUpdateWithoutItemsInput = {
   invoice?: Prisma.InvoiceUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateWithoutItemsInput = {
@@ -1217,6 +1289,8 @@ export type OrderUncheckedUpdateWithoutItemsInput = {
   invoice?: Prisma.InvoiceUncheckedUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUncheckedUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUncheckedUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderCreateWithoutPaymentInput = {
@@ -1238,6 +1312,8 @@ export type OrderCreateWithoutPaymentInput = {
   invoice?: Prisma.InvoiceCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateWithoutPaymentInput = {
@@ -1259,6 +1335,8 @@ export type OrderUncheckedCreateWithoutPaymentInput = {
   invoice?: Prisma.InvoiceUncheckedCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeUncheckedCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderCreateOrConnectWithoutPaymentInput = {
@@ -1296,6 +1374,8 @@ export type OrderUpdateWithoutPaymentInput = {
   invoice?: Prisma.InvoiceUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateWithoutPaymentInput = {
@@ -1317,6 +1397,8 @@ export type OrderUncheckedUpdateWithoutPaymentInput = {
   invoice?: Prisma.InvoiceUncheckedUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUncheckedUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUncheckedUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderCreateWithoutDeliveryInput = {
@@ -1338,6 +1420,8 @@ export type OrderCreateWithoutDeliveryInput = {
   invoice?: Prisma.InvoiceCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateWithoutDeliveryInput = {
@@ -1359,6 +1443,8 @@ export type OrderUncheckedCreateWithoutDeliveryInput = {
   invoice?: Prisma.InvoiceUncheckedCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeUncheckedCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderCreateOrConnectWithoutDeliveryInput = {
@@ -1396,6 +1482,8 @@ export type OrderUpdateWithoutDeliveryInput = {
   invoice?: Prisma.InvoiceUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateWithoutDeliveryInput = {
@@ -1417,6 +1505,224 @@ export type OrderUncheckedUpdateWithoutDeliveryInput = {
   invoice?: Prisma.InvoiceUncheckedUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUncheckedUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUncheckedUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutOrderNestedInput
+}
+
+export type OrderCreateWithoutMessagesInput = {
+  id?: string
+  orderNumber: string
+  orderGroupId?: string | null
+  status?: $Enums.OrderStatus
+  subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
+  deliveryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  notes?: string | null
+  deliverySnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  user: Prisma.UserCreateNestedOneWithoutOrdersInput
+  deliveryAddress: Prisma.AddressCreateNestedOneWithoutOrdersInput
+  items?: Prisma.OrderItemCreateNestedManyWithoutOrderInput
+  payment?: Prisma.PaymentCreateNestedOneWithoutOrderInput
+  delivery?: Prisma.DeliveryCreateNestedOneWithoutOrderInput
+  invoice?: Prisma.InvoiceCreateNestedOneWithoutOrderInput
+  history?: Prisma.OrderStatusHistoryCreateNestedManyWithoutOrderInput
+  dispute?: Prisma.DisputeCreateNestedOneWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutOrderInput
+}
+
+export type OrderUncheckedCreateWithoutMessagesInput = {
+  id?: string
+  orderNumber: string
+  userId: string
+  deliveryAddressId: string
+  orderGroupId?: string | null
+  status?: $Enums.OrderStatus
+  subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
+  deliveryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  notes?: string | null
+  deliverySnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  items?: Prisma.OrderItemUncheckedCreateNestedManyWithoutOrderInput
+  payment?: Prisma.PaymentUncheckedCreateNestedOneWithoutOrderInput
+  delivery?: Prisma.DeliveryUncheckedCreateNestedOneWithoutOrderInput
+  invoice?: Prisma.InvoiceUncheckedCreateNestedOneWithoutOrderInput
+  history?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutOrderInput
+  dispute?: Prisma.DisputeUncheckedCreateNestedOneWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutOrderInput
+}
+
+export type OrderCreateOrConnectWithoutMessagesInput = {
+  where: Prisma.OrderWhereUniqueInput
+  create: Prisma.XOR<Prisma.OrderCreateWithoutMessagesInput, Prisma.OrderUncheckedCreateWithoutMessagesInput>
+}
+
+export type OrderUpsertWithoutMessagesInput = {
+  update: Prisma.XOR<Prisma.OrderUpdateWithoutMessagesInput, Prisma.OrderUncheckedUpdateWithoutMessagesInput>
+  create: Prisma.XOR<Prisma.OrderCreateWithoutMessagesInput, Prisma.OrderUncheckedCreateWithoutMessagesInput>
+  where?: Prisma.OrderWhereInput
+}
+
+export type OrderUpdateToOneWithWhereWithoutMessagesInput = {
+  where?: Prisma.OrderWhereInput
+  data: Prisma.XOR<Prisma.OrderUpdateWithoutMessagesInput, Prisma.OrderUncheckedUpdateWithoutMessagesInput>
+}
+
+export type OrderUpdateWithoutMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  orderNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  orderGroupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  deliveryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliverySnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneRequiredWithoutOrdersNestedInput
+  deliveryAddress?: Prisma.AddressUpdateOneRequiredWithoutOrdersNestedInput
+  items?: Prisma.OrderItemUpdateManyWithoutOrderNestedInput
+  payment?: Prisma.PaymentUpdateOneWithoutOrderNestedInput
+  delivery?: Prisma.DeliveryUpdateOneWithoutOrderNestedInput
+  invoice?: Prisma.InvoiceUpdateOneWithoutOrderNestedInput
+  history?: Prisma.OrderStatusHistoryUpdateManyWithoutOrderNestedInput
+  dispute?: Prisma.DisputeUpdateOneWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutOrderNestedInput
+}
+
+export type OrderUncheckedUpdateWithoutMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  orderNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  deliveryAddressId?: Prisma.StringFieldUpdateOperationsInput | string
+  orderGroupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  deliveryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliverySnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  items?: Prisma.OrderItemUncheckedUpdateManyWithoutOrderNestedInput
+  payment?: Prisma.PaymentUncheckedUpdateOneWithoutOrderNestedInput
+  delivery?: Prisma.DeliveryUncheckedUpdateOneWithoutOrderNestedInput
+  invoice?: Prisma.InvoiceUncheckedUpdateOneWithoutOrderNestedInput
+  history?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutOrderNestedInput
+  dispute?: Prisma.DisputeUncheckedUpdateOneWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutOrderNestedInput
+}
+
+export type OrderCreateWithoutThreadReadsInput = {
+  id?: string
+  orderNumber: string
+  orderGroupId?: string | null
+  status?: $Enums.OrderStatus
+  subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
+  deliveryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  notes?: string | null
+  deliverySnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  user: Prisma.UserCreateNestedOneWithoutOrdersInput
+  deliveryAddress: Prisma.AddressCreateNestedOneWithoutOrdersInput
+  items?: Prisma.OrderItemCreateNestedManyWithoutOrderInput
+  payment?: Prisma.PaymentCreateNestedOneWithoutOrderInput
+  delivery?: Prisma.DeliveryCreateNestedOneWithoutOrderInput
+  invoice?: Prisma.InvoiceCreateNestedOneWithoutOrderInput
+  history?: Prisma.OrderStatusHistoryCreateNestedManyWithoutOrderInput
+  dispute?: Prisma.DisputeCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageCreateNestedManyWithoutOrderInput
+}
+
+export type OrderUncheckedCreateWithoutThreadReadsInput = {
+  id?: string
+  orderNumber: string
+  userId: string
+  deliveryAddressId: string
+  orderGroupId?: string | null
+  status?: $Enums.OrderStatus
+  subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
+  deliveryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  total: runtime.Decimal | runtime.DecimalJsLike | number | string
+  notes?: string | null
+  deliverySnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  items?: Prisma.OrderItemUncheckedCreateNestedManyWithoutOrderInput
+  payment?: Prisma.PaymentUncheckedCreateNestedOneWithoutOrderInput
+  delivery?: Prisma.DeliveryUncheckedCreateNestedOneWithoutOrderInput
+  invoice?: Prisma.InvoiceUncheckedCreateNestedOneWithoutOrderInput
+  history?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutOrderInput
+  dispute?: Prisma.DisputeUncheckedCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutOrderInput
+}
+
+export type OrderCreateOrConnectWithoutThreadReadsInput = {
+  where: Prisma.OrderWhereUniqueInput
+  create: Prisma.XOR<Prisma.OrderCreateWithoutThreadReadsInput, Prisma.OrderUncheckedCreateWithoutThreadReadsInput>
+}
+
+export type OrderUpsertWithoutThreadReadsInput = {
+  update: Prisma.XOR<Prisma.OrderUpdateWithoutThreadReadsInput, Prisma.OrderUncheckedUpdateWithoutThreadReadsInput>
+  create: Prisma.XOR<Prisma.OrderCreateWithoutThreadReadsInput, Prisma.OrderUncheckedCreateWithoutThreadReadsInput>
+  where?: Prisma.OrderWhereInput
+}
+
+export type OrderUpdateToOneWithWhereWithoutThreadReadsInput = {
+  where?: Prisma.OrderWhereInput
+  data: Prisma.XOR<Prisma.OrderUpdateWithoutThreadReadsInput, Prisma.OrderUncheckedUpdateWithoutThreadReadsInput>
+}
+
+export type OrderUpdateWithoutThreadReadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  orderNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  orderGroupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  deliveryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliverySnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneRequiredWithoutOrdersNestedInput
+  deliveryAddress?: Prisma.AddressUpdateOneRequiredWithoutOrdersNestedInput
+  items?: Prisma.OrderItemUpdateManyWithoutOrderNestedInput
+  payment?: Prisma.PaymentUpdateOneWithoutOrderNestedInput
+  delivery?: Prisma.DeliveryUpdateOneWithoutOrderNestedInput
+  invoice?: Prisma.InvoiceUpdateOneWithoutOrderNestedInput
+  history?: Prisma.OrderStatusHistoryUpdateManyWithoutOrderNestedInput
+  dispute?: Prisma.DisputeUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUpdateManyWithoutOrderNestedInput
+}
+
+export type OrderUncheckedUpdateWithoutThreadReadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  orderNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  deliveryAddressId?: Prisma.StringFieldUpdateOperationsInput | string
+  orderGroupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  deliveryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliverySnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  items?: Prisma.OrderItemUncheckedUpdateManyWithoutOrderNestedInput
+  payment?: Prisma.PaymentUncheckedUpdateOneWithoutOrderNestedInput
+  delivery?: Prisma.DeliveryUncheckedUpdateOneWithoutOrderNestedInput
+  invoice?: Prisma.InvoiceUncheckedUpdateOneWithoutOrderNestedInput
+  history?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutOrderNestedInput
+  dispute?: Prisma.DisputeUncheckedUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderCreateWithoutInvoiceInput = {
@@ -1438,6 +1744,8 @@ export type OrderCreateWithoutInvoiceInput = {
   delivery?: Prisma.DeliveryCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateWithoutInvoiceInput = {
@@ -1459,6 +1767,8 @@ export type OrderUncheckedCreateWithoutInvoiceInput = {
   delivery?: Prisma.DeliveryUncheckedCreateNestedOneWithoutOrderInput
   history?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutOrderInput
   dispute?: Prisma.DisputeUncheckedCreateNestedOneWithoutOrderInput
+  messages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutOrderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderCreateOrConnectWithoutInvoiceInput = {
@@ -1496,6 +1806,8 @@ export type OrderUpdateWithoutInvoiceInput = {
   delivery?: Prisma.DeliveryUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateWithoutInvoiceInput = {
@@ -1517,6 +1829,8 @@ export type OrderUncheckedUpdateWithoutInvoiceInput = {
   delivery?: Prisma.DeliveryUncheckedUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUncheckedUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUncheckedUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderCreateManyUserInput = {
@@ -1553,6 +1867,8 @@ export type OrderUpdateWithoutUserInput = {
   invoice?: Prisma.InvoiceUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateWithoutUserInput = {
@@ -1574,6 +1890,8 @@ export type OrderUncheckedUpdateWithoutUserInput = {
   invoice?: Prisma.InvoiceUncheckedUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUncheckedUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUncheckedUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateManyWithoutUserInput = {
@@ -1625,6 +1943,8 @@ export type OrderUpdateWithoutDeliveryAddressInput = {
   invoice?: Prisma.InvoiceUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateWithoutDeliveryAddressInput = {
@@ -1646,6 +1966,8 @@ export type OrderUncheckedUpdateWithoutDeliveryAddressInput = {
   invoice?: Prisma.InvoiceUncheckedUpdateOneWithoutOrderNestedInput
   history?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutOrderNestedInput
   dispute?: Prisma.DisputeUncheckedUpdateOneWithoutOrderNestedInput
+  messages?: Prisma.OrderMessageUncheckedUpdateManyWithoutOrderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateManyWithoutDeliveryAddressInput = {
@@ -1671,11 +1993,15 @@ export type OrderUncheckedUpdateManyWithoutDeliveryAddressInput = {
 export type OrderCountOutputType = {
   items: number
   history: number
+  messages: number
+  threadReads: number
 }
 
 export type OrderCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   items?: boolean | OrderCountOutputTypeCountItemsArgs
   history?: boolean | OrderCountOutputTypeCountHistoryArgs
+  messages?: boolean | OrderCountOutputTypeCountMessagesArgs
+  threadReads?: boolean | OrderCountOutputTypeCountThreadReadsArgs
 }
 
 /**
@@ -1702,6 +2028,20 @@ export type OrderCountOutputTypeCountHistoryArgs<ExtArgs extends runtime.Types.E
   where?: Prisma.OrderStatusHistoryWhereInput
 }
 
+/**
+ * OrderCountOutputType without action
+ */
+export type OrderCountOutputTypeCountMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.OrderMessageWhereInput
+}
+
+/**
+ * OrderCountOutputType without action
+ */
+export type OrderCountOutputTypeCountThreadReadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.OrderThreadReadWhereInput
+}
+
 
 export type OrderSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1725,6 +2065,8 @@ export type OrderSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   invoice?: boolean | Prisma.Order$invoiceArgs<ExtArgs>
   history?: boolean | Prisma.Order$historyArgs<ExtArgs>
   dispute?: boolean | Prisma.Order$disputeArgs<ExtArgs>
+  messages?: boolean | Prisma.Order$messagesArgs<ExtArgs>
+  threadReads?: boolean | Prisma.Order$threadReadsArgs<ExtArgs>
   _count?: boolean | Prisma.OrderCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["order"]>
 
@@ -1790,6 +2132,8 @@ export type OrderInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   invoice?: boolean | Prisma.Order$invoiceArgs<ExtArgs>
   history?: boolean | Prisma.Order$historyArgs<ExtArgs>
   dispute?: boolean | Prisma.Order$disputeArgs<ExtArgs>
+  messages?: boolean | Prisma.Order$messagesArgs<ExtArgs>
+  threadReads?: boolean | Prisma.Order$threadReadsArgs<ExtArgs>
   _count?: boolean | Prisma.OrderCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type OrderIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1812,6 +2156,8 @@ export type $OrderPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     invoice: Prisma.$InvoicePayload<ExtArgs> | null
     history: Prisma.$OrderStatusHistoryPayload<ExtArgs>[]
     dispute: Prisma.$DisputePayload<ExtArgs> | null
+    messages: Prisma.$OrderMessagePayload<ExtArgs>[]
+    threadReads: Prisma.$OrderThreadReadPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2229,6 +2575,8 @@ export interface Prisma__OrderClient<T, Null = never, ExtArgs extends runtime.Ty
   invoice<T extends Prisma.Order$invoiceArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Order$invoiceArgs<ExtArgs>>): Prisma.Prisma__InvoiceClient<runtime.Types.Result.GetResult<Prisma.$InvoicePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   history<T extends Prisma.Order$historyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Order$historyArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   dispute<T extends Prisma.Order$disputeArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Order$disputeArgs<ExtArgs>>): Prisma.Prisma__DisputeClient<runtime.Types.Result.GetResult<Prisma.$DisputePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  messages<T extends Prisma.Order$messagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Order$messagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  threadReads<T extends Prisma.Order$threadReadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Order$threadReadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderThreadReadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2793,6 +3141,54 @@ export type Order$disputeArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    */
   include?: Prisma.DisputeInclude<ExtArgs> | null
   where?: Prisma.DisputeWhereInput
+}
+
+/**
+ * Order.messages
+ */
+export type Order$messagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the OrderMessage
+   */
+  select?: Prisma.OrderMessageSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the OrderMessage
+   */
+  omit?: Prisma.OrderMessageOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OrderMessageInclude<ExtArgs> | null
+  where?: Prisma.OrderMessageWhereInput
+  orderBy?: Prisma.OrderMessageOrderByWithRelationInput | Prisma.OrderMessageOrderByWithRelationInput[]
+  cursor?: Prisma.OrderMessageWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.OrderMessageScalarFieldEnum | Prisma.OrderMessageScalarFieldEnum[]
+}
+
+/**
+ * Order.threadReads
+ */
+export type Order$threadReadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the OrderThreadRead
+   */
+  select?: Prisma.OrderThreadReadSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the OrderThreadRead
+   */
+  omit?: Prisma.OrderThreadReadOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OrderThreadReadInclude<ExtArgs> | null
+  where?: Prisma.OrderThreadReadWhereInput
+  orderBy?: Prisma.OrderThreadReadOrderByWithRelationInput | Prisma.OrderThreadReadOrderByWithRelationInput[]
+  cursor?: Prisma.OrderThreadReadWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.OrderThreadReadScalarFieldEnum | Prisma.OrderThreadReadScalarFieldEnum[]
 }
 
 /**

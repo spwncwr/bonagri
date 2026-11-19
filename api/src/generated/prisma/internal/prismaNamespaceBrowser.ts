@@ -80,6 +80,8 @@ export const ModelName = {
   DeliveryPhoto: 'DeliveryPhoto',
   TransporterProfile: 'TransporterProfile',
   Notification: 'Notification',
+  OrderMessage: 'OrderMessage',
+  OrderThreadRead: 'OrderThreadRead',
   Invoice: 'Invoice',
   NotificationBroadcast: 'NotificationBroadcast',
   PromoBanner: 'PromoBanner',
@@ -584,6 +586,27 @@ export const NotificationScalarFieldEnum = {
 } as const
 
 export type NotificationScalarFieldEnum = (typeof NotificationScalarFieldEnum)[keyof typeof NotificationScalarFieldEnum]
+
+
+export const OrderMessageScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  senderId: 'senderId',
+  body: 'body',
+  createdAt: 'createdAt'
+} as const
+
+export type OrderMessageScalarFieldEnum = (typeof OrderMessageScalarFieldEnum)[keyof typeof OrderMessageScalarFieldEnum]
+
+
+export const OrderThreadReadScalarFieldEnum = {
+  orderId: 'orderId',
+  userId: 'userId',
+  lastReadAt: 'lastReadAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type OrderThreadReadScalarFieldEnum = (typeof OrderThreadReadScalarFieldEnum)[keyof typeof OrderThreadReadScalarFieldEnum]
 
 
 export const InvoiceScalarFieldEnum = {

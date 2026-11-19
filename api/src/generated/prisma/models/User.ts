@@ -339,6 +339,8 @@ export type UserWhereInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
+  sentMessages?: Prisma.OrderMessageListRelationFilter
+  threadReads?: Prisma.OrderThreadReadListRelationFilter
   actedOnOrders?: Prisma.OrderStatusHistoryListRelationFilter
   openedDisputes?: Prisma.DisputeListRelationFilter
   resolvedDisputes?: Prisma.DisputeListRelationFilter
@@ -387,6 +389,8 @@ export type UserOrderByWithRelationInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogOrderByRelationAggregateInput
   orders?: Prisma.OrderOrderByRelationAggregateInput
   notifications?: Prisma.NotificationOrderByRelationAggregateInput
+  sentMessages?: Prisma.OrderMessageOrderByRelationAggregateInput
+  threadReads?: Prisma.OrderThreadReadOrderByRelationAggregateInput
   actedOnOrders?: Prisma.OrderStatusHistoryOrderByRelationAggregateInput
   openedDisputes?: Prisma.DisputeOrderByRelationAggregateInput
   resolvedDisputes?: Prisma.DisputeOrderByRelationAggregateInput
@@ -438,6 +442,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   verificationActionsTaken?: Prisma.VerificationAuditLogListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
+  sentMessages?: Prisma.OrderMessageListRelationFilter
+  threadReads?: Prisma.OrderThreadReadListRelationFilter
   actedOnOrders?: Prisma.OrderStatusHistoryListRelationFilter
   openedDisputes?: Prisma.DisputeListRelationFilter
   resolvedDisputes?: Prisma.DisputeListRelationFilter
@@ -543,6 +549,8 @@ export type UserCreateInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -590,6 +598,8 @@ export type UserUncheckedCreateInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -637,6 +647,8 @@ export type UserUpdateInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -684,6 +696,8 @@ export type UserUncheckedUpdateInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -1226,6 +1240,34 @@ export type UserUpdateOneRequiredWithoutNotificationsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutNotificationsInput, Prisma.UserUpdateWithoutNotificationsInput>, Prisma.UserUncheckedUpdateWithoutNotificationsInput>
 }
 
+export type UserCreateNestedOneWithoutSentMessagesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSentMessagesInput, Prisma.UserUncheckedCreateWithoutSentMessagesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSentMessagesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutSentMessagesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSentMessagesInput, Prisma.UserUncheckedCreateWithoutSentMessagesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSentMessagesInput
+  upsert?: Prisma.UserUpsertWithoutSentMessagesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSentMessagesInput, Prisma.UserUpdateWithoutSentMessagesInput>, Prisma.UserUncheckedUpdateWithoutSentMessagesInput>
+}
+
+export type UserCreateNestedOneWithoutThreadReadsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutThreadReadsInput, Prisma.UserUncheckedCreateWithoutThreadReadsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutThreadReadsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutThreadReadsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutThreadReadsInput, Prisma.UserUncheckedCreateWithoutThreadReadsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutThreadReadsInput
+  upsert?: Prisma.UserUpsertWithoutThreadReadsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutThreadReadsInput, Prisma.UserUpdateWithoutThreadReadsInput>, Prisma.UserUncheckedUpdateWithoutThreadReadsInput>
+}
+
 export type UserCreateWithoutEmailVerificationTokensInput = {
   id?: string
   email: string
@@ -1261,6 +1303,8 @@ export type UserCreateWithoutEmailVerificationTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -1307,6 +1351,8 @@ export type UserUncheckedCreateWithoutEmailVerificationTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -1369,6 +1415,8 @@ export type UserUpdateWithoutEmailVerificationTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -1415,6 +1463,8 @@ export type UserUncheckedUpdateWithoutEmailVerificationTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -1461,6 +1511,8 @@ export type UserCreateWithoutPasswordResetTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -1507,6 +1559,8 @@ export type UserUncheckedCreateWithoutPasswordResetTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -1569,6 +1623,8 @@ export type UserUpdateWithoutPasswordResetTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -1615,6 +1671,8 @@ export type UserUncheckedUpdateWithoutPasswordResetTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -1661,6 +1719,8 @@ export type UserCreateWithoutRefreshTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -1707,6 +1767,8 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -1769,6 +1831,8 @@ export type UserUpdateWithoutRefreshTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -1815,6 +1879,8 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -1861,6 +1927,8 @@ export type UserCreateWithoutSupplierProfileInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -1907,6 +1975,8 @@ export type UserUncheckedCreateWithoutSupplierProfileInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -1969,6 +2039,8 @@ export type UserUpdateWithoutSupplierProfileInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -2015,6 +2087,8 @@ export type UserUncheckedUpdateWithoutSupplierProfileInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -2061,6 +2135,8 @@ export type UserCreateWithoutAddressesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -2107,6 +2183,8 @@ export type UserUncheckedCreateWithoutAddressesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -2169,6 +2247,8 @@ export type UserUpdateWithoutAddressesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -2215,6 +2295,8 @@ export type UserUncheckedUpdateWithoutAddressesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -2262,6 +2344,8 @@ export type UserCreateWithoutProductReviewsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -2308,6 +2392,8 @@ export type UserUncheckedCreateWithoutProductReviewsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -2370,6 +2456,8 @@ export type UserUpdateWithoutProductReviewsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -2416,6 +2504,8 @@ export type UserUncheckedUpdateWithoutProductReviewsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -2461,6 +2551,8 @@ export type UserCreateWithoutOrdersInput = {
   adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -2507,6 +2599,8 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -2569,6 +2663,8 @@ export type UserUpdateWithoutOrdersInput = {
   adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -2615,6 +2711,8 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -2662,6 +2760,8 @@ export type UserCreateWithoutActedOnOrdersInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
   sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
@@ -2708,6 +2808,8 @@ export type UserUncheckedCreateWithoutActedOnOrdersInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
   sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
@@ -2770,6 +2872,8 @@ export type UserUpdateWithoutActedOnOrdersInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
   sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
@@ -2816,6 +2920,8 @@ export type UserUncheckedUpdateWithoutActedOnOrdersInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
   sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
@@ -2862,6 +2968,8 @@ export type UserCreateWithoutOpenedDisputesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
   sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
@@ -2908,6 +3016,8 @@ export type UserUncheckedCreateWithoutOpenedDisputesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
   sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
@@ -2959,6 +3069,8 @@ export type UserCreateWithoutResolvedDisputesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
@@ -3005,6 +3117,8 @@ export type UserUncheckedCreateWithoutResolvedDisputesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
@@ -3067,6 +3181,8 @@ export type UserUpdateWithoutOpenedDisputesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
   sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
@@ -3113,6 +3229,8 @@ export type UserUncheckedUpdateWithoutOpenedDisputesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
   sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
@@ -3170,6 +3288,8 @@ export type UserUpdateWithoutResolvedDisputesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
@@ -3216,6 +3336,8 @@ export type UserUncheckedUpdateWithoutResolvedDisputesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
@@ -3262,6 +3384,8 @@ export type UserCreateWithoutSellerApplicationInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -3308,6 +3432,8 @@ export type UserUncheckedCreateWithoutSellerApplicationInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -3359,6 +3485,8 @@ export type UserCreateWithoutReviewedApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -3405,6 +3533,8 @@ export type UserUncheckedCreateWithoutReviewedApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -3467,6 +3597,8 @@ export type UserUpdateWithoutSellerApplicationInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -3513,6 +3645,8 @@ export type UserUncheckedUpdateWithoutSellerApplicationInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -3570,6 +3704,8 @@ export type UserUpdateWithoutReviewedApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -3616,6 +3752,8 @@ export type UserUncheckedUpdateWithoutReviewedApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -3661,6 +3799,8 @@ export type UserCreateWithoutPhoneOtpCodesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -3707,6 +3847,8 @@ export type UserUncheckedCreateWithoutPhoneOtpCodesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -3769,6 +3911,8 @@ export type UserUpdateWithoutPhoneOtpCodesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -3815,6 +3959,8 @@ export type UserUncheckedUpdateWithoutPhoneOtpCodesInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -3861,6 +4007,8 @@ export type UserCreateWithoutVerificationApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -3907,6 +4055,8 @@ export type UserUncheckedCreateWithoutVerificationApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -3958,6 +4108,8 @@ export type UserCreateWithoutLatestApplicationInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -4004,6 +4156,8 @@ export type UserUncheckedCreateWithoutLatestApplicationInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -4055,6 +4209,8 @@ export type UserCreateWithoutReviewedVerificationApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -4101,6 +4257,8 @@ export type UserUncheckedCreateWithoutReviewedVerificationApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -4163,6 +4321,8 @@ export type UserUpdateWithoutVerificationApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -4209,6 +4369,8 @@ export type UserUncheckedUpdateWithoutVerificationApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -4266,6 +4428,8 @@ export type UserUpdateWithoutLatestApplicationInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -4312,6 +4476,8 @@ export type UserUncheckedUpdateWithoutLatestApplicationInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -4369,6 +4535,8 @@ export type UserUpdateWithoutReviewedVerificationApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -4415,6 +4583,8 @@ export type UserUncheckedUpdateWithoutReviewedVerificationApplicationsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -4461,6 +4631,8 @@ export type UserCreateWithoutVerificationActionsTakenInput = {
   adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -4507,6 +4679,8 @@ export type UserUncheckedCreateWithoutVerificationActionsTakenInput = {
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -4569,6 +4743,8 @@ export type UserUpdateWithoutVerificationActionsTakenInput = {
   adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -4615,6 +4791,8 @@ export type UserUncheckedUpdateWithoutVerificationActionsTakenInput = {
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -4661,6 +4839,8 @@ export type UserCreateWithoutAdminAuditLogsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -4707,6 +4887,8 @@ export type UserUncheckedCreateWithoutAdminAuditLogsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -4769,6 +4951,8 @@ export type UserUpdateWithoutAdminAuditLogsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -4815,6 +4999,8 @@ export type UserUncheckedUpdateWithoutAdminAuditLogsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -4862,6 +5048,8 @@ export type UserCreateWithoutProductRequestsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -4908,6 +5096,8 @@ export type UserUncheckedCreateWithoutProductRequestsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -4970,6 +5160,8 @@ export type UserUpdateWithoutProductRequestsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -5016,6 +5208,8 @@ export type UserUncheckedUpdateWithoutProductRequestsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -5062,6 +5256,8 @@ export type UserCreateWithoutCartItemsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -5108,6 +5304,8 @@ export type UserUncheckedCreateWithoutCartItemsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -5170,6 +5368,8 @@ export type UserUpdateWithoutCartItemsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -5216,6 +5416,8 @@ export type UserUncheckedUpdateWithoutCartItemsInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -5262,6 +5464,8 @@ export type UserCreateWithoutTransporterProfileInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -5308,6 +5512,8 @@ export type UserUncheckedCreateWithoutTransporterProfileInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -5370,6 +5576,8 @@ export type UserUpdateWithoutTransporterProfileInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -5416,6 +5624,8 @@ export type UserUncheckedUpdateWithoutTransporterProfileInput = {
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -5461,6 +5671,8 @@ export type UserCreateWithoutNotificationsInput = {
   adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
@@ -5507,6 +5719,8 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
   openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
   resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
@@ -5569,6 +5783,8 @@ export type UserUpdateWithoutNotificationsInput = {
   adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
@@ -5615,6 +5831,424 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
   verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUncheckedUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUncheckedUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUncheckedUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserCreateWithoutSentMessagesInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  threadReads?: Prisma.OrderThreadReadCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewCreateNestedManyWithoutBuyerInput
+}
+
+export type UserUncheckedCreateWithoutSentMessagesInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  threadReads?: Prisma.OrderThreadReadUncheckedCreateNestedManyWithoutUserInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestUncheckedCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemUncheckedCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewUncheckedCreateNestedManyWithoutBuyerInput
+}
+
+export type UserCreateOrConnectWithoutSentMessagesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutSentMessagesInput, Prisma.UserUncheckedCreateWithoutSentMessagesInput>
+}
+
+export type UserUpsertWithoutSentMessagesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutSentMessagesInput, Prisma.UserUncheckedUpdateWithoutSentMessagesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSentMessagesInput, Prisma.UserUncheckedCreateWithoutSentMessagesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutSentMessagesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutSentMessagesInput, Prisma.UserUncheckedUpdateWithoutSentMessagesInput>
+}
+
+export type UserUpdateWithoutSentMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  threadReads?: Prisma.OrderThreadReadUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserUncheckedUpdateWithoutSentMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  threadReads?: Prisma.OrderThreadReadUncheckedUpdateManyWithoutUserNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUncheckedUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUncheckedUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUncheckedUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserCreateWithoutThreadReadsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutUserInput
+  latestApplication?: Prisma.VerificationApplicationCreateNestedOneWithoutLatestOfInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogCreateNestedManyWithoutActorInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageCreateNestedManyWithoutSenderInput
+  actedOnOrders?: Prisma.OrderStatusHistoryCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewCreateNestedManyWithoutBuyerInput
+}
+
+export type UserUncheckedCreateWithoutThreadReadsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  firstName: string
+  lastName: string
+  phone?: string | null
+  avatarUrl?: string | null
+  avatarPublicId?: string | null
+  emailVerifiedAt?: Date | string | null
+  phoneVerifiedAt?: Date | string | null
+  businessStatus?: $Enums.VerificationStatus
+  businessVerifiedAt?: Date | string | null
+  latestApplicationId?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  twoFactorEnabled?: boolean
+  twoFactorSecret?: string | null
+  twoFactorRecoveryCodes?: string | null
+  twoFactorEnabledAt?: Date | string | null
+  twoFactorPreAuthHash?: string | null
+  twoFactorPreAuthExp?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+  addresses?: Prisma.AddressUncheckedCreateNestedManyWithoutUserInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedCreateNestedManyWithoutUserInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutUserInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedCreateNestedManyWithoutActorInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedCreateNestedManyWithoutAdminInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.OrderMessageUncheckedCreateNestedManyWithoutSenderInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUncheckedCreateNestedManyWithoutActorInput
+  openedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutOpenedByInput
+  resolvedDisputes?: Prisma.DisputeUncheckedCreateNestedManyWithoutResolvedByInput
+  sellerApplication?: Prisma.SellerApplicationUncheckedCreateNestedOneWithoutUserInput
+  reviewedApplications?: Prisma.SellerApplicationUncheckedCreateNestedManyWithoutReviewedByInput
+  transporterProfile?: Prisma.TransporterProfileUncheckedCreateNestedOneWithoutUserInput
+  productRequests?: Prisma.ProductRequestUncheckedCreateNestedManyWithoutBuyerInput
+  cartItems?: Prisma.CartItemUncheckedCreateNestedManyWithoutUserInput
+  productReviews?: Prisma.ProductReviewUncheckedCreateNestedManyWithoutBuyerInput
+}
+
+export type UserCreateOrConnectWithoutThreadReadsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutThreadReadsInput, Prisma.UserUncheckedCreateWithoutThreadReadsInput>
+}
+
+export type UserUpsertWithoutThreadReadsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutThreadReadsInput, Prisma.UserUncheckedUpdateWithoutThreadReadsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutThreadReadsInput, Prisma.UserUncheckedCreateWithoutThreadReadsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutThreadReadsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutThreadReadsInput, Prisma.UserUncheckedUpdateWithoutThreadReadsInput>
+}
+
+export type UserUpdateWithoutThreadReadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutUserNestedInput
+  latestApplication?: Prisma.VerificationApplicationUpdateOneWithoutLatestOfNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUpdateManyWithoutActorNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUpdateManyWithoutSenderNestedInput
+  actedOnOrders?: Prisma.OrderStatusHistoryUpdateManyWithoutActorNestedInput
+  openedDisputes?: Prisma.DisputeUpdateManyWithoutOpenedByNestedInput
+  resolvedDisputes?: Prisma.DisputeUpdateManyWithoutResolvedByNestedInput
+  sellerApplication?: Prisma.SellerApplicationUpdateOneWithoutUserNestedInput
+  reviewedApplications?: Prisma.SellerApplicationUpdateManyWithoutReviewedByNestedInput
+  transporterProfile?: Prisma.TransporterProfileUpdateOneWithoutUserNestedInput
+  productRequests?: Prisma.ProductRequestUpdateManyWithoutBuyerNestedInput
+  cartItems?: Prisma.CartItemUpdateManyWithoutUserNestedInput
+  productReviews?: Prisma.ProductReviewUpdateManyWithoutBuyerNestedInput
+}
+
+export type UserUncheckedUpdateWithoutThreadReadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarPublicId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  phoneVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  businessStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
+  businessVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  latestApplicationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorRecoveryCodes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  twoFactorPreAuthHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorPreAuthExp?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  supplierProfile?: Prisma.SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+  addresses?: Prisma.AddressUncheckedUpdateManyWithoutUserNestedInput
+  emailVerificationTokens?: Prisma.EmailVerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  phoneOtpCodes?: Prisma.PhoneOtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  verificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutUserNestedInput
+  reviewedVerificationApplications?: Prisma.VerificationApplicationUncheckedUpdateManyWithoutReviewedByNestedInput
+  adminAuditLogs?: Prisma.AdminAuditLogUncheckedUpdateManyWithoutActorNestedInput
+  verificationActionsTaken?: Prisma.VerificationAuditLogUncheckedUpdateManyWithoutAdminNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.OrderMessageUncheckedUpdateManyWithoutSenderNestedInput
   actedOnOrders?: Prisma.OrderStatusHistoryUncheckedUpdateManyWithoutActorNestedInput
   openedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutOpenedByNestedInput
   resolvedDisputes?: Prisma.DisputeUncheckedUpdateManyWithoutResolvedByNestedInput
@@ -5643,6 +6277,8 @@ export type UserCountOutputType = {
   verificationActionsTaken: number
   orders: number
   notifications: number
+  sentMessages: number
+  threadReads: number
   actedOnOrders: number
   openedDisputes: number
   resolvedDisputes: number
@@ -5664,6 +6300,8 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   verificationActionsTaken?: boolean | UserCountOutputTypeCountVerificationActionsTakenArgs
   orders?: boolean | UserCountOutputTypeCountOrdersArgs
   notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
+  sentMessages?: boolean | UserCountOutputTypeCountSentMessagesArgs
+  threadReads?: boolean | UserCountOutputTypeCountThreadReadsArgs
   actedOnOrders?: boolean | UserCountOutputTypeCountActedOnOrdersArgs
   openedDisputes?: boolean | UserCountOutputTypeCountOpenedDisputesArgs
   resolvedDisputes?: boolean | UserCountOutputTypeCountResolvedDisputesArgs
@@ -5763,6 +6401,20 @@ export type UserCountOutputTypeCountNotificationsArgs<ExtArgs extends runtime.Ty
 /**
  * UserCountOutputType without action
  */
+export type UserCountOutputTypeCountSentMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.OrderMessageWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountThreadReadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.OrderThreadReadWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
 export type UserCountOutputTypeCountActedOnOrdersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.OrderStatusHistoryWhereInput
 }
@@ -5847,6 +6499,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   verificationActionsTaken?: boolean | Prisma.User$verificationActionsTakenArgs<ExtArgs>
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
+  sentMessages?: boolean | Prisma.User$sentMessagesArgs<ExtArgs>
+  threadReads?: boolean | Prisma.User$threadReadsArgs<ExtArgs>
   actedOnOrders?: boolean | Prisma.User$actedOnOrdersArgs<ExtArgs>
   openedDisputes?: boolean | Prisma.User$openedDisputesArgs<ExtArgs>
   resolvedDisputes?: boolean | Prisma.User$resolvedDisputesArgs<ExtArgs>
@@ -5954,6 +6608,8 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   verificationActionsTaken?: boolean | Prisma.User$verificationActionsTakenArgs<ExtArgs>
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
+  sentMessages?: boolean | Prisma.User$sentMessagesArgs<ExtArgs>
+  threadReads?: boolean | Prisma.User$threadReadsArgs<ExtArgs>
   actedOnOrders?: boolean | Prisma.User$actedOnOrdersArgs<ExtArgs>
   openedDisputes?: boolean | Prisma.User$openedDisputesArgs<ExtArgs>
   resolvedDisputes?: boolean | Prisma.User$resolvedDisputesArgs<ExtArgs>
@@ -5988,6 +6644,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     verificationActionsTaken: Prisma.$VerificationAuditLogPayload<ExtArgs>[]
     orders: Prisma.$OrderPayload<ExtArgs>[]
     notifications: Prisma.$NotificationPayload<ExtArgs>[]
+    sentMessages: Prisma.$OrderMessagePayload<ExtArgs>[]
+    threadReads: Prisma.$OrderThreadReadPayload<ExtArgs>[]
     actedOnOrders: Prisma.$OrderStatusHistoryPayload<ExtArgs>[]
     openedDisputes: Prisma.$DisputePayload<ExtArgs>[]
     resolvedDisputes: Prisma.$DisputePayload<ExtArgs>[]
@@ -6429,6 +7087,8 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   verificationActionsTaken<T extends Prisma.User$verificationActionsTakenArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$verificationActionsTakenArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VerificationAuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   orders<T extends Prisma.User$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notifications<T extends Prisma.User$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  sentMessages<T extends Prisma.User$sentMessagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sentMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  threadReads<T extends Prisma.User$threadReadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$threadReadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderThreadReadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   actedOnOrders<T extends Prisma.User$actedOnOrdersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$actedOnOrdersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   openedDisputes<T extends Prisma.User$openedDisputesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$openedDisputesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DisputePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   resolvedDisputes<T extends Prisma.User$resolvedDisputesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$resolvedDisputesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DisputePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -7190,6 +7850,54 @@ export type User$notificationsArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.NotificationScalarFieldEnum | Prisma.NotificationScalarFieldEnum[]
+}
+
+/**
+ * User.sentMessages
+ */
+export type User$sentMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the OrderMessage
+   */
+  select?: Prisma.OrderMessageSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the OrderMessage
+   */
+  omit?: Prisma.OrderMessageOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OrderMessageInclude<ExtArgs> | null
+  where?: Prisma.OrderMessageWhereInput
+  orderBy?: Prisma.OrderMessageOrderByWithRelationInput | Prisma.OrderMessageOrderByWithRelationInput[]
+  cursor?: Prisma.OrderMessageWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.OrderMessageScalarFieldEnum | Prisma.OrderMessageScalarFieldEnum[]
+}
+
+/**
+ * User.threadReads
+ */
+export type User$threadReadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the OrderThreadRead
+   */
+  select?: Prisma.OrderThreadReadSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the OrderThreadRead
+   */
+  omit?: Prisma.OrderThreadReadOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OrderThreadReadInclude<ExtArgs> | null
+  where?: Prisma.OrderThreadReadWhereInput
+  orderBy?: Prisma.OrderThreadReadOrderByWithRelationInput | Prisma.OrderThreadReadOrderByWithRelationInput[]
+  cursor?: Prisma.OrderThreadReadWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.OrderThreadReadScalarFieldEnum | Prisma.OrderThreadReadScalarFieldEnum[]
 }
 
 /**

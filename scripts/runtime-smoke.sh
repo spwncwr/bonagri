@@ -5545,6 +5545,556 @@ echo "✓ TRANSPORTER DELIVERY FLOW ACCEPTANCE PASSED"
 
 echo
 echo "========================================"
+echo "ORDER MESSAGING FLOW (F2)"
+echo "========================================"
+
+# F2: one thread per order — buyer ↔ owning supplier ↔ assigned transporter,
+# admin read-only, flat 404 for strangers. Needs a FRESH order parked at
+# OUT_FOR_DELIVERY with a claimed job (the M recipe) so all three non-admin
+# participants exist. Runs right after M and before A2 re-roles the main
+# buyer, so the accounts behind $ACCESS_TOKEN / $SUPPLIER_TOKEN / $M_TOKEN
+# are still buyer/supplier/transporter here. Access tokens live 15 minutes:
+# buyer + supplier are re-minted up front (their logins date back to the
+# start of the run), and Y's foreign buyer re-logins in Z5 for the same
+# reason. Admin is re-minted via admin_login in Z6.
+
+echo
+echo "[Z1/8] Fresh order driven to OUT_FOR_DELIVERY with a claimed job..."
+
+Z_BUYER_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-buyer-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}"
+)"
+
+if [[ "$Z_BUYER_LOGIN_HTTP" != "201" && "$Z_BUYER_LOGIN_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-buyer-login.json"
+  fail "F2 buyer re-login failed. HTTP $Z_BUYER_LOGIN_HTTP"
+fi
+
+ACCESS_TOKEN="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("accessToken",""))' "$LOG_DIR/z-buyer-login.json"
+)"
+
+if [[ -z "$ACCESS_TOKEN" ]]; then
+  cat "$LOG_DIR/z-buyer-login.json"
+  fail "F2 buyer re-login returned no access token."
+fi
+
+Z_SUPPLIER_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-supplier-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$SUPPLIER_EMAIL\",\"password\":\"$SUPPLIER_PASSWORD\"}"
+)"
+
+if [[ "$Z_SUPPLIER_LOGIN_HTTP" != "201" && "$Z_SUPPLIER_LOGIN_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-supplier-login.json"
+  fail "F2 supplier re-login failed. HTTP $Z_SUPPLIER_LOGIN_HTTP"
+fi
+
+SUPPLIER_TOKEN="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("accessToken",""))' "$LOG_DIR/z-supplier-login.json"
+)"
+
+if [[ -z "$SUPPLIER_TOKEN" ]]; then
+  cat "$LOG_DIR/z-supplier-login.json"
+  fail "F2 supplier re-login returned no access token."
+fi
+
+Z_ORDER_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-order-create.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"deliveryAddressId\":\"$ADDRESS_ID\",\"productId\":\"$PRODUCT_ID\",\"quantity\":1,\"notes\":\"F2 messaging smoke order\"}"
+)"
+
+if [[ "$Z_ORDER_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/z-order-create.json"
+  fail "F2 buyer order creation failed. HTTP $Z_ORDER_HTTP"
+fi
+
+Z_ORDER_ID="$(
+  python3 - "$LOG_DIR/z-order-create.json" <<'PYJSON'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+
+order = data.get("order") if isinstance(data.get("order"), dict) else data
+
+if not order.get("id"):
+    raise SystemExit("F2 order id missing from creation response.")
+
+print(order["id"])
+PYJSON
+)"
+
+for Z_STEP in CONFIRMED PROCESSING READY_FOR_DELIVERY; do
+  Z_STEP_HTTP="$(
+    curl -sS -o "$LOG_DIR/z-order-$Z_STEP.json" -w "%{http_code}" \
+      -X PATCH "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/status" \
+      -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"status\":\"$Z_STEP\"}"
+  )"
+
+  if [[ "$Z_STEP_HTTP" != "200" ]]; then
+    cat "$LOG_DIR/z-order-$Z_STEP.json"
+    fail "F2 supplier transition to $Z_STEP failed. HTTP $Z_STEP_HTTP"
+  fi
+done
+
+Z_PUBLISH_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-publish.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/delivery/publish" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$Z_PUBLISH_HTTP" != "201" && "$Z_PUBLISH_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-publish.json"
+  fail "F2 job publish failed. HTTP $Z_PUBLISH_HTTP"
+fi
+
+Z_CLAIM_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-claim.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/transport/jobs/$Z_ORDER_ID/claim" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$Z_CLAIM_HTTP" != "201" && "$Z_CLAIM_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-claim.json"
+  fail "F2 job claim failed. HTTP $Z_CLAIM_HTTP"
+fi
+
+Z_PICKUP_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-pickup.json" -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/delivery/pickup" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$Z_PICKUP_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-pickup.json"
+  fail "F2 pickup failed. HTTP $Z_PICKUP_HTTP"
+fi
+
+Z_STATE="$(
+  curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID"
+)"
+
+if ! echo "$Z_STATE" | grep -q '"status"[[:space:]]*:[[:space:]]*"OUT_FOR_DELIVERY"'; then
+  echo "$Z_STATE"
+  fail "F2 setup order did not reach OUT_FOR_DELIVERY."
+fi
+
+echo "✓ Order OUT_FOR_DELIVERY with the transporter claimed"
+
+echo
+echo "[Z2/8] Buyer posts the opening message; supplier sees it unread..."
+
+Z_BUYER_SEND_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-buyer-send.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"body":"F2 smoke: buyer opens the thread"}'
+)"
+
+if [[ "$Z_BUYER_SEND_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/z-buyer-send.json"
+  fail "Buyer message send failed. HTTP $Z_BUYER_SEND_HTTP"
+fi
+
+Z_BUYER_THREAD_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-thread-buyer1.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages"
+)"
+
+if [[ "$Z_BUYER_THREAD_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-thread-buyer1.json"
+  fail "Buyer thread read failed. HTTP $Z_BUYER_THREAD_HTTP"
+fi
+
+if ! grep -q "F2 smoke: buyer opens the thread" "$LOG_DIR/z-thread-buyer1.json"; then
+  cat "$LOG_DIR/z-thread-buyer1.json"
+  fail "Buyer cannot see their own message in the thread."
+fi
+
+Z_SUPPLIER_THREAD_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-thread-supplier.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages"
+)"
+
+if [[ "$Z_SUPPLIER_THREAD_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-thread-supplier.json"
+  fail "Supplier thread read failed. HTTP $Z_SUPPLIER_THREAD_HTTP"
+fi
+
+if ! grep -q '"unreadCount"[[:space:]]*:[[:space:]]*[1-9]' "$LOG_DIR/z-thread-supplier.json"; then
+  cat "$LOG_DIR/z-thread-supplier.json"
+  fail "Supplier should see the buyer's message as unread."
+fi
+
+if ! grep -q "F2 smoke: buyer opens the thread" "$LOG_DIR/z-thread-supplier.json"; then
+  cat "$LOG_DIR/z-thread-supplier.json"
+  fail "Supplier cannot read the buyer's message."
+fi
+
+echo "✓ Buyer's message visible; supplier sees it unread"
+
+echo
+echo "[Z3/8] Supplier replies; buyer marks the thread read..."
+
+Z_SUPPLIER_SEND_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-supplier-send.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"body":"F2 smoke: supplier answers"}'
+)"
+
+if [[ "$Z_SUPPLIER_SEND_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/z-supplier-send.json"
+  fail "Supplier message send failed. HTTP $Z_SUPPLIER_SEND_HTTP"
+fi
+
+Z_BUYER_UNREAD_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-thread-buyer2.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages"
+)"
+
+if [[ "$Z_BUYER_UNREAD_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-thread-buyer2.json"
+  fail "Buyer thread re-read failed. HTTP $Z_BUYER_UNREAD_HTTP"
+fi
+
+if ! grep -q '"unreadCount"[[:space:]]*:[[:space:]]*[1-9]' "$LOG_DIR/z-thread-buyer2.json"; then
+  cat "$LOG_DIR/z-thread-buyer2.json"
+  fail "Buyer should see the supplier's reply as unread."
+fi
+
+Z_MARK_READ_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-mark-read.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages/read" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+)"
+
+if [[ "$Z_MARK_READ_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-mark-read.json"
+  fail "Mark-read failed. HTTP $Z_MARK_READ_HTTP"
+fi
+
+if ! grep -q '"unreadCount"[[:space:]]*:[[:space:]]*0' "$LOG_DIR/z-mark-read.json"; then
+  cat "$LOG_DIR/z-mark-read.json"
+  fail "Mark-read did not report zero unread."
+fi
+
+Z_BUYER_READ_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-thread-buyer3.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages"
+)"
+
+if [[ "$Z_BUYER_READ_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-thread-buyer3.json"
+  fail "Buyer thread read after mark-read failed. HTTP $Z_BUYER_READ_HTTP"
+fi
+
+if ! grep -q '"unreadCount"[[:space:]]*:[[:space:]]*0' "$LOG_DIR/z-thread-buyer3.json"; then
+  cat "$LOG_DIR/z-thread-buyer3.json"
+  fail "Buyer unread did not drop to zero after mark-read."
+fi
+
+echo "✓ Supplier reply unread for buyer; mark-read resets the cursor"
+
+echo
+echo "[Z4/8] Assigned transporter joins during OUT_FOR_DELIVERY..."
+
+Z_DRIVER_THREAD_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-thread-driver.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages"
+)"
+
+if [[ "$Z_DRIVER_THREAD_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-thread-driver.json"
+  fail "Transporter thread read failed. HTTP $Z_DRIVER_THREAD_HTTP"
+fi
+
+if ! grep -q '"readOnly"[[:space:]]*:[[:space:]]*false' "$LOG_DIR/z-thread-driver.json"; then
+  cat "$LOG_DIR/z-thread-driver.json"
+  fail "Assigned transporter should have a writable thread view."
+fi
+
+Z_DRIVER_SEND_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-driver-send.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages" \
+    -H "Authorization: Bearer $M_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"body":"F2 smoke: driver is on the way"}'
+)"
+
+if [[ "$Z_DRIVER_SEND_HTTP" != "201" ]]; then
+  cat "$LOG_DIR/z-driver-send.json"
+  fail "Transporter message send failed. HTTP $Z_DRIVER_SEND_HTTP"
+fi
+
+Z_BUYER_DRIVER_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-thread-buyer4.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages"
+)"
+
+if [[ "$Z_BUYER_DRIVER_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-thread-buyer4.json"
+  fail "Buyer thread read (driver message) failed. HTTP $Z_BUYER_DRIVER_HTTP"
+fi
+
+if ! grep -q "F2 smoke: driver is on the way" "$LOG_DIR/z-thread-buyer4.json"; then
+  cat "$LOG_DIR/z-thread-buyer4.json"
+  fail "Buyer cannot see the transporter's message."
+fi
+
+if ! grep -q '"unreadCount"[[:space:]]*:[[:space:]]*[1-9]' "$LOG_DIR/z-thread-buyer4.json"; then
+  cat "$LOG_DIR/z-thread-buyer4.json"
+  fail "Driver's message should be unread for the buyer."
+fi
+
+echo "✓ Transporter reads and posts; buyer sees the driver's message"
+
+echo
+echo "[Z5/8] Foreign buyer and anonymous callers get flat 404/401..."
+
+# Y_FOREIGN_TOKEN was minted back in section Y — re-login so this step
+# cannot fail on a stale 15-minute access token.
+Z_FOREIGN_LOGIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-foreign-login.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$Y_FOREIGN_EMAIL\",\"password\":\"$TEST_PASSWORD\"}"
+)"
+
+if [[ "$Z_FOREIGN_LOGIN_HTTP" != "201" && "$Z_FOREIGN_LOGIN_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-foreign-login.json"
+  fail "F2 foreign-buyer re-login failed. HTTP $Z_FOREIGN_LOGIN_HTTP"
+fi
+
+Z_FOREIGN_TOKEN="$(
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("accessToken",""))' "$LOG_DIR/z-foreign-login.json"
+)"
+
+if [[ -z "$Z_FOREIGN_TOKEN" ]]; then
+  cat "$LOG_DIR/z-foreign-login.json"
+  fail "F2 foreign-buyer re-login returned no access token."
+fi
+
+Z_FOREIGN_GET_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-foreign-get.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $Z_FOREIGN_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages"
+)"
+
+if [[ "$Z_FOREIGN_GET_HTTP" != "404" ]]; then
+  cat "$LOG_DIR/z-foreign-get.json"
+  fail "Foreign buyer thread read must 404. HTTP $Z_FOREIGN_GET_HTTP"
+fi
+
+if ! grep -q "Order not found" "$LOG_DIR/z-foreign-get.json"; then
+  cat "$LOG_DIR/z-foreign-get.json"
+  fail "Foreign 404 must carry the flat 'Order not found' message."
+fi
+
+# The 404 must not leak that the thread exists or what is inside it.
+if grep -q "F2 smoke:" "$LOG_DIR/z-foreign-get.json"; then
+  cat "$LOG_DIR/z-foreign-get.json"
+  fail "Foreign 404 leaked thread content."
+fi
+
+Z_FOREIGN_POST_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-foreign-post.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages" \
+    -H "Authorization: Bearer $Z_FOREIGN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"body":"F2 smoke: stranger tries to post"}'
+)"
+
+if [[ "$Z_FOREIGN_POST_HTTP" != "404" ]]; then
+  cat "$LOG_DIR/z-foreign-post.json"
+  fail "Foreign buyer message send must 404. HTTP $Z_FOREIGN_POST_HTTP"
+fi
+
+Z_ANON_GET_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-anon-get.json" -w "%{http_code}" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages"
+)"
+
+if [[ "$Z_ANON_GET_HTTP" != "401" ]]; then
+  cat "$LOG_DIR/z-anon-get.json"
+  fail "Anonymous thread read must 401. HTTP $Z_ANON_GET_HTTP"
+fi
+
+# The rejected write must not have landed in the thread either.
+Z_THREAD_AFTER_FOREIGN="$(
+  curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages"
+)"
+
+if echo "$Z_THREAD_AFTER_FOREIGN" | grep -q "F2 smoke: stranger tries to post"; then
+  echo "$Z_THREAD_AFTER_FOREIGN"
+  fail "Foreign send was refused with 404 but still created a message."
+fi
+
+echo "✓ Foreign buyer 404 (no leak, no write); anonymous 401"
+
+echo
+echo "[Z6/8] Admin reads any thread but cannot post..."
+
+ADMIN_TOKEN="$(admin_login "$ADMIN_E2E_EMAIL" "$ADMIN_E2E_PASSWORD")"
+
+if [[ -z "$ADMIN_TOKEN" ]]; then
+  fail "Admin re-login for the messaging flow returned no access token"
+fi
+
+Z_ADMIN_THREAD_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-thread-admin.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages"
+)"
+
+if [[ "$Z_ADMIN_THREAD_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-thread-admin.json"
+  fail "Admin thread read failed. HTTP $Z_ADMIN_THREAD_HTTP"
+fi
+
+if ! grep -q '"readOnly"[[:space:]]*:[[:space:]]*true' "$LOG_DIR/z-thread-admin.json"; then
+  cat "$LOG_DIR/z-thread-admin.json"
+  fail "Admin thread view must be read-only."
+fi
+
+if ! grep -q "F2 smoke: buyer opens the thread" "$LOG_DIR/z-thread-admin.json"; then
+  cat "$LOG_DIR/z-thread-admin.json"
+  fail "Admin cannot read the thread content."
+fi
+
+Z_ADMIN_SEND_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-admin-send.json" -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"body":"F2 smoke: admin tries to post"}'
+)"
+
+if [[ "$Z_ADMIN_SEND_HTTP" != "403" ]]; then
+  cat "$LOG_DIR/z-admin-send.json"
+  fail "Admin message send must 403 (read-only). HTTP $Z_ADMIN_SEND_HTTP"
+fi
+
+echo "✓ Admin reads as observer; admin send 403"
+
+echo
+echo "[Z7/8] Bulk unread feed: buyer badge yes, admin none..."
+
+Z_BULK_BUYER_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-bulk-buyer.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/messages/unread"
+)"
+
+if [[ "$Z_BULK_BUYER_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-bulk-buyer.json"
+  fail "Buyer bulk unread feed failed. HTTP $Z_BULK_BUYER_HTTP"
+fi
+
+if ! grep -q "\"$Z_ORDER_ID\"[[:space:]]*:[[:space:]]*[1-9]" "$LOG_DIR/z-bulk-buyer.json"; then
+  cat "$LOG_DIR/z-bulk-buyer.json"
+  fail "Buyer bulk feed should count the driver's message on this order."
+fi
+
+Z_BULK_ADMIN_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-bulk-admin.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    "$API_URL$API_PREFIX/messages/unread"
+)"
+
+if [[ "$Z_BULK_ADMIN_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-bulk-admin.json"
+  fail "Admin bulk unread feed failed. HTTP $Z_BULK_ADMIN_HTTP"
+fi
+
+if ! grep -q '"counts"[[:space:]]*:[[:space:]]*{}' "$LOG_DIR/z-bulk-admin.json"; then
+  cat "$LOG_DIR/z-bulk-admin.json"
+  fail "Admin bulk feed must be an empty counts map (no badge affordance)."
+fi
+
+echo "✓ Bulk feed: buyer counts this order, admin gets an empty map"
+
+echo
+echo "[Z8/8] Send bucket caps at 30/min; reads stay open..."
+
+# 32 sends against a 30/min bucket: even on a freshly reset window the
+# last two must 429, so the assertion cannot depend on earlier sends
+# still being inside their TTL. Reads use a different (default) bucket.
+Z_BURST_429=0
+for Z_I in $(seq 1 32); do
+  Z_BURST_HTTP="$(
+    curl -sS -o "$LOG_DIR/z-burst.json" -w "%{http_code}" \
+      -X POST "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages" \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"body\":\"F2 smoke: burst $Z_I\"}"
+  )"
+
+  if [[ "$Z_BURST_HTTP" == "429" ]]; then
+    Z_BURST_429=$((Z_BURST_429 + 1))
+    cp "$LOG_DIR/z-burst.json" "$LOG_DIR/z-burst-429.json"
+  elif [[ "$Z_BURST_HTTP" != "201" && "$Z_BURST_HTTP" != "200" ]]; then
+    cat "$LOG_DIR/z-burst.json"
+    fail "Unexpected send status during burst. HTTP $Z_BURST_HTTP"
+  fi
+done
+
+if [[ "$Z_BURST_429" -lt 1 ]]; then
+  fail "Send rate limit (30/min) never triggered across a 32-message burst."
+fi
+
+if ! grep -qi "too many requests" "$LOG_DIR/z-burst-429.json"; then
+  cat "$LOG_DIR/z-burst-429.json"
+  fail "The 429 did not come from the rate limiter."
+fi
+
+Z_FINAL_READ_HTTP="$(
+  curl -sS -o "$LOG_DIR/z-thread-final.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "$API_URL$API_PREFIX/orders/$Z_ORDER_ID/messages"
+)"
+
+if [[ "$Z_FINAL_READ_HTTP" != "200" ]]; then
+  cat "$LOG_DIR/z-thread-final.json"
+  fail "Thread read after the burst must stay 200. HTTP $Z_FINAL_READ_HTTP"
+fi
+
+echo "✓ Send bucket 429s under burst; reads unaffected"
+
+echo
+echo "✓ ORDER MESSAGING FLOW (F2) ACCEPTANCE PASSED"
+
+echo
+echo "========================================"
 echo "CHECKPOINT LEDGER FLOW (CP15a)"
 echo "========================================"
 

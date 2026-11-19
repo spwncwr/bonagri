@@ -242,6 +242,34 @@ export class NotificationsService {
     );
   }
 
+  // F2: chat ping — in-app Notification rows ONLY, one per recipient, no
+  // email (a message thread must not flood inboxes; the bell + unread badge
+  // are the affordance). Row write is best-effort and never fails the send.
+  async onOrderMessage(
+    recipients: string[],
+    orderNumber: string,
+    senderName: string,
+    body: string,
+  ) {
+    if (recipients.length === 0) {
+      return;
+    }
+
+    const snippet = body.length > 140 ? `${body.slice(0, 140)}…` : body;
+
+    try {
+      await this.prisma.notification.createMany({
+        data: recipients.map((userId) => ({
+          userId,
+          title: `New message on ${orderNumber}`,
+          message: `${senderName}: ${snippet}`,
+        })),
+      });
+    } catch (error) {
+      console.error("BonAgri message notification row write failed:", error);
+    }
+  }
+
   // CP14: transport hooks. Rows only for the publish fan-out (a board
   // refresh, not a point event); row + email for everything addressed
   // to a specific person.

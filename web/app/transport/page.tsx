@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import AuthGuard from "../../components/auth/auth-guard";
 import { AppearanceSection } from "../../components/theme/theme-switch";
 import { BrandIcon } from "../../components/brand/logo";
+import { OrderThread } from "../../components/messages/order-thread";
+import { useMessageUnreads } from "../../components/messages/use-message-unreads";
 import LocationTracking from "../../components/transport/location-tracking";
 import TransporterSettings from "../../components/transport/transporter-settings";
 import {
@@ -206,6 +208,7 @@ function TransportTabBar({
 function DetailSheet({
   delivery,
   busy,
+  unread = 0,
   onAction,
   onFail,
   onTrack,
@@ -213,6 +216,7 @@ function DetailSheet({
 }: {
   delivery: Delivery;
   busy: boolean;
+  unread?: number;
   onAction: (d: Delivery, a: "pickup" | "transit" | "complete") => void;
   onFail: (d: Delivery) => void;
   onTrack: (d: Delivery) => void;
@@ -231,8 +235,9 @@ function DetailSheet({
       {/* Backdrop tap to close */}
       <div className="absolute inset-0" onClick={onClose} />
 
-      {/* Sheet */}
-      <div className="relative z-10 w-full max-w-md animate-[slideUp_0.3s_ease-out] rounded-t-3xl bg-slate-900 px-5 pb-8 pt-4 text-white">
+      {/* Sheet — scrollable so long content (incl. the thread) stays
+          reachable on short screens. */}
+      <div className="relative z-10 max-h-[92vh] w-full max-w-md animate-[slideUp_0.3s_ease-out] overflow-y-auto rounded-t-3xl bg-slate-900 px-5 pb-8 pt-4 text-white">
         {/* Handle bar */}
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-slate-600" />
 
@@ -394,6 +399,15 @@ function DetailSheet({
           </div>
         )}
 
+        {/* F2: conversation on this delivery — buyer, supplier and the
+            assigned driver. Light card so it reads on the dark sheet. */}
+        <div className="mt-4 rounded-2xl bg-white p-3 text-slate-900">
+          <OrderThread
+            orderId={delivery.orderId}
+            unread={unread}
+          />
+        </div>
+
         {/* Action buttons */}
         <div className="mt-5 flex flex-wrap gap-2">
           {delivery.status === "ASSIGNED" && (
@@ -518,6 +532,8 @@ function TransportHub() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("ALL");
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  // F2: collapsed "Messages (n)" badge feed across this driver's deliveries.
+  const unreadMessages = useMessageUnreads();
 
   /* ── API calls ────────────────────────────────────────────────────────── */
 
@@ -1786,6 +1802,7 @@ function TransportHub() {
         <DetailSheet
           delivery={selectedDelivery}
           busy={actingId === selectedDelivery.orderId}
+          unread={unreadMessages[selectedDelivery.orderId] ?? 0}
           onAction={(d, a) => void deliveryAction(d, a)}
           onFail={(d) => {
             setFailTarget(d);

@@ -185,6 +185,16 @@ export type TransporterProfile = Prisma.TransporterProfileModel
  */
 export type Notification = Prisma.NotificationModel
 /**
+ * Model OrderMessage
+ * 
+ */
+export type OrderMessage = Prisma.OrderMessageModel
+/**
+ * Model OrderThreadRead
+ * 
+ */
+export type OrderThreadRead = Prisma.OrderThreadReadModel
+/**
  * Model Invoice
  * 
  */

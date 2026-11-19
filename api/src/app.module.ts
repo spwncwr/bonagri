@@ -20,6 +20,7 @@ import { PromotionsModule } from "./promotions/promotions.module";
 import { ProfileModule } from "./profile/profile.module";
 import { VerificationModule } from "./verification/verification.module";
 import { AuditModule } from "./audit/audit.module";
+import { MessagesModule } from "./messages/messages.module";
 
 @Module({
   imports: [
@@ -52,6 +53,8 @@ import { AuditModule } from "./audit/audit.module";
     VerificationModule,
     // HP3: admin audit trail (read controller + guarded() writer).
     AuditModule,
+    // F2: order-scoped messaging (thread + bulk unread routes).
+    MessagesModule,
   ],
 })
 export class AppModule {}

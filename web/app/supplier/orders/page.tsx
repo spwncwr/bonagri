@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRightIcon, SearchIcon } from "../../../components/mobile/icons";
+import { OrderThread } from "../../../components/messages/order-thread";
+import { useMessageUnreads } from "../../../components/messages/use-message-unreads";
 import PageHeading from "../../../components/supplier/page-heading";
 import { authHeaders } from "../../../lib/auth";
 
@@ -173,6 +175,8 @@ function OrdersContent() {
   const [jobActionId, setJobActionId] = useState<string | null>(null);
   const [redispatchChoice, setRedispatchChoice] = useState<Record<string, string>>({});
   const [jobNotice, setJobNotice] = useState("");
+  // F2: collapsed "Messages (n)" badge feed across this supplier's orders.
+  const unreadMessages = useMessageUnreads();
 
   useEffect(() => {
     void fetch(`${API_BASE_URL}/api/transport/transporters`, {
@@ -1194,6 +1198,15 @@ function OrdersContent() {
                       </div>
                     </div>
                   ) : null}
+
+                  {/* F2: the order thread — supplier with the buyer (and the
+                      assigned transporter once a job is claimed). */}
+                  <div className="mt-4 border-t border-slate-100 pt-4">
+                    <OrderThread
+                      orderId={order.id}
+                      unread={unreadMessages[order.id] ?? 0}
+                    />
+                  </div>
                 </article>
               );
             })}

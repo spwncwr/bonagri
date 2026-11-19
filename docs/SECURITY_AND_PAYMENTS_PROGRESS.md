@@ -48,7 +48,7 @@ record actuals in §3).
 | HP5 | Session hardening (refresh rotation, no storage token) | 2026-11-17 | done (16a07a6, 2026-11-17) |
 | HP6 | Security hygiene + admin runbook | 2026-11-18 | done (657ce13, 2026-11-18) |
 | C1 | Checkout UX split: cart → delivery → payment | 2026-11-18 | done (b2808a2, 2026-11-18) |
-| F1 | Quote → checkout (agreed price → payment screen) | — | pending |
+| F1 | Quote → checkout (agreed price → payment screen) | 2026-11-19 | done (b7730af, 2026-11-19) |
 | F2 | Order-scoped messaging (buyer/supplier/transporter) | — | pending |
 | F3 | Payment-after-acceptance timing (optional) | — | pending |
 
@@ -571,12 +571,74 @@ includeSubDomains`, 0 report-only).
   (its own future phase if wanted).
 
 ### F1 — Quote → checkout (agreed price → payment screen)
-**Status**: pending
-**Shipped**: —
-**Deviations from plan**: —
-**Gates**: —
-**Live journey**: —
-**Residue / follow-ups**: —
+**Status**: done (b7730af, 2026-11-19)
+**Shipped**:
+- **Schema**: migration `20261118223000_add_quote_product_and_order_link` —
+  `RequestResponse.productId` (FK → Product, nullable so legacy quotes keep
+  working) and `orderId` (FK → Order, `SET NULL`, unique index); regenerated
+  Prisma client committed under `api/src/generated/prisma/`.
+- **API quote creation** (`requests.service.ts respond()`): a supplier's
+  response must now be backed by their **own ACTIVE product** — `productId`
+  required on the DTO (`@IsUUID()`), ownership + status validated server-side;
+  the public `product` relation (name/unit/price) is returned with each quote.
+- **API conversion**: new `POST /api/product-requests/responses/:id/checkout
+  {deliveryAddressId, notes}` — `@UseGuards(JwtAuthGuard, RolesGuard)` +
+  `@Roles("BUYER")`; ACCEPTED-only; creates **one** order at `quotedPrice` ×
+  `request.quantity` with `deliveryFee = 0`, reserves inventory, and claims
+  the quote race-safely via guarded `updateMany where orderId: null` (double
+  convert → 409); returns `{orderCount, orders[]}`. Legacy null-`productId`
+  quotes → 409 (cannot be converted).
+- **Web**: `lib/checkout-draft.ts` gained quote-draft helpers (sessionStorage
+  `bonagri_checkout_quote`, cleared by cart entry points); `/requests` shows a
+  *Proceed to checkout* CTA on ACCEPTED product-backed quotes plus a terminal
+  *Ordered* chip once claimed; `/supplier/demand` respond form gained the
+  product picker and *My responses* shows an *ORDER PLACED* chip;
+  `/checkout/delivery` and `/checkout` render quote branches ("charged at the
+  agreed quote price, not the catalog price", `25 kg × R7,25 (agreed price)`).
+- **Tests**: new `web/tests/quote-checkout.test.mjs` (6) + 1 allowlist entry
+  in `supplier-dashboard.test.mjs`; new smoke section **Y** (7 steps) and 4
+  existing H-section respond bodies patched with the now-required `productId`.
+**Deviations from plan**:
+- **Ownership-before-preconditions ordering** in `checkoutResponse()`:
+  quote ownership is checked **first** (flat 404 "Quote not found") before the
+  phone/address gates, so a stranger never learns whether the quote exists or
+  which precondition failed — the section spec pins foreign quote → 404 even
+  with `phoneVerifiedAt: null`.
+- Smoke section letter **Y** (A–X already taken), placed right after CP17
+  (the buyer must be phone-verified by then) and before the CART section.
+- The smoke script starts/stops the dev servers itself and refuses to run if
+  :3000/:3001 are already serving ("stop that server before running the
+  smoke") — kill dev servers before launching it.
+**Gates**: api build ✓, **531/531** ✓ (+10), lint ✓ (4 pre-existing mail
+warnings); web build ✓, **128/128** ✓ (+6 quote-checkout, +1 allowlist pin),
+lint ✓ (0 errors, 17 baseline warnings); full `scripts/runtime-smoke.sh`
+**exit 0** — section **Y green Y1/7–Y7/7** (agreed price 9.75 × 40 = R390
+with fee 0; double-convert 409; unaccepted 409; foreign flat-404; supplier
+403 / anon 401), all pre-existing sections green.
+**Live journey** (local dev, 0 JS/uncaught console errors; every 401 accounted
+as the HP5 refresh chain — 2× `POST /auth/refresh` 200 → all replays 200):
+buyer posted demand "Journey Quote Demand" (25 kg → Tzaneen) → supplier
+responded through the product picker (Fresh Tomatoes, **R7.25/kg**) → buyer
+*Accept* → **ACCEPTED** + *Proceed to checkout* (draft: response
+`4275e332…`, 25 kg @ 7.25) → `/checkout/delivery` shows "YOUR QUOTE ORDER …
+Total: R 181,25 — charged at the agreed quote price, not the catalog price"
+→ `/checkout` shows "25 kg × R7,25 (agreed price) R181.25" → placed
+**BON-20261119-125105, R181.25, Manual EFT** (catalog price would be R450) →
+server-side verified via psql: order PENDING, subtotal 181.25, deliveryFee
+0.00, unit 7.25 × 25, response ACCEPTED with `orderId` claimed → `PATCH`
+accept 200, conversion `POST …/checkout` **201** → buyer card shows the
+terminal **Ordered** chip (no Proceed CTA); supplier *My responses* shows
+**Fresh Tomatoes + ORDER PLACED**.
+**Residue / follow-ups**:
+- Pre-existing cosmetic (surfaced during this journey, present before F1):
+  the buyer `/requests` badge `View responses (N)` always renders **(0)**
+  because `getMine()` never returns `_count` (the public `listOpen` does).
+  Small API fix + test when picked up.
+- Screenshot capture blocked ("needs a visible desktop window") — carried
+  from HP5/HP6; journey evidenced via DOM/console/network assertions.
+- Render/deployed-stack walkthrough still owed (carried from HP2–HP4).
+- Nonce CSP + `img-src` tightening carried from HP6; product-detail
+  quick-order flow still outside the cart/quote checkout split (C1 note).
 
 ### F2 — Order-scoped messaging (buyer/supplier/transporter)
 **Status**: pending
@@ -601,6 +663,17 @@ includeSubDomains`, 0 report-only).
 Cross-phase observations (baseline drift, decisions confirmed mid-flight,
 environment issues). Newest first.
 
+- 2026-11-19 — F1 done (`b7730af`); baselines api 521 → **531** (+10
+  checkout), web 122 → **128** (+6 quote-checkout, +1 allowlist). Deviations
+  now pinned: ownership is checked **before** preconditions in
+  `checkoutResponse()` (foreign quote → flat 404, no precondition hint), and
+  the new smoke section is **Y** (A–X taken) placed after CP17 so the buyer is
+  phone-verified for the conversion steps; 4 existing H-section respond
+  bodies needed the now-required `productId`. Environment: the smoke
+  start/stops the dev servers itself and refuses to run while :3000/:3001 are
+  serving — kill dev servers first. Found pre-existing during the journey:
+  buyer `/requests` response-count badge always shows (0) (`getMine()` omits
+  `_count`) — recorded as residue, not fixed in F1.
 - 2026-11-18 — C1 done (`b2808a2`); web test baseline 117 → **122** (+5
   checkout-flow, 2 cart-drawer pins reworded), api unchanged **521**. New
   smoke lesson: HP5 section Q2 false-failed when login+refresh landed in the

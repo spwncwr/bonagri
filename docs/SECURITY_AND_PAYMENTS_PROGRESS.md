@@ -49,7 +49,7 @@ record actuals in §3).
 | HP6 | Security hygiene + admin runbook | 2026-11-18 | done (657ce13, 2026-11-18) |
 | C1 | Checkout UX split: cart → delivery → payment | 2026-11-18 | done (b2808a2, 2026-11-18) |
 | F1 | Quote → checkout (agreed price → payment screen) | 2026-11-19 | done (b7730af, 2026-11-19) |
-| F2 | Order-scoped messaging (buyer/supplier/transporter) | — | pending |
+| F2 | Order-scoped messaging (buyer/supplier/transporter) | 2026-11-19 | done (3729916, 2026-11-19) |
 | F3 | Payment-after-acceptance timing (optional) | — | pending |
 
 Update the Status column (`pending` → `in progress` → `done (commit, date)`) as
@@ -641,12 +641,81 @@ terminal **Ordered** chip (no Proceed CTA); supplier *My responses* shows
   quick-order flow still outside the cart/quote checkout split (C1 note).
 
 ### F2 — Order-scoped messaging (buyer/supplier/transporter)
-**Status**: pending
-**Shipped**: —
-**Deviations from plan**: —
-**Gates**: —
-**Live journey**: —
-**Residue / follow-ups**: —
+**Status**: done (3729916, 2026-11-19)
+**Shipped**:
+- **Schema**: migration `20261119085503_add_order_messages` — `OrderMessage`
+  (one thread per order: `orderId` FK, `senderId`, `body` text, `createdAt`)
+  and `OrderThreadRead` (per-participant read cursor, unique on
+  `orderId`+`userId`); regenerated Prisma client committed under
+  `api/src/generated/prisma/`.
+- **API** (`api/src/messages/`, `MessagesModule` in `app.module.ts`): the
+  participant matrix mirrors order detail — buyer, owning supplier and the
+  assigned transporter get a writable thread (transporter only once its job is
+  claimed), admin gets read-only (`readOnly: true`); everyone else gets the
+  flat **404 "Order not found"** (no existence leak). Routes:
+  `GET/POST /api/orders/:orderId/messages`, `POST …/messages/read`
+  (cursor upsert → `@HttpCode(200)`), `GET /api/messages/unread` (bulk badge
+  feed: `{counts: {orderId: n}}`, admin always `{}`). Rate limits: sends
+  30/min, reads 60/min, bulk 30/min (per-route `@Throttle`, CP13 base bucket
+  underneath).
+- **Notifications**: `notifications.service.ts onOrderMessage()` — a new
+  message pings the *other* participants as in-app rows only (no email).
+- **Web**: `components/messages/order-thread.tsx` (polling thread composer,
+  4s refetch while open, auto mark-read on view) +
+  `components/messages/use-message-unreads.ts` (30s bulk-unread hook with
+  badge counts); mounted on the buyer order detail (`/orders/[id]`), the
+  supplier order cards (`/supplier/orders`, "Messages N" button) and the
+  transporter detail sheet (`/transport`, "Messages N").
+- **Tests**: new `web/tests/order-messaging.test.mjs` (7) + new API unit spec
+  `messages.service.spec.ts` (participant matrix, foreign 404, admin
+  read-only, unread cursor semantics) and smoke section **Z** (8 steps).
+**Deviations from plan**:
+- `ParseUUIDPipe` on `:orderId` params (house style; malformed ids 400 before
+  the service).
+- No pre-order inquiry room — messaging exists only for placed orders (plan's
+  MVP scope; product-detail chat stays out).
+- Message ping = in-app notification rows only; no email digest (plan MVP).
+- Smoke section **Z** placed after M (transport flow) and before CP15a, so the
+  buyer/supplier/transporter accounts behind `$ACCESS_TOKEN`/`$SUPPLIER_TOKEN`/
+  `$M_TOKEN` still hold their roles (A2 re-roles the buyer later) — buyer +
+  supplier tokens are re-minted in Z1 for the 15-minute TTL, admin via
+  `admin_login` in Z6, foreign buyer re-logins in Z5.
+- `POST …/messages/read` returns **200** (`@HttpCode(HttpStatus.OK)`) —
+  action-POST, not a creation; house style (auth.controller).
+- Z8 bursts **32** sends (not 30) so the 429 cannot depend on earlier sends
+  still sitting inside their window.
+**Gates**: api build ✓, **549/549** ✓ (+18), lint ✓ (4 pre-existing mail
+warnings); web build ✓, **135/135** ✓ (+7 order-messaging), lint ✓ (0 errors,
+17 baseline warnings); full `scripts/runtime-smoke.sh` **exit 0** — section
+**Z green Z1/8–Z8/8** (buyer↔supplier exchange + unread/mark-read; transporter
+joins during OUT_FOR_DELIVERY; foreign 404 with no-leak + no-write checks and
+anon 401; admin GET 200 `readOnly:true` + POST 403; bulk unread buyer counts
+/ admin `"counts":{}`; 32-send burst 429s while reads stay 200), all
+pre-existing sections green.
+**Live journey** (local dev, 0 uncaught JS errors across 3 tabs; every 401
+accounted as the HP5 refresh chain — buyer tab 2× on order fetch and supplier
+tab 1× on messages GET, all recovered and polling continued):
+order `0d0b15ee-d9cc-4cbb-a173-ffad315ebf4d` / **BON-20261119-652267**
+(OUT_FOR_DELIVERY, picked-up, transporter claimed) — buyer sent "Browser
+journey: can you confirm the delivery window?" (POST 201, GET polling 200 /
+OPTIONS 204, zero 4xx in message traffic) → supplier's card badge showed
+**Messages 1**, replied from the thread → reply arrived on the buyer tab via
+4s polling **without refresh**, display names resolving to business names
+(BonAgri Farm / Mosa Hauliers / E2E Buyer) → transporter detail sheet badge
+**Messages 4**, driver posted from the sheet → buyer received it → staged
+supplier follow-up showed `unreadCount 1` → opening the thread dropped it to
+**0** and the supplier's bulk feed dropped the order afterward (mark-read
+cycle proven live).
+**Residue / follow-ups**:
+- Screenshot capture blocked ("needs a visible desktop window") — carried
+  from HP5/HP6/F1; journey evidenced via DOM/console/network assertions.
+- HP5 one-session-per-browser surfaced again in the journey: a tab whose
+  15-min token expires refreshes into whatever account the shared refresh
+  cookie currently holds (observed: buyer tab rotated to the transporter) —
+  expected, but worth a multi-account UX note later.
+- Media attachments, read receipts and WebSocket push explicitly out (plan
+  MVP); revisit after F3.
+
 
 ### F3 — Payment-after-acceptance timing (optional)
 **Status**: pending
@@ -663,6 +732,17 @@ terminal **Ordered** chip (no Proceed CTA); supplier *My responses* shows
 Cross-phase observations (baseline drift, decisions confirmed mid-flight,
 environment issues). Newest first.
 
+- 2026-11-19 — F2 done (`3729916`); baselines api 531 → **549** (+18
+  messages), web 128 → **135** (+7 order-messaging). New smoke section **Z**
+  (8 steps) sits after M and before CP15a — before A2 re-roles the main
+  buyer — and re-mints buyer/supplier/foreign/admin tokens for the 15-minute
+  TTL. Lessons: (1) action-POSTs need explicit `@HttpCode(HttpStatus.OK)` —
+  `POST …/messages/read` defaulted to 201 and failed Z3 until coded to 200;
+  (2) first smoke run died at API startup because `nest start --watch`'s
+  initial compile took 71s (cold disk after parallel gates) vs the script's
+  60s readiness budget — rerun on a quiet machine passed, no code change;
+  (3) never run api `npm test` in parallel with the web build — 5 auth tests
+  time out from CPU starvation (171s vs 50s) but pass 549/549 alone.
 - 2026-11-19 — F1 done (`b7730af`); baselines api 521 → **531** (+10
   checkout), web 122 → **128** (+6 quote-checkout, +1 allowlist). Deviations
   now pinned: ownership is checked **before** preconditions in

@@ -50,7 +50,7 @@ record actuals in §3).
 | C1 | Checkout UX split: cart → delivery → payment | 2026-11-18 | done (b2808a2, 2026-11-18) |
 | F1 | Quote → checkout (agreed price → payment screen) | 2026-11-19 | done (b7730af, 2026-11-19) |
 | F2 | Order-scoped messaging (buyer/supplier/transporter) | 2026-11-19 | done (3729916, 2026-11-19) |
-| F3 | Payment-after-acceptance timing (optional) | — | pending |
+| F3 | Payment-after-acceptance timing (optional) | 2026-11-24 | done (4bea579, 2026-11-24) |
 
 Update the Status column (`pending` → `in progress` → `done (commit, date)`) as
 work proceeds; a phase that stalls goes back to `pending` with a note in §3.
@@ -718,12 +718,61 @@ cycle proven live).
 
 
 ### F3 — Payment-after-acceptance timing (optional)
-**Status**: pending
-**Shipped**: —
-**Deviations from plan**: —
-**Gates**: —
-**Live journey**: —
-**Residue / follow-ups**: —
+**Status**: done (4bea579, 2026-11-24)
+**Shipped**:
+- **API hard gate** (`orders.service.ts`): `recordPayment` rejects
+  `PENDING`/`CANCELLED` with 409 "EFT payment can only be recorded after the
+  supplier accepts the order" — agree → then pay is enforced server-side.
+  Recording stays open past acceptance (late evidence is fine); the payment
+  row remains evidence only and never moves the order status.
+- **Notification**: the CONFIRMED buyer ping now prompts the payment —
+  "…Record your EFT reference on the order page so they can verify it…" —
+  so the buyer learns the sequence at the exact moment it opens.
+- **Buyer surfaces**: the order page gains `isPayable()` (not
+  `PENDING`/`CANCELLED`) gating the record form; while PENDING the Payment
+  section explains the sequence ("The supplier accepts your order first —
+  once it is confirmed, pay by EFT…"); the My Orders card's Pay EFT /
+  Re-record EFT entry uses the same gate; the awaiting-check copy is now
+  "Nothing else is needed from you."
+- **Smoke section J resequenced** (accept → pay → verify): fresh order
+  PENDING/no-payment/no-invoice asserts → early record **409** → supplier
+  confirms → invoice-on-acceptance assert → record → duplicate **409** →
+  order stays CONFIRMED → verify PAID + paidAt → payment-received
+  notification → PROCESSING transition keeps PAID → re-verify/re-record
+  **409** → guard matrix (anon 401/401, vendor 403, buyer 403, foreign 404,
+  no-payment 409) + record-on-PENDING **409** + buyer cancel + record-on-
+  CANCELLED **409** → invoice route 200.
+- **Tests**: api 549 → **551** (+2: pre-acceptance 409, cancelled 409; the
+  old non-pending test flipped to the new gate and a late-evidence test was
+  added), web 135 → **136** (+1 `checkout-payment` F3 gate test pinning both
+  buyer surfaces). Plan §F3 annotated with the decision.
+
+**Deviations from plan**: chose the **hard gate** over UX-only (user call,
+2026-11-20, plan §F3 annotated). Implemented as "reject `PENDING`/
+`CANCELLED`" rather than "require `CONFIRMED`" so late/after-the-fact
+evidence recording still works on fulfilled orders — deliberate.
+**Gates**: api build ✓, lint ✓ (4 pre-existing mail warnings), **551/551**
+✓; web build ✓, lint ✓ (0 errors, 17 baseline warnings), **136/136** ✓;
+`bash -n` ✓; full `scripts/runtime-smoke.sh` **exit 0** with section J green
+(5th run — environment saga in §4).
+**Live journey**: fresh order `BON-20261124-197195` placed in the browser →
+PENDING showed the guidance copy only (no record input, no button) →
+supplier accepted → buyer recorded `EFT-JOURNEY-778899` (AWAITING CHECK,
+new copy) → supplier verified → buyer saw "PAID VIA EFT · Verified
+24 Nov 2026, 07:58" with the invoice link; server confirms payment `PAID`
+with `paidAt`, order stays `CONFIRMED`; notifications "Order … confirmed"
++ "Payment received for order …" both present. Sequential logins with a
+real logout between each (HP5 one-session-per-browser). Console: **0
+uncaught JS errors**; the only network errors are 2×401 on a cold
+order-page load — dev StrictMode double-mount fetching before the HP5
+session hydration completes, pre-existing and self-healing (page renders
+on retry). Screenshot captured — the old visible-window blocker no longer
+applies.
+**Residue / follow-ups**: the cold-load 401s above could be silenced by
+awaiting session hydration before the first fetch (pre-existing, untouched
+by F3); buyer `/requests` response-count badge always 0 (pre-existing);
+Render/deployed-stack walkthrough still owed (HP2–HP4); nonce CSP +
+`img-src` tightening; product-detail quick-order flow out of scope.
 
 ---
 
@@ -732,6 +781,22 @@ cycle proven live).
 Cross-phase observations (baseline drift, decisions confirmed mid-flight,
 environment issues). Newest first.
 
+- 2026-11-24 — F3 done (`4bea579`); baselines api 549 → **551** (+2
+  recordPayment gate), web 135 → **136** (+1 checkout-payment F3). Smoke
+  section **J** resequenced to accept → pay → verify. Environment: five runs
+  were needed — (1) run 1 failed A2 with a 429 because the whole pre-A suite
+  finished inside one 15-minute login window on a fast machine → added an
+  **A0** `sleep 61` before section A (same discipline T0/L already use);
+  (2) runs 2 and 4 died on transient `createOrder` 500s (P2003
+  `OrderItem_orderId_fkey`, then P2028 "Unable to start a transaction") in
+  code untouched by F3 — root cause was the **machine thrashing swap** (load
+  390–432, ~1.5 GB/10 s page churn from one Chrome renderer running since
+  Tuesday and holding 1.9 GB); killing it dropped load 390 → 12 and the next
+  run passed clean; (3) run 3 failed API startup because a cold `nest
+  --watch` compile exceeded the 60 s readiness budget for the second time →
+  budget raised to **120 s**. Lesson: when smoke failures hop between
+  unrelated sections, check `vm.loadavg` + `vm.swapusage` before suspecting
+  the code.
 - 2026-11-19 — F2 done (`3729916`); baselines api 531 → **549** (+18
   messages), web 128 → **135** (+7 order-messaging). New smoke section **Z**
   (8 steps) sits after M and before CP15a — before A2 re-roles the main

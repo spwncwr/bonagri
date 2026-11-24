@@ -710,8 +710,9 @@ export class OrdersService {
     return updatedOrder;
   }
 
-  // CP11: the buyer records manual EFT evidence against a pending order.
-  // The row is evidence only - it never moves the order status itself.
+  // CP11/F3: the buyer records manual EFT evidence once the supplier has
+  // accepted the order - agree, then pay. The row is evidence only - it
+  // never moves the order status itself.
   async recordPayment(orderId: string, userId: string, dto: RecordPaymentDto) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
@@ -722,9 +723,11 @@ export class OrdersService {
       throw new NotFoundException("Order not found");
     }
 
-    if (order.status !== "PENDING") {
+    // F3 hard gate: recording stays open after acceptance (late evidence is
+    // fine) but is rejected before it and on a dead order.
+    if (order.status === "PENDING" || order.status === "CANCELLED") {
       throw new ConflictException(
-        "EFT payment can only be recorded while the order is pending",
+        "EFT payment can only be recorded after the supplier accepts the order",
       );
     }
 

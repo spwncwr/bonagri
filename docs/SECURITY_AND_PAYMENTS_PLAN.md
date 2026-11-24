@@ -365,3 +365,8 @@ Target structure:
   - **Hard gate**: `recordPayment` rejects until `CONFIRMED` (API change +
     smoke + copy updates across buyer/supplier screens).
 - May fold into F1 (both touch the payment sequence) — decide when it starts.
+- **Decision (2026-11-20): hard gate shipped** — `recordPayment` rejects
+  `PENDING`/`CANCELLED` ("after the supplier accepts the order"), the buyer
+  surfaces (order page + My Orders card) open the record step only on payable
+  statuses, the CONFIRMED notification prompts the recording, and smoke
+  section J was resequenced to accept → pay → verify.

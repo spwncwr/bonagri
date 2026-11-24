@@ -28,7 +28,7 @@ const ORDER_NOTIFICATION_CONFIG: Record<
     recipient: "buyer",
     title: (orderNumber) => `Order ${orderNumber} confirmed`,
     message: () =>
-      "The supplier confirmed your order and is preparing it. You can follow every step on the order page.",
+      "The supplier confirmed your order and is preparing it. Record your EFT reference on the order page so they can verify it, then follow every step from there.",
   },
   DELIVERED: {
     recipient: "buyer",

@@ -41,14 +41,20 @@ describe("NotificationsService (CP6 glue)", () => {
         data: {
           userId: "buyer-1",
           title: "Order BON-1 confirmed",
-          message: expect.stringContaining("confirmed your order"),
+          // F3: the confirmed ping is where the buyer learns to record the
+          // EFT (recordPayment only opens after acceptance).
+          message: expect.stringMatching(
+            /confirmed your order.*Record your EFT reference on the order page/,
+          ),
         },
       });
       expect(mailService.sendNotificationEmail).toHaveBeenCalledWith(
         "thandi@example.com",
         "Thandi",
         "Order BON-1 confirmed",
-        expect.stringContaining("confirmed your order"),
+        expect.stringMatching(
+          /confirmed your order.*Record your EFT reference on the order page/,
+        ),
       );
     });
 

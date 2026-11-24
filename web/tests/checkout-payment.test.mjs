@@ -83,3 +83,29 @@ test("the chosen method is echoed on the success screen and order detail", () =>
   assert.match(orderPage, /Payment method:/);
   assert.match(orderPage, /paymentMethodLabel\(checkoutMethod\)/);
 });
+
+// F3 (payment-after-acceptance): the prominent record-EFT step moved to after
+// the supplier accepts — the API hard gate and both buyer surfaces agree.
+
+test("F3: the record-EFT step only opens after the supplier accepts", () => {
+  // order page: helper + form gate on payable statuses, not PENDING
+  assert.match(orderPage, /function isPayable\(status: string\)/);
+  assert.match(orderPage, /viewerRole === "BUYER" &&\s*isPayable\(order\.status\)/);
+  assert.ok(
+    !/viewerRole === "BUYER" &&\s*order\.status === "PENDING"/.test(orderPage),
+    "order page must no longer unlock the record form on PENDING",
+  );
+  // while PENDING the section explains the sequence instead of prompting
+  assert.match(orderPage, /The supplier accepts your order first/);
+
+  // marketplace order cards: Pay EFT / Re-record EFT use the same gate
+  const homeShell = read("../components/marketplace/home-shell.tsx");
+  assert.match(
+    homeShell,
+    /order\.status !== "PENDING" &&\s*order\.status !== "CANCELLED" &&/,
+  );
+  assert.ok(
+    !/order\.status === "PENDING" &&\s*\(!order\.payment/.test(homeShell),
+    "home-shell must no longer unlock Pay EFT on PENDING",
+  );
+});

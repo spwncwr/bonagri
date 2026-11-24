@@ -4194,7 +4194,11 @@ export default function HomeShell({
                                   View Order
                                 </Link>
 
-                                {order.status === "PENDING" &&
+                                {/* F3 hard gate: the record step opens only
+                                    after the supplier accepts — same rule as
+                                    the API. */}
+                                {order.status !== "PENDING" &&
+                                order.status !== "CANCELLED" &&
                                 (!order.payment ||
                                   order.payment.status === "FAILED") ? (
                                   paymentEntryOrderId === order.id ? (

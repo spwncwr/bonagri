@@ -332,7 +332,7 @@ E2E_RESET_CAPTURE_FILE="$RESET_CAPTURE_FILE" \
 npm run start:dev >"$LOG_DIR/api.log" 2>&1 &
 API_PID=$!
 
-for i in {1..60}; do
+for i in {1..120}; do
   if curl -sS "$API_URL$API_PREFIX/categories" >/dev/null 2>&1; then
     echo "✓ API responding"
     break
@@ -345,7 +345,10 @@ for i in {1..60}; do
 
   sleep 1
 
-  if [[ "$i" == "60" ]]; then
+  # 120s, not 60s: a cold nest --watch compile took 71s (F2, 2026-11-19) and
+  # again >60s (F3, 2026-11-20) after heavy gates — a false "did not become
+  # ready" that a quiet rerun does not reproduce.
+  if [[ "$i" == "120" ]]; then
     cat "$LOG_DIR/api.log"
     fail "API did not become ready."
   fi
@@ -4184,7 +4187,7 @@ echo "MANUAL EFT PAYMENT + INVOICE FLOW"
 echo "========================================"
 
 echo
-echo "[J1/3] Buyer records EFT evidence against a pending order..."
+echo "[J1/3] Recording is gated on acceptance: accept first, then record the EFT..."
 
 J_TS="$(date +%s)"
 J_SLUG="cp11-eft-$J_TS"
@@ -4222,6 +4225,83 @@ J_ORDER="$(
 J_ORDER_NUMBER="$(
   python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("orderNumber",""))' "$LOG_DIR/j-order.json")"
 
+curl -sS "$API_URL$API_PREFIX/orders/$J_ORDER" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/j-order-after-create.json"
+
+python3 - "$LOG_DIR/j-order-after-create.json" <<'PYJSON'
+import json
+import sys
+
+order = json.load(open(sys.argv[1], encoding="utf-8"))
+
+if order.get("status") != "PENDING":
+    raise SystemExit("ERROR: fresh order should be PENDING, got {}".format(order.get("status")))
+
+if order.get("payment") is not None:
+    raise SystemExit("ERROR: fresh order must carry no payment")
+
+if order.get("invoice") is not None:
+    raise SystemExit("ERROR: invoice must not exist before CONFIRMED")
+
+print("OK Fresh order is PENDING with no payment and no invoice")
+PYJSON
+
+# F3 hard gate: recording before the supplier accepts is rejected.
+J_EARLY_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"transactionRef\":\"EFT-J-$J_TS\"}")"
+
+if [[ "$J_EARLY_HTTP" != "409" ]]; then
+  fail "Recording EFT before acceptance returned HTTP $J_EARLY_HTTP, expected 409"
+fi
+
+echo "OK Recording before acceptance rejected with 409"
+
+# The deal is agreed first: the supplier accepts and the invoice issues.
+J_CONFIRM_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$J_ORDER/status" \
+    -H "Authorization: Bearer $SUPPLIER_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"CONFIRMED"}')"
+
+if [[ "$J_CONFIRM_HTTP" != "200" ]]; then
+  fail "Confirming the CP11 order failed. HTTP $J_CONFIRM_HTTP"
+fi
+
+curl -sS "$API_URL$API_PREFIX/orders/$J_ORDER" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/j-order-confirmed.json"
+
+python3 - "$LOG_DIR/j-order-confirmed.json" "$J_ORDER_NUMBER" <<'PYJSON'
+import json
+import sys
+
+order = json.load(open(sys.argv[1], encoding="utf-8"))
+order_number = sys.argv[2]
+
+if order.get("status") != "CONFIRMED":
+    raise SystemExit("ERROR: order should be CONFIRMED, got {}".format(order.get("status")))
+
+invoice = order.get("invoice") or {}
+expected_number = "INV-{}".format(order_number)
+
+if invoice.get("invoiceNumber") != expected_number:
+    raise SystemExit("ERROR: invoiceNumber should be {}, got {}".format(expected_number, invoice.get("invoiceNumber")))
+
+for key, expected in (("subtotal", 40.0), ("deliveryFee", 0.0), ("total", 40.0)):
+    if float(invoice.get(key) or 0) != expected:
+        raise SystemExit("ERROR: invoice {} should be {}, got {}".format(key, expected, invoice.get(key)))
+
+if order.get("payment") is not None:
+    raise SystemExit("ERROR: nothing may be recorded before acceptance")
+
+print("OK Invoice {} issued on acceptance; nothing recorded yet".format(expected_number))
+PYJSON
+
+# Now the buyer records the EFT evidence against the accepted order.
 J_PAY_HTTP="$(
   curl -sS -o "$LOG_DIR/j-payment.json" -w "%{http_code}" \
     -X POST "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
@@ -4272,7 +4352,7 @@ import sys
 
 order = json.load(open(sys.argv[1], encoding="utf-8"))
 
-if order.get("status") != "PENDING":
+if order.get("status") != "CONFIRMED":
     raise SystemExit("ERROR: recording payment must not move the order (got {})".format(order.get("status")))
 
 payment = order.get("payment") or {}
@@ -4283,16 +4363,16 @@ if payment.get("status") != "PENDING":
 if not str(payment.get("transactionRef") or "").startswith("EFT-J-"):
     raise SystemExit("ERROR: payment transactionRef not carried on the order")
 
-if order.get("invoice") is not None:
-    raise SystemExit("ERROR: invoice must not exist before CONFIRMED")
+if order.get("invoice") is None:
+    raise SystemExit("ERROR: invoice issued at acceptance must stay on the order")
 
-print("OK Order stays PENDING with payment attached; no invoice yet")
+print("OK Order stays CONFIRMED with payment attached; invoice intact")
 PYJSON
 
 echo "OK Duplicate record 409; payment is evidence only"
 
 echo
-echo "[J2/3] Supplier verifies, buyer notified, confirm issues the invoice..."
+echo "[J2/3] Supplier verifies the reference, the buyer is notified, transitions keep it intact..."
 
 J_VERIFY_HTTP="$(
   curl -sS -o "$LOG_DIR/j-verify.json" -w "%{http_code}" \
@@ -4337,46 +4417,37 @@ if not any(n.get("title") == title for n in rows):
 print("OK Buyer received the payment-received notification")
 PYJSON
 
-J_CONFIRM_HTTP="$(
+# Fulfilment advances on its own; the verified payment must survive status
+# changes (payment is evidence, not authority - CP11).
+J_PROCESS_HTTP="$(
   curl -sS -o /dev/null -w "%{http_code}" \
     -X PATCH "$API_URL$API_PREFIX/orders/$J_ORDER/status" \
     -H "Authorization: Bearer $SUPPLIER_TOKEN" \
     -H "Content-Type: application/json" \
-    -d '{"status":"CONFIRMED"}')"
+    -d '{"status":"PROCESSING"}')"
 
-if [[ "$J_CONFIRM_HTTP" != "200" ]]; then
-  fail "Confirming the CP11 order failed. HTTP $J_CONFIRM_HTTP"
+if [[ "$J_PROCESS_HTTP" != "200" ]]; then
+  fail "Advancing the CP11 order to PROCESSING failed. HTTP $J_PROCESS_HTTP"
 fi
 
 curl -sS "$API_URL$API_PREFIX/orders/$J_ORDER" \
-  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/j-order-confirmed.json"
+  -H "Authorization: Bearer $ACCESS_TOKEN" > "$LOG_DIR/j-order-processing.json"
 
-python3 - "$LOG_DIR/j-order-confirmed.json" "$J_ORDER_NUMBER" <<'PYJSON'
+python3 - "$LOG_DIR/j-order-processing.json" <<'PYJSON'
 import json
 import sys
 
 order = json.load(open(sys.argv[1], encoding="utf-8"))
-order_number = sys.argv[2]
 
-if order.get("status") != "CONFIRMED":
-    raise SystemExit("ERROR: order should be CONFIRMED, got {}".format(order.get("status")))
-
-invoice = order.get("invoice") or {}
-expected_number = "INV-{}".format(order_number)
-
-if invoice.get("invoiceNumber") != expected_number:
-    raise SystemExit("ERROR: invoiceNumber should be {}, got {}".format(expected_number, invoice.get("invoiceNumber")))
-
-for key, expected in (("subtotal", 40.0), ("deliveryFee", 0.0), ("total", 40.0)):
-    if float(invoice.get(key) or 0) != expected:
-        raise SystemExit("ERROR: invoice {} should be {}, got {}".format(key, expected, invoice.get(key)))
+if order.get("status") != "PROCESSING":
+    raise SystemExit("ERROR: order should be PROCESSING, got {}".format(order.get("status")))
 
 payment = order.get("payment") or {}
 
 if payment.get("status") != "PAID":
-    raise SystemExit("ERROR: payment should stay PAID through confirmation")
+    raise SystemExit("ERROR: payment should stay PAID through transitions")
 
-print("OK Invoice {} issued with matching totals; payment stays PAID".format(expected_number))
+print("OK Order advanced to PROCESSING; payment stays PAID")
 PYJSON
 
 J_REVERIFY_HTTP="$(
@@ -4401,7 +4472,7 @@ if [[ "$J_REPAY_HTTP" != "409" ]]; then
   fail "Re-recording after verification returned HTTP $J_REPAY_HTTP, expected 409"
 fi
 
-echo "OK Confirm issued the invoice; repeat verify/record rejected with 409"
+echo "OK Verified payment survives fulfilment; repeat verify/record rejected with 409"
 
 echo
 echo "[J3/3] Payment guard matrix and the printable invoice route..."
@@ -4486,16 +4557,38 @@ fi
 
 J_WRONG_STATE_HTTP="$(
   curl -sS -o /dev/null -w "%{http_code}" \
-    -X POST "$API_URL$API_PREFIX/orders/$J_ORDER/payment" \
+    -X POST "$API_URL$API_PREFIX/orders/$J_ORDER2/payment" \
     -H "Authorization: Bearer $ACCESS_TOKEN" \
     -H "Content-Type: application/json" \
     -d "{\"transactionRef\":\"EFT-J-$J_TS-E\"}")"
 
 if [[ "$J_WRONG_STATE_HTTP" != "409" ]]; then
-  fail "Recording on a CONFIRMED order returned HTTP $J_WRONG_STATE_HTTP, expected 409"
+  fail "Recording on a PENDING order returned HTTP $J_WRONG_STATE_HTTP, expected 409"
 fi
 
-echo "OK Anon 401/401, vendor 403, buyer 403, foreign 404, no-payment 409, wrong-state 409"
+J_CANCEL_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X PATCH "$API_URL$API_PREFIX/orders/$J_ORDER2/status" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"status":"CANCELLED"}')"
+
+if [[ "$J_CANCEL_HTTP" != "200" ]]; then
+  fail "Buyer cancelling their pending CP11 order returned HTTP $J_CANCEL_HTTP, expected 200"
+fi
+
+J_CANCELLED_PAY_HTTP="$(
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL$API_PREFIX/orders/$J_ORDER2/payment" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"transactionRef\":\"EFT-J-$J_TS-F\"}")"
+
+if [[ "$J_CANCELLED_PAY_HTTP" != "409" ]]; then
+  fail "Recording on a CANCELLED order returned HTTP $J_CANCELLED_PAY_HTTP, expected 409"
+fi
+
+echo "OK Anon 401/401, vendor 403, buyer 403, foreign 404, no-payment 409, pre-acceptance 409, cancelled 409"
 
 echo
 echo "Printable invoice route..."
@@ -7182,6 +7275,15 @@ fi
 if [ -z "$ADMIN_E2E_PASSWORD" ]; then
   echo "⚠ Admin section SKIPPED: no SEED_ADMIN_PASSWORD in api/.env and no ADMIN_E2E_PASSWORD env var."
 else
+
+# Login bucket discipline (same as T0/L): the login budget is 15/min shared
+# per IP, and the whole pre-A suite can finish inside one window on a fast
+# machine (2026-11-20: A2's suspended login came back 429 and looked like a
+# lockout bug). Wait it out so section A always starts with a full window.
+echo
+echo "[A0] Waiting out the login throttle window..."
+sleep 61
+echo "✓ Login window clear"
 
 echo
 echo "[A1/3] Admin login + platform stats..."

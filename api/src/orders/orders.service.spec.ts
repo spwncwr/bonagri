@@ -668,11 +668,11 @@ describe("OrdersService (CP11 manual EFT payments)", () => {
   }
 
   describe("recordPayment", () => {
-    it("records manual EFT evidence against the buyer's pending order", async () => {
+    it("records manual EFT evidence against the buyer's accepted order", async () => {
       const tx = makeTx();
       const { service, prisma } = makeService(tx);
 
-      primeBuyerOrder(prisma);
+      primeBuyerOrder(prisma, { status: "CONFIRMED" });
       prisma.payment.create.mockResolvedValue({
         id: "pay-1",
         status: "PENDING",
@@ -721,11 +721,27 @@ describe("OrdersService (CP11 manual EFT payments)", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("rejects recording evidence on a non-pending order (409)", async () => {
+    it("rejects recording evidence before the supplier accepts (409)", async () => {
       const tx = makeTx();
       const { service, prisma } = makeService(tx);
 
-      primeBuyerOrder(prisma, { status: "CONFIRMED" });
+      primeBuyerOrder(prisma, { status: "PENDING" });
+
+      await expect(
+        service.recordPayment("order-1", "buyer-1", {
+          transactionRef: "EFT-12345",
+        } as never),
+      ).rejects.toThrow(
+        "EFT payment can only be recorded after the supplier accepts the order",
+      );
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects recording evidence on a cancelled order (409)", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeBuyerOrder(prisma, { status: "CANCELLED" });
 
       await expect(
         service.recordPayment("order-1", "buyer-1", {
@@ -735,11 +751,31 @@ describe("OrdersService (CP11 manual EFT payments)", () => {
       expect(prisma.payment.create).not.toHaveBeenCalled();
     });
 
+    it("keeps recording open for late evidence once past acceptance", async () => {
+      const tx = makeTx();
+      const { service, prisma } = makeService(tx);
+
+      primeBuyerOrder(prisma, { status: "DELIVERED" });
+      prisma.payment.create.mockResolvedValue({
+        id: "pay-1",
+        status: "PENDING",
+      });
+
+      await service.recordPayment("order-1", "buyer-1", {
+        transactionRef: "EFT-LATE",
+      } as never);
+
+      expect(prisma.payment.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ transactionRef: "EFT-LATE" }),
+      });
+    });
+
     it("rejects a duplicate while awaiting verification (409)", async () => {
       const tx = makeTx();
       const { service, prisma } = makeService(tx);
 
       primeBuyerOrder(prisma, {
+        status: "CONFIRMED",
         payment: { id: "pay-1", status: "PENDING" },
       });
 
@@ -758,6 +794,7 @@ describe("OrdersService (CP11 manual EFT payments)", () => {
       const { service, prisma } = makeService(tx);
 
       primeBuyerOrder(prisma, {
+        status: "CONFIRMED",
         payment: { id: "pay-1", status: "PAID" },
       });
 
@@ -776,6 +813,7 @@ describe("OrdersService (CP11 manual EFT payments)", () => {
       const { service, prisma } = makeService(tx);
 
       primeBuyerOrder(prisma, {
+        status: "CONFIRMED",
         payment: { id: "pay-1", status: "FAILED", paidAt: null },
       });
       prisma.payment.update.mockResolvedValue({
@@ -803,7 +841,7 @@ describe("OrdersService (CP11 manual EFT payments)", () => {
       const tx = makeTx();
       const { service, prisma } = makeService(tx);
 
-      primeBuyerOrder(prisma);
+      primeBuyerOrder(prisma, { status: "CONFIRMED" });
 
       await expect(
         service.recordPayment("order-1", "buyer-1", {

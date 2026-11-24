@@ -186,6 +186,12 @@ function paymentBadgeClass(status: string) {
   return "bg-amber-100 text-amber-700";
 }
 
+// F3 hard gate: the buyer records the EFT only after the supplier accepts
+// (recordPayment rejects PENDING/CANCELLED the same way server-side).
+function isPayable(status: string) {
+  return status !== "PENDING" && status !== "CANCELLED";
+}
+
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
   const orderId = params.id;
@@ -325,8 +331,8 @@ export default function OrderDetailPage() {
     }
   }
 
-  // CP11: the buyer records their manual EFT reference (evidence only —
-  // the supplier verifies it separately).
+  // CP11/F3: the buyer records their manual EFT reference after acceptance
+  // (evidence only — the supplier verifies it separately).
   async function recordPayment() {
     if (!order) return;
 
@@ -799,9 +805,11 @@ export default function OrderDetailPage() {
                 </div>
               </section>
 
-              {/* Payment + invoice (CP11) */}
+              {/* Payment + invoice (CP11). F3: while PENDING the section only
+                  explains the sequence — the record step itself opens once
+                  the supplier accepts. */}
               {order.payment ||
-              (viewerRole === "BUYER" && order.status === "PENDING") ? (
+              (viewerRole === "BUYER" && order.status !== "CANCELLED") ? (
                 <section className="rounded-2xl border border-[#dce2d9] bg-white p-6 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[#7b867d]">
@@ -846,8 +854,7 @@ export default function OrderDetailPage() {
                       ) : order.payment.status === "PENDING" ? (
                         <p className="text-xs text-[#69756c]">
                           Recorded — the supplier will match it against their
-                          bank statement. The order only moves on when the
-                          supplier confirms it.
+                          bank statement. Nothing else is needed from you.
                         </p>
                       ) : (
                         <p className="text-xs text-red-700">
@@ -864,16 +871,24 @@ export default function OrderDetailPage() {
                           {paymentMethodLabel(checkoutMethod)}
                         </p>
                       ) : null}
-                      <p>
-                        Pay by EFT using your bank app, then record the
-                        reference below — the supplier verifies it against
-                        their statement.
-                      </p>
+                      {order.status === "PENDING" ? (
+                        <p>
+                          The supplier accepts your order first — once it is
+                          confirmed, pay by EFT using your bank app and record
+                          the reference here for verification.
+                        </p>
+                      ) : (
+                        <p>
+                          Pay by EFT using your bank app, then record the
+                          reference below — the supplier verifies it against
+                          their statement.
+                        </p>
+                      )}
                     </div>
                   )}
 
                   {viewerRole === "BUYER" &&
-                  order.status === "PENDING" &&
+                  isPayable(order.status) &&
                   (!order.payment || order.payment.status === "FAILED") ? (
                     <div className="mt-4 space-y-3">
                       {paymentError ? (
